@@ -46,7 +46,7 @@ pivot_full = pivot_full.dropna(how="all")
 all_funds = list(pivot_full.columns)
 
 # =========================
-# SIDEBAR - FUNDS
+# SIDEBAR
 # =========================
 st.sidebar.header("Funds")
 
@@ -167,7 +167,7 @@ with tab3:
     st.dataframe(sharpe.to_frame("Sharpe"))
 
 # =========================
-# 🔥 HEATMAP (FINAL FIXED COLORS)
+# HEATMAP
 # =========================
 with tab4:
     st.subheader("Return heatmap")
@@ -202,32 +202,19 @@ with tab4:
     heat_short = heatmap[short_cols]
     heat_long = heatmap[long_cols]
 
-    # SHORT TERM
     fig1 = go.Figure(data=go.Heatmap(
         z=heat_short.values,
         x=heat_short.columns,
         y=heat_short.index,
-        colorscale=[
-            [0, "#ff4d4d"],
-            [0.5, "#ffffff"],
-            [1, "#00cc66"]
-        ],
+        colorscale=[[0,"#ff4d4d"],[0.5,"#ffffff"],[1,"#00cc66"]],
         zmid=0,
         zmin=-3,
         zmax=3,
         text=heat_short.astype(str) + "%",
         texttemplate="%{text}"
     ))
-
-    fig1.update_layout(
-        title="Short term (<1M)",
-        xaxis_title="Period",
-        yaxis_title="Fund"
-    )
-
     st.plotly_chart(fig1, use_container_width=True)
 
-    # LONG TERM
     fig2 = go.Figure(data=go.Heatmap(
         z=heat_long.values,
         x=heat_long.columns,
@@ -237,13 +224,6 @@ with tab4:
         text=heat_long.astype(str) + "%",
         texttemplate="%{text}"
     ))
-
-    fig2.update_layout(
-        title="Long term (≥1M)",
-        xaxis_title="Period",
-        yaxis_title="Fund"
-    )
-
     st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
@@ -277,18 +257,16 @@ with tab5:
         "Weight":best_w
     }).sort_values("Weight", ascending=False))
 
-    port = (returns*best_w).sum(axis=1)
-    cum = (1+port).cumprod()
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=cum.index,y=cum))
-    st.plotly_chart(style(fig,"Index"), use_container_width=True)
-
 # =========================
 # REBALANCE + MONTE CARLO
 # =========================
 with tab6:
-    st.warning("Dit is geen financieel advies")
+    st.markdown("""
+    ⚠️ **Geen financieel advies**  
+    Deze tool is uitsluitend bedoeld voor educatieve doeleinden.  
+    Resultaten zijn gebaseerd op historische data en vereenvoudigde aannames.  
+    Er kunnen geen rechten aan worden ontleend.
+    """)
 
     capital = st.number_input("Start (€)",100,1000000,10000)
 
@@ -306,4 +284,34 @@ with tab6:
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=value.index,y=value))
+    st.plotly_chart(style(fig,"Portfolio (€)"), use_container_width=True)
+
+    # Monte Carlo
+    sims = 200
+    days = 252
+
+    results = []
+
+    for _ in range(sims):
+        path = [capital]
+        sampled = np.random.choice(port, size=days, replace=True)
+
+        for r in sampled:
+            path.append(path[-1]*(1+r))
+
+        results.append(path)
+
+    sim_df = pd.DataFrame(results).T
+
+    future_dates = pd.date_range(
+        start=value.index[-1],
+        periods=days+1,
+        freq="B"
+    )
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=future_dates, y=sim_df.quantile(0.5,axis=1), name="Expected"))
+    fig.add_trace(go.Scatter(x=future_dates, y=sim_df.quantile(0.1,axis=1), name="Worst"))
+    fig.add_trace(go.Scatter(x=future_dates, y=sim_df.quantile(0.9,axis=1), name="Best"))
+
     st.plotly_chart(style(fig,"Portfolio (€)"), use_container_width=True)
