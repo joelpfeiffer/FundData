@@ -13,11 +13,8 @@ TRADING_DAYS = 252
 st.set_page_config(layout="wide", page_title="Funds Terminal")
 
 # =========================
-# HELPERS
+# STYLE
 # =========================
-def safe_div(a, b):
-    return a / b if b != 0 else np.nan
-
 def style(fig, y_label):
     fig.update_layout(
         hovermode="x unified",
@@ -40,7 +37,7 @@ def load():
 df = load()
 
 if df.empty:
-    st.error("No valid data loaded")
+    st.error("No data loaded")
     st.stop()
 
 pivot_full = df.pivot(index="date", columns="fund", values="price")
@@ -49,7 +46,7 @@ pivot_full = pivot_full.dropna(how="all")
 all_funds = list(pivot_full.columns)
 
 # =========================
-# SIDEBAR
+# SIDEBAR - FUNDS
 # =========================
 st.sidebar.header("Funds")
 
@@ -63,20 +60,26 @@ if not selected:
     st.warning("Select at least one fund")
     st.stop()
 
-pivot = pivot_full[selected].dropna(how="all")
+pivot = pivot_full[selected]
 
 # =========================
-# TIMEFRAME
+# SIDEBAR - TIMEFRAME
 # =========================
 st.sidebar.markdown("---")
-mode = st.sidebar.radio("Timeframe", ["Preset", "Custom"])
+st.sidebar.header("Timeframe")
+
+mode = st.sidebar.radio("Mode", ["Preset", "Custom"])
 
 if mode == "Preset":
-    tf = st.sidebar.selectbox("Range", ["1W","2W","1M","3M","6M","1Y","ALL"])
+    tf = st.sidebar.selectbox(
+        "Range",
+        ["1W","2W","1M","3M","6M","1Y","3Y","ALL"]
+    )
 
     days_map = {
         "1W":7,"2W":14,"1M":30,
-        "3M":90,"6M":180,"1Y":365
+        "3M":90,"6M":180,
+        "1Y":365,"3Y":1095
     }
 
     if tf != "ALL":
@@ -93,17 +96,21 @@ else:
         (pivot.index <= pd.to_datetime(end))
     ]
 
+# =========================
+# VALIDATIE
+# =========================
 if len(pivot) < 2:
-    st.error("Not enough data")
+    st.error("Not enough data in selected timeframe")
     st.stop()
 
 # =========================
 # RETURNS
 # =========================
 returns = pivot.pct_change().dropna()
+returns_full = pivot_full[selected].pct_change().dropna()
 
 if returns.empty:
-    st.error("No return data available")
+    st.error("No return data")
     st.stop()
 
 # =========================
@@ -111,7 +118,7 @@ if returns.empty:
 # =========================
 perf = (pivot / pivot.iloc[0] - 1).iloc[-1] * 100
 
-col1,col2,col3 = st.columns(3)
+col1, col2, col3 = st.columns(3)
 col1.metric("Best fund", perf.idxmax(), f"{perf.max():.2f}%")
 col2.metric("Worst fund", perf.idxmin(), f"{perf.min():.2f}%")
 col3.metric("Average return", "", f"{perf.mean():.2f}%")
@@ -119,7 +126,7 @@ col3.metric("Average return", "", f"{perf.mean():.2f}%")
 # =========================
 # TABS
 # =========================
-tab1,tab2,tab3,tab4,tab5,tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Overview","Performance","Risk","Heatmap","Optimizer","Rebalance"
 ])
 
@@ -139,13 +146,23 @@ with tab1:
     st.plotly_chart(style(fig,"Index (start=1)"), use_container_width=True)
 
 # =========================
-# PERFORMANCE
+# PERFORMANCE (FIXED)
 # =========================
 with tab2:
-    mom = (pivot / pivot.shift(30) - 1) * 100
+    st.subheader("Momentum")
+
+    if len(pivot) < 30:
+        shift_days = max(1, int(len(pivot) / 2))
+        st.info(f"Using {shift_days}-day momentum (limited data)")
+    else:
+        shift_days = 30
+
+    mom = (pivot / pivot.shift(shift_days) - 1) * 100
     last = mom.iloc[-1].dropna()
 
-    if not last.empty:
+    if last.empty:
+        st.warning("No momentum data available")
+    else:
         fig = go.Figure()
         fig.add_trace(go.Bar(x=last.index, y=last.values))
         fig.update_layout(xaxis_title="Fund", yaxis_title="Return (%)")
@@ -159,81 +176,82 @@ with tab3:
     sharpe = returns.mean() / returns.std()
 
     st.dataframe(vol.to_frame("Volatility"))
-    st.dataframe(sharpe.to_frame("Sharpe (no risk-free rate)"))
+    st.dataframe(sharpe.to_frame("Sharpe"))
 
 # =========================
-# HEATMAP
+# HEATMAP (FIXED)
 # =========================
 with tab4:
-    corr = returns.corr()
+    st.subheader("Correlation heatmap (full dataset)")
 
-    fig = go.Figure(data=go.Heatmap(
-        z=corr,
-        x=corr.columns,
-        y=corr.index,
-        colorscale="RdYlGn"
-    ))
+    if returns_full.empty:
+        st.warning("Not enough data for heatmap")
+    else:
+        corr = returns_full.corr()
 
-    fig.update_layout(xaxis_title="Fund", yaxis_title="Fund")
-    st.plotly_chart(fig, use_container_width=True)
+        fig = go.Figure(data=go.Heatmap(
+            z=corr,
+            x=corr.columns,
+            y=corr.index,
+            colorscale="RdYlGn",
+            zmin=-1,
+            zmax=1
+        ))
+
+        fig.update_layout(
+            xaxis_title="Fund",
+            yaxis_title="Fund"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# OPTIMIZER (MAX SHARPE)
+# OPTIMIZER
 # =========================
 with tab5:
-
-    mean_returns = returns.mean()
+    mean = returns.mean()
     cov = returns.cov()
 
-    num = len(mean_returns)
-    sims = 2000
+    best_s = -np.inf
+    best_w = None
 
-    best_sharpe = -np.inf
-    best_weights = None
+    for _ in range(2000):
+        w = np.random.random(len(mean))
+        w /= w.sum()
 
-    for _ in range(sims):
-        w = np.random.random(num)
-        w /= np.sum(w)
-
-        r = np.sum(mean_returns * w) * TRADING_DAYS
-        v = np.sqrt(np.dot(w.T, np.dot(cov * TRADING_DAYS, w)))
+        r = np.sum(mean*w)*TRADING_DAYS
+        v = np.sqrt(np.dot(w.T, np.dot(cov*TRADING_DAYS, w)))
 
         if v == 0:
             continue
 
-        s = r / v
+        s = r/v
 
-        if s > best_sharpe:
-            best_sharpe = s
-            best_weights = w
+        if s > best_s:
+            best_s = s
+            best_w = w
 
-    if best_weights is None:
+    if best_w is None:
         st.error("Optimization failed")
         st.stop()
 
-    weights_df = pd.DataFrame({
-        "Fund": mean_returns.index,
-        "Weight": best_weights
-    }).sort_values("Weight", ascending=False)
+    st.dataframe(pd.DataFrame({
+        "Fund":mean.index,
+        "Weight":best_w
+    }).sort_values("Weight", ascending=False))
 
-    st.dataframe(weights_df)
-
-    # performance
-    port_returns = (returns * best_weights).sum(axis=1)
-    cumulative = (1 + port_returns).cumprod()
+    port = (returns * best_w).sum(axis=1)
+    cum = (1+port).cumprod()
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=cumulative.index, y=cumulative))
+    fig.add_trace(go.Scatter(x=cum.index,y=cum))
     st.plotly_chart(style(fig,"Index"), use_container_width=True)
 
 # =========================
-# REBALANCE + MONTE CARLO
+# REBALANCE
 # =========================
 with tab6:
-
-    st.warning(
-        "Dit is geen financieel advies. Resultaten zijn gebaseerd op historische data."
-    )
+    st.warning("Dit is geen financieel advies")
 
     capital = st.number_input("Start (€)",100,1000000,10000)
 
@@ -246,40 +264,9 @@ with tab6:
     w = np.array(list(weights.values()))
     w /= w.sum()
 
-    port = (returns * w).sum(axis=1)
-    value = capital * (1 + port).cumprod()
+    port = (returns*w).sum(axis=1)
+    value = capital*(1+port).cumprod()
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=value.index, y=value))
-    st.plotly_chart(style(fig,"Portfolio (€)"), use_container_width=True)
-
-    # Monte Carlo (bootstrap)
-    sims = 200
-    days = 252
-
-    results = []
-
-    for _ in range(sims):
-        path = [capital]
-        sampled = np.random.choice(port, size=days, replace=True)
-
-        for r in sampled:
-            path.append(path[-1]*(1+r))
-
-        results.append(path)
-
-    sim_df = pd.DataFrame(results).T
-
-    future_dates = pd.date_range(
-        start=value.index[-1],
-        periods=days+1,
-        freq="B"
-    )
-
-    fig = go.Figure()
-
-    fig.add_trace(go.Scatter(x=future_dates, y=sim_df.quantile(0.5,axis=1), name="Expected"))
-    fig.add_trace(go.Scatter(x=future_dates, y=sim_df.quantile(0.1,axis=1), name="Worst"))
-    fig.add_trace(go.Scatter(x=future_dates, y=sim_df.quantile(0.9,axis=1), name="Best"))
-
+    fig.add_trace(go.Scatter(x=value.index,y=value))
     st.plotly_chart(style(fig,"Portfolio (€)"), use_container_width=True)
