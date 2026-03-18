@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+import plotly.express as px
 import time
 
 CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
@@ -10,32 +11,13 @@ TRADING_DAYS = 252
 st.set_page_config(layout="wide")
 
 # =========================
-# ONBOARDING
-# =========================
-if "onboarding" not in st.session_state:
-    st.session_state.onboarding = True
-
-if st.session_state.onboarding:
-    st.info("""
-Welkom in het dashboard.
-
-• Selecteer fondsen links  
-• Kies timeframe  
-• Bekijk trends, risico en simulaties  
-
-Gebruik de ℹ️ knoppen voor uitleg.
-""")
-    if st.button("Start"):
-        st.session_state.onboarding = False
-
-# =========================
-# DATA
+# LOAD DATA
 # =========================
 @st.cache_data(ttl=60)
 def load():
     df = pd.read_csv(f"{CSV_URL}?t={int(time.time())}")
     df["date"] = pd.to_datetime(df["date"])
-    return df
+    return df.sort_values("date")
 
 df = load()
 pivot_full = df.pivot(index="date", columns="fund", values="price")
@@ -47,15 +29,7 @@ funds = list(pivot_full.columns)
 
 selected = st.sidebar.multiselect("Fondsen", funds, default=funds[:5])
 
-# RESET ONBOARDING
-st.sidebar.markdown("---")
-if st.sidebar.button("Start onboarding opnieuw"):
-    st.session_state.onboarding = True
-
-# =========================
-# TIMEFRAME
-# =========================
-mode = st.sidebar.radio("Timeframe", ["Preset", "Custom"])
+mode = st.sidebar.radio("Timeframe", ["Preset","Custom"])
 
 pivot = pivot_full[selected]
 
@@ -72,20 +46,6 @@ else:
 returns = pivot.pct_change().dropna()
 
 # =========================
-# TOOLTIP
-# =========================
-def tooltip(title, text):
-    col1, col2 = st.columns([20,1])
-    with col1:
-        st.subheader(title)
-    with col2:
-        if st.button("ℹ️", key=title):
-            st.session_state[title] = True
-
-    if st.session_state.get(title, False):
-        st.info(text)
-
-# =========================
 # TABS
 # =========================
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
@@ -97,39 +57,32 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # =========================
 with tab1:
 
-    tooltip("Trend", """
-Hier zie je de prijsontwikkeling van fondsen.
-
-• X-as = tijd  
-• Y-as = prijs  
-• Gebruik dit om trends te herkennen  
-""")
+    st.subheader("Prijsontwikkeling")
 
     fig = go.Figure()
-
     for col in pivot.columns:
-        fig.add_trace(go.Scatter(
-            x=pivot.index,
-            y=pivot[col],
-            name=col
-        ))
-
-    fig.update_layout(
-        xaxis_rangeslider_visible=True,  # RULER
-        xaxis_title="Datum",
-        yaxis_title="Prijs"
-    )
-
+        fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
     st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("Genormaliseerde groei (%)")
+
+    norm = pivot / pivot.iloc[0] * 100
+
+    fig2 = go.Figure()
+    for col in norm.columns:
+        fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
+    st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
 # PERFORMANCE
 # =========================
 with tab2:
-    tooltip("Momentum", "Performance over recente periode")
+
+    st.subheader("Momentum (%)")
 
     if len(pivot) > 1:
-        mom = (pivot / pivot.shift(30) - 1) * 100
+        shift = min(30, len(pivot)-1)
+        mom = (pivot / pivot.shift(shift) - 1) * 100
         last = mom.iloc[-1].dropna()
 
         if not last.empty:
@@ -146,24 +99,27 @@ with tab2:
 # RISK
 # =========================
 with tab3:
-    tooltip("Risk analyse", """
-Risico analyse van fondsen
 
-• Volatility = schommeling  
-• Sharpe = rendement vs risico  
-""")
-
+    st.subheader("Volatility")
     vol = returns.std() * np.sqrt(TRADING_DAYS)
-    sharpe = (returns.mean()*TRADING_DAYS)/vol
-
     st.dataframe(vol.to_frame("Volatility"))
+
+    st.subheader("Sharpe Ratio")
+    sharpe = (returns.mean()*TRADING_DAYS)/vol
     st.dataframe(sharpe.to_frame("Sharpe"))
+
+    st.subheader("Correlatie (Fund vergelijking)")
+    corr = returns.corr()
+
+    fig = px.imshow(corr, text_auto=True, color_continuous_scale="RdYlGn")
+    st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # HEATMAP (FIXED COLORS)
 # =========================
 with tab4:
-    tooltip("Heatmap", "Groen = positief rendement, rood = negatief")
+
+    st.subheader("Rendement Heatmap")
 
     latest = pivot_full.index.max()
 
@@ -186,11 +142,7 @@ with tab4:
         z=heatmap.values,
         x=heatmap.columns,
         y=heatmap.index,
-        colorscale=[
-            [0, "red"],
-            [0.5, "white"],
-            [1, "green"]
-        ],
+        colorscale="RdYlGn",
         zmid=0,
         text=heatmap.round(2).astype(str)+"%",
         texttemplate="%{text}"
@@ -202,18 +154,59 @@ with tab4:
 # OPTIMIZER
 # =========================
 with tab5:
-    st.subheader("Optimizer")
+
+    st.subheader("Portfolio gewichten (voorbeeld)")
+
+    w = np.random.random(len(selected))
+    w /= w.sum()
+
+    df_opt = pd.DataFrame({
+        "Fund": selected,
+        "Weight (%)": (w*100).round(2)
+    })
+
+    st.dataframe(df_opt)
 
 # =========================
-# REBALANCE + MONTE CARLO
+# REBALANCE
 # =========================
 with tab6:
 
-    st.subheader("Portfolio")
+    st.subheader("Portfolio verdeling (%)")
 
-    capital = st.number_input("Kapitaal", 100, 1000000, 10000)
+    capital = st.number_input("Startkapitaal (€)", 100, 1000000, 10000)
 
-    weights = np.ones(len(selected)) / len(selected)
+    if "alloc" not in st.session_state:
+        st.session_state.alloc = {f: int(100/len(selected)) for f in selected}
+
+    # sync
+    st.session_state.alloc = {
+        k: v for k, v in st.session_state.alloc.items() if k in selected
+    }
+
+    for f in selected:
+        if f not in st.session_state.alloc:
+            st.session_state.alloc[f] = 0
+
+    cols = st.columns(len(selected))
+
+    for i, f in enumerate(selected):
+        with cols[i]:
+            st.markdown(f"**{f}**")
+            st.session_state.alloc[f] = st.number_input(
+                "%",
+                0, 100,
+                st.session_state.alloc[f],
+                key=f
+            )
+
+    total = sum(st.session_state.alloc.values())
+
+    if total != 100:
+        st.error(f"Totaal = {total}% (moet 100%)")
+        st.stop()
+
+    weights = pd.Series(st.session_state.alloc)/100
 
     port = (returns[selected] * weights).sum(axis=1)
 
@@ -222,7 +215,7 @@ with tab6:
     value = capital * (1 + port).cumprod()
     st.line_chart(value)
 
-    # MONTE CARLO FIX
+    # MONTE CARLO
     st.subheader("Monte Carlo")
 
     if len(port) > 20:
