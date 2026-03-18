@@ -1,101 +1,31 @@
-import sys
-import os
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from app.config import DB_PATH
-
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-
-from pipeline.database import init_db
-init_db()
-
-import streamlit as st
-import sqlite3
+import requests
 import pandas as pd
+from io import StringIO
+from app.config import URL
 
-from app.config import DB_PATH
-from app.analytics import normalize, performance, volatility, sharpe_ratio
-from pipeline.runner import run
+def fetch_data():
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(URL, headers=headers, timeout=30)
 
-# =========================
-# Zorg dat data bestaat
-# =========================
-conn = sqlite3.connect(DB_PATH)
+    print("STATUS:", response.status_code)
 
-try:
-    count = conn.execute("SELECT COUNT(*) FROM prices").fetchone()[0]
-except:
-    count = 0
+    tables = pd.read_html(StringIO(response.text))
+    print("Aantal tabellen:", len(tables))
 
-conn.close()
+    for i, table in enumerate(tables):
+        print(f"Tabel {i} columns:", table.columns)
 
-if count == 0:
-    with st.spinner("Data ophalen..."):
-        try:
-            run()
-        except Exception as e:
-            st.error(f"Fout bij ophalen data: {e}")
+    for table in tables:
+        if "Fonds" in table.columns:
+            df = table
+            break
+    else:
+        raise ValueError("Geen juiste tabel gevonden")
 
-# =========================
-# Dashboard UI
-# =========================
-st.set_page_config(layout="wide")
-st.title("📈 Funds Intelligence Dashboard")
+    df = df[["Fonds", "Koers"]]
+    df["Koers"] = pd.to_numeric(df["Koers"], errors="coerce")
+    df = df.dropna()
 
-conn = sqlite3.connect(DB_PATH)
-df = pd.read_sql("SELECT * FROM prices", conn)
-conn.close()
+    print("Rows gevonden:", len(df))
 
-if df.empty:
-    st.warning("Geen data beschikbaar")
-    st.stop()
-
-# =========================
-# Data processing
-# =========================
-df["date"] = pd.to_datetime(df["date"])
-pivot = df.pivot(index="date", columns="fund", values="price")
-
-# =========================
-# Filters
-# =========================
-selected = st.multiselect(
-    "Selecteer fondsen",
-    pivot.columns,
-    default=list(pivot.columns)[:5]
-)
-
-if not selected:
-    st.warning("Selecteer minimaal 1 fonds")
-    st.stop()
-
-pivot = pivot[selected]
-
-# =========================
-# Analyse
-# =========================
-norm = normalize(pivot)
-
-# =========================
-# Visuals
-# =========================
-st.subheader("📊 Groei (genormaliseerd)")
-st.line_chart(norm)
-
-st.subheader("🏆 Performance (%)")
-perf = performance(norm)
-st.dataframe(perf)
-
-st.subheader("⚡ Volatility")
-st.dataframe(volatility(norm))
-
-st.subheader("📉 Sharpe Ratio")
-st.dataframe(sharpe_ratio(norm))
-
-# =========================
-# Highlight beste fonds
-# =========================
-if not perf.empty:
-    best = perf.index[0]
-    st.success(f"🏆 Beste fonds: {best}")
+    return df
