@@ -77,7 +77,7 @@ with tab1:
     fig.update_layout(
         xaxis_title="Datum",
         yaxis_title="Prijs (€)",
-        xaxis_rangeslider_visible=True
+        hovermode="x unified"
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -94,7 +94,7 @@ with tab1:
         fig2.update_layout(
             xaxis_title="Datum",
             yaxis_title="Index (start = 100)",
-            xaxis_rangeslider_visible=True
+            hovermode="x unified"
         )
 
         st.plotly_chart(fig2, use_container_width=True)
@@ -290,7 +290,8 @@ with tab6:
 
             fig.update_layout(
                 xaxis_title="Dagen",
-                yaxis_title="Waarde (€)"
+                yaxis_title="Waarde (€)",
+                hovermode="x unified"
             )
 
             st.plotly_chart(fig, use_container_width=True)
