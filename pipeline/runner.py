@@ -1,5 +1,11 @@
 from datetime import datetime
 import sqlite3
+import sys
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+
 from app.config import DB_PATH
 from pipeline.scraper import fetch_data
 from pipeline.database import init_db
