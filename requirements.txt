@@ -5,3 +5,4 @@ altair
 lxml
 fastapi
 uvicorn
+beautifulsoup4
