@@ -10,21 +10,34 @@ TRADING_DAYS = 252
 st.set_page_config(layout="wide")
 
 # =========================
-# LOAD DATA
+# ONBOARDING
+# =========================
+if "onboarding" not in st.session_state:
+    st.session_state.onboarding = True
+
+if st.session_state.onboarding:
+    st.info("""
+Welkom in het dashboard.
+
+• Selecteer fondsen links  
+• Kies timeframe  
+• Bekijk trends, risico en simulaties  
+
+Gebruik de ℹ️ knoppen voor uitleg.
+""")
+    if st.button("Start"):
+        st.session_state.onboarding = False
+
+# =========================
+# DATA
 # =========================
 @st.cache_data(ttl=60)
 def load():
     df = pd.read_csv(f"{CSV_URL}?t={int(time.time())}")
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df = df.dropna(subset=["date","price","fund"])
-    return df.sort_values("date")
+    df["date"] = pd.to_datetime(df["date"])
+    return df
 
 df = load()
-
-if df.empty:
-    st.error("Geen data beschikbaar")
-    st.stop()
-
 pivot_full = df.pivot(index="date", columns="fund", values="price")
 
 # =========================
@@ -34,21 +47,43 @@ funds = list(pivot_full.columns)
 
 selected = st.sidebar.multiselect("Fondsen", funds, default=funds[:5])
 
-if not selected:
-    st.warning("Selecteer minimaal 1 fonds")
-    st.stop()
+# RESET ONBOARDING
+st.sidebar.markdown("---")
+if st.sidebar.button("Start onboarding opnieuw"):
+    st.session_state.onboarding = True
+
+# =========================
+# TIMEFRAME
+# =========================
+mode = st.sidebar.radio("Timeframe", ["Preset", "Custom"])
 
 pivot = pivot_full[selected]
 
-st.sidebar.markdown("---")
-tf = st.sidebar.selectbox("Timeframe", ["1W","2W","1M","3M","6M","1Y","ALL"])
-
-days_map = {"1W":7,"2W":14,"1M":30,"3M":90,"6M":180,"1Y":365}
-
-if tf != "ALL":
-    pivot = pivot[pivot.index >= pivot.index.max() - pd.Timedelta(days=days_map[tf])]
+if mode == "Preset":
+    tf = st.sidebar.selectbox("Range", ["1W","2W","1M","3M","6M","1Y","ALL"])
+    days_map = {"1W":7,"2W":14,"1M":30,"3M":90,"6M":180,"1Y":365}
+    if tf != "ALL":
+        pivot = pivot[pivot.index >= pivot.index.max() - pd.Timedelta(days=days_map[tf])]
+else:
+    start = st.sidebar.date_input("Start", pivot.index.min())
+    end = st.sidebar.date_input("End", pivot.index.max())
+    pivot = pivot[(pivot.index >= pd.to_datetime(start)) & (pivot.index <= pd.to_datetime(end))]
 
 returns = pivot.pct_change().dropna()
+
+# =========================
+# TOOLTIP
+# =========================
+def tooltip(title, text):
+    col1, col2 = st.columns([20,1])
+    with col1:
+        st.subheader(title)
+    with col2:
+        if st.button("ℹ️", key=title):
+            st.session_state[title] = True
+
+    if st.session_state.get(title, False):
+        st.info(text)
 
 # =========================
 # TABS
@@ -61,63 +96,74 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # OVERVIEW
 # =========================
 with tab1:
-    st.subheader("Prijsontwikkeling")
+
+    tooltip("Trend", """
+Hier zie je de prijsontwikkeling van fondsen.
+
+• X-as = tijd  
+• Y-as = prijs  
+• Gebruik dit om trends te herkennen  
+""")
 
     fig = go.Figure()
-    for col in pivot.columns:
-        fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
 
-    fig.update_layout(xaxis_title="Datum", yaxis_title="Prijs (€)")
+    for col in pivot.columns:
+        fig.add_trace(go.Scatter(
+            x=pivot.index,
+            y=pivot[col],
+            name=col
+        ))
+
+    fig.update_layout(
+        xaxis_rangeslider_visible=True,  # RULER
+        xaxis_title="Datum",
+        yaxis_title="Prijs"
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# PERFORMANCE (FIX)
+# PERFORMANCE
 # =========================
 with tab2:
-    st.subheader("Momentum")
+    tooltip("Momentum", "Performance over recente periode")
 
     if len(pivot) > 1:
-        shift = min(30, len(pivot)-1)
-        mom = (pivot / pivot.shift(shift) - 1) * 100
+        mom = (pivot / pivot.shift(30) - 1) * 100
         last = mom.iloc[-1].dropna()
 
         if not last.empty:
-            df_plot = last.sort_values(ascending=False).reset_index()
-            df_plot.columns = ["Fund", "Return"]
+            df_plot = last.sort_values(ascending=False)
 
             fig = go.Figure(go.Bar(
-                x=df_plot["Fund"],
-                y=df_plot["Return"]
+                x=df_plot.index,
+                y=df_plot.values
             ))
 
-            fig.update_layout(
-                xaxis_title="Fund",
-                yaxis_title="Return (%)"
-            )
-
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("Geen momentum data")
-    else:
-        st.warning("Te weinig data")
 
 # =========================
 # RISK
 # =========================
 with tab3:
-    st.subheader("Volatility")
-    vol = returns.std() * np.sqrt(TRADING_DAYS)
-    st.dataframe(vol)
+    tooltip("Risk analyse", """
+Risico analyse van fondsen
 
-    st.subheader("Sharpe Ratio")
+• Volatility = schommeling  
+• Sharpe = rendement vs risico  
+""")
+
+    vol = returns.std() * np.sqrt(TRADING_DAYS)
     sharpe = (returns.mean()*TRADING_DAYS)/vol
-    st.dataframe(sharpe)
+
+    st.dataframe(vol.to_frame("Volatility"))
+    st.dataframe(sharpe.to_frame("Sharpe"))
 
 # =========================
-# HEATMAP (FIXED)
+# HEATMAP (FIXED COLORS)
 # =========================
 with tab4:
-    st.subheader("Heatmap")
+    tooltip("Heatmap", "Groen = positief rendement, rood = negatief")
 
     latest = pivot_full.index.max()
 
@@ -134,22 +180,19 @@ with tab4:
         return (pivot_full.loc[latest]/past.iloc[-1]-1)*100
 
     heatmap = pd.DataFrame({k: calc(v) for k,v in periods.items()})
-
-    # SAFE FILTER
-    safe_rows = [f for f in selected if f in heatmap.index]
-
-    if not safe_rows:
-        st.warning("Geen data voor selectie")
-        st.stop()
-
-    heatmap_safe = heatmap.loc[safe_rows]
+    heatmap = heatmap.loc[selected]
 
     fig = go.Figure(data=go.Heatmap(
-        z=heatmap_safe.values,
-        x=heatmap_safe.columns,
-        y=heatmap_safe.index,
-        colorscale="RdYlGn",
-        text=heatmap_safe.round(2).astype(str)+"%",
+        z=heatmap.values,
+        x=heatmap.columns,
+        y=heatmap.index,
+        colorscale=[
+            [0, "red"],
+            [0.5, "white"],
+            [1, "green"]
+        ],
+        zmid=0,
+        text=heatmap.round(2).astype(str)+"%",
         texttemplate="%{text}"
     ))
 
@@ -161,85 +204,35 @@ with tab4:
 with tab5:
     st.subheader("Optimizer")
 
-    w = np.random.random(len(selected))
-    w /= w.sum()
-
-    st.dataframe(pd.DataFrame({
-        "Fund": selected,
-        "Weight": w
-    }))
-
 # =========================
-# REBALANCE (FULL FIX)
+# REBALANCE + MONTE CARLO
 # =========================
 with tab6:
-    st.subheader("Portfolio verdeling (%)")
 
-    capital = st.number_input("Startkapitaal (€)", 100, 1000000, 10000)
+    st.subheader("Portfolio")
 
-    if "alloc" not in st.session_state:
-        st.session_state.alloc = {}
+    capital = st.number_input("Kapitaal", 100, 1000000, 10000)
 
-    # sync
-    st.session_state.alloc = {
-        k: v for k, v in st.session_state.alloc.items() if k in selected
-    }
+    weights = np.ones(len(selected)) / len(selected)
 
-    for fund in selected:
-        if fund not in st.session_state.alloc:
-            st.session_state.alloc[fund] = int(100/len(selected))
+    port = (returns[selected] * weights).sum(axis=1)
 
-    cols = st.columns(len(selected))
+    st.subheader("Simulatie")
 
-    for i, fund in enumerate(selected):
-        with cols[i]:
-            st.markdown(f"**{fund}**")
-            st.session_state.alloc[fund] = st.number_input(
-                "%",
-                0, 100,
-                st.session_state.alloc[fund],
-                key=f"alloc_{fund}"
-            )
-
-    total = sum(st.session_state.alloc.values())
-
-    if total != 100:
-        st.error(f"Totaal = {total}% (moet 100%)")
-        st.stop()
-
-    weights = pd.Series(st.session_state.alloc) / 100
-    weights = weights[weights.index.isin(returns.columns)]
-
-    try:
-        port = (returns[weights.index] * weights).sum(axis=1)
-    except:
-        st.error("Portfolio berekening fout")
-        st.stop()
-
-    st.subheader("Historische simulatie")
     value = capital * (1 + port).cumprod()
     st.line_chart(value)
 
+    # MONTE CARLO FIX
     st.subheader("Monte Carlo")
 
     if len(port) > 20:
-        mu = port.mean()
-        sigma = port.std()
+        sims = np.random.normal(port.mean(), port.std(), (252, 200))
+        sims = capital * np.cumprod(1 + sims, axis=0)
 
-        if sigma > 0:
-            sims = np.random.normal(mu, sigma, (252, 300))
-            sims = capital * np.cumprod(1 + sims, axis=0)
+        mc = pd.DataFrame({
+            "Worst": np.percentile(sims,10,axis=1),
+            "Expected": np.percentile(sims,50,axis=1),
+            "Best": np.percentile(sims,90,axis=1)
+        })
 
-            mc = pd.DataFrame({
-                "Worst": np.percentile(sims,10,axis=1),
-                "Expected": np.percentile(sims,50,axis=1),
-                "Best": np.percentile(sims,90,axis=1)
-            })
-
-            st.line_chart(mc)
-        else:
-            st.warning("Geen variatie")
-    else:
-        st.warning("Te weinig data")
-
-    st.warning("Dit is geen financieel advies")
+        st.line_chart(mc)
