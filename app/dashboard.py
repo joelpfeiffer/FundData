@@ -27,12 +27,6 @@ def section(title, tooltip):
             st.session_state[f"show_{title}"] = False
 
 # =========================
-# ONBOARDING
-# =========================
-if "onboarding" not in st.session_state:
-    st.session_state.onboarding = True
-
-# =========================
 # LOAD DATA
 # =========================
 @st.cache_data(ttl=60)
@@ -80,20 +74,6 @@ else:
     pivot = pivot[(pivot.index >= pd.to_datetime(start)) & (pivot.index <= pd.to_datetime(end))]
 
 returns = pivot.pct_change().dropna()
-
-# onboarding reset
-st.sidebar.markdown("---")
-if st.sidebar.button("Start onboarding opnieuw"):
-    st.session_state.onboarding = True
-
-# =========================
-# ONBOARDING
-# =========================
-if st.session_state.onboarding:
-    st.info("Welkom! Selecteer fondsen en gebruik de tabs.")
-    if st.button("Start"):
-        st.session_state.onboarding = False
-        st.rerun()
 
 # =========================
 # TABS
@@ -211,7 +191,7 @@ with tab5:
     st.dataframe(pd.DataFrame({"Fund": selected, "Weight": w}))
 
 # =========================
-# REBALANCE (NEW UI)
+# REBALANCE (CLEAN UI)
 # =========================
 with tab6:
 
@@ -232,18 +212,13 @@ with tab6:
         if fund not in st.session_state.alloc:
             st.session_state.alloc[fund] = 0
 
-    # UI
-    for fund in selected:
-        col1, col2, col3, col4 = st.columns([3,1,2,1])
+    # GRID LAYOUT
+    cols = st.columns(len(selected))
 
-        with col1:
-            st.write(fund)
+    for i, fund in enumerate(selected):
+        with cols[i]:
+            st.markdown(f"**{fund}**")
 
-        with col2:
-            if st.button("➖", key=f"minus_{fund}"):
-                st.session_state.alloc[fund] = max(0, st.session_state.alloc[fund] - 1)
-
-        with col3:
             st.session_state.alloc[fund] = st.number_input(
                 label="",
                 min_value=0,
@@ -251,10 +226,6 @@ with tab6:
                 value=st.session_state.alloc[fund],
                 key=f"input_{fund}"
             )
-
-        with col4:
-            if st.button("➕", key=f"plus_{fund}"):
-                st.session_state.alloc[fund] = min(100, st.session_state.alloc[fund] + 1)
 
     total = sum(st.session_state.alloc.values())
 
