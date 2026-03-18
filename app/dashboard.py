@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-import plotly.express as px
 import time
 
 CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
@@ -23,7 +22,7 @@ def load():
 df = load()
 
 if df.empty:
-    st.error("Geen data")
+    st.error("Geen data beschikbaar")
     st.stop()
 
 pivot_full = df.pivot(index="date", columns="fund", values="price")
@@ -72,14 +71,13 @@ with tab1:
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# PERFORMANCE (FIXED)
+# PERFORMANCE (FIX)
 # =========================
 with tab2:
     st.subheader("Momentum")
 
-    shift = min(30, len(pivot)-1)
-
-    if shift > 0:
+    if len(pivot) > 1:
+        shift = min(30, len(pivot)-1)
         mom = (pivot / pivot.shift(shift) - 1) * 100
         last = mom.iloc[-1].dropna()
 
@@ -99,7 +97,7 @@ with tab2:
 
             st.plotly_chart(fig, use_container_width=True)
         else:
-            st.warning("Geen data")
+            st.warning("Geen momentum data")
     else:
         st.warning("Te weinig data")
 
@@ -116,7 +114,7 @@ with tab3:
     st.dataframe(sharpe)
 
 # =========================
-# HEATMAP
+# HEATMAP (FIXED)
 # =========================
 with tab4:
     st.subheader("Heatmap")
@@ -137,12 +135,21 @@ with tab4:
 
     heatmap = pd.DataFrame({k: calc(v) for k,v in periods.items()})
 
+    # SAFE FILTER
+    safe_rows = [f for f in selected if f in heatmap.index]
+
+    if not safe_rows:
+        st.warning("Geen data voor selectie")
+        st.stop()
+
+    heatmap_safe = heatmap.loc[safe_rows]
+
     fig = go.Figure(data=go.Heatmap(
-        z=heatmap[selected].values,
-        x=heatmap.columns,
-        y=heatmap.index,
+        z=heatmap_safe.values,
+        x=heatmap_safe.columns,
+        y=heatmap_safe.index,
         colorscale="RdYlGn",
-        text=heatmap[selected].round(2).astype(str)+"%",
+        text=heatmap_safe.round(2).astype(str)+"%",
         texttemplate="%{text}"
     ))
 
@@ -206,11 +213,10 @@ with tab6:
     try:
         port = (returns[weights.index] * weights).sum(axis=1)
     except:
-        st.error("Berekening fout")
+        st.error("Portfolio berekening fout")
         st.stop()
 
     st.subheader("Historische simulatie")
-
     value = capital * (1 + port).cumprod()
     st.line_chart(value)
 
