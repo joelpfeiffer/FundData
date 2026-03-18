@@ -11,15 +11,25 @@ TRADING_DAYS = 252
 st.set_page_config(layout="wide", page_title="Funds Dashboard")
 
 # =========================
-# TOOLTIP (CLICKBAAR)
+# 🔥 TOOLTIP POPUP (FIX)
 # =========================
 def section(title, tooltip):
     col1, col2 = st.columns([20,1])
+
     with col1:
         st.subheader(title)
+
     with col2:
-        with st.expander("ℹ️"):
-            st.markdown(tooltip)
+        if st.button("ℹ️", key=title):
+            st.session_state[f"show_{title}"] = True
+
+    # popup
+    if st.session_state.get(f"show_{title}", False):
+        with st.container():
+            st.info(tooltip)
+            if st.button("Sluiten", key=f"close_{title}"):
+                st.session_state[f"show_{title}"] = False
+
 
 # =========================
 # ONBOARDING STATE
@@ -52,16 +62,11 @@ funds = list(pivot_full.columns)
 
 selected = st.sidebar.multiselect("Fondsen", funds, default=funds[:5])
 
-st.sidebar.markdown("---")
-
-# 🔁 onboarding reset knop
-if st.sidebar.button("🔄 Start onboarding opnieuw"):
-    st.session_state.onboarding = True
-
 if not selected:
     st.warning("Selecteer minimaal 1 fonds")
     st.stop()
 
+st.sidebar.markdown("---")
 st.sidebar.subheader("Timeframe")
 
 mode = st.sidebar.radio("Mode", ["Preset", "Custom"])
@@ -81,26 +86,24 @@ else:
 
 returns = pivot.pct_change().dropna()
 
+# 👉 SIDEBAR ONDERAAN
+st.sidebar.markdown("---")
+st.sidebar.markdown("### ")
+if st.sidebar.button("🔄 Start onboarding opnieuw"):
+    st.session_state.onboarding = True
+
 # =========================
-# ONBOARDING UI
+# ONBOARDING
 # =========================
 if st.session_state.onboarding:
     st.info("""
-    👋 **Welkom bij het Funds Dashboard**
+    👋 Welkom!
 
-    Dit dashboard helpt je om fondsen te analyseren.
+    - Kies fondsen links
+    - Gebruik tabs voor analyse
+    - Bekijk risico en simulaties
 
-    🔹 **Stap 1:** Selecteer fondsen in de sidebar  
-    🔹 **Stap 2:** Kies een timeframe  
-    🔹 **Stap 3:** Gebruik de tabs voor analyse  
-
-    📊 Overzicht → prijs & trends  
-    📈 Performance → rendement  
-    ⚠️ Risk → risico & correlatie  
-    🔥 Heatmap → snelle vergelijking  
-    ⚙️ Rebalance → simulaties  
-
-    Klik hieronder om te starten 👇
+    Klik hieronder om te starten
     """)
 
     if st.button("Start dashboard"):
@@ -118,23 +121,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # OVERVIEW
 # =========================
 with tab1:
-    section(
-        "Prijsontwikkeling (€)",
-        """
-Dit laat de werkelijke prijs van elk fonds zien.
-
-**Hoe lees je dit:**
-- Lijn omhoog = stijgende waarde
-- Lijn omlaag = daling
-
-**Gebruik:**
-- Bekijk stabiliteit
-- Zie lange termijn trend
-
-**Let op:**
-Hogere prijs ≠ beter fonds
-"""
-    )
+    section("Prijsontwikkeling (€)", "Toont prijsontwikkeling van fondsen.")
 
     fig = go.Figure()
     for col in pivot.columns:
@@ -143,19 +130,7 @@ Hogere prijs ≠ beter fonds
     fig.update_layout(xaxis_title="Datum", yaxis_title="Prijs (€)")
     st.plotly_chart(fig, use_container_width=True)
 
-    section(
-        "Trends (genormaliseerd)",
-        """
-Alle fondsen starten op 100.
-
-**Waarom:**
-Zo kun je prestaties eerlijk vergelijken
-
-**Voorbeeld:**
-- 120 = +20%
-- 80 = -20%
-"""
-    )
+    section("Trends (genormaliseerd)", "Vergelijkt prestaties vanaf startpunt 100.")
 
     norm = pivot / pivot.iloc[0] * 100
 
@@ -163,26 +138,14 @@ Zo kun je prestaties eerlijk vergelijken
     for col in norm.columns:
         fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
 
-    fig2.update_layout(xaxis_title="Datum", yaxis_title="Index (100 = start)")
+    fig2.update_layout(xaxis_title="Datum", yaxis_title="Index")
     st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
 # PERFORMANCE
 # =========================
 with tab2:
-    section(
-        "Momentum (%)",
-        """
-Laat recente prestaties zien.
-
-**Gebruik:**
-- Hoog = sterke trend
-- Laag = zwakke trend
-
-**Let op:**
-Momentum kan snel draaien
-"""
-    )
+    section("Momentum (%)", "Toont recente rendementen.")
 
     shift = min(30, len(pivot)-1)
     mom = (pivot/pivot.shift(shift)-1)*100
@@ -195,44 +158,17 @@ Momentum kan snel draaien
 # RISK
 # =========================
 with tab3:
-    section(
-        "Volatility",
-        """
-Meet hoe sterk een fonds beweegt.
-
-**Interpretatie:**
-- Hoog = meer risico
-- Laag = stabiel
-"""
-    )
+    section("Volatility", "Meet risico.")
 
     vol = returns.std() * np.sqrt(TRADING_DAYS)
     st.dataframe(vol.to_frame("Volatility"))
 
-    section(
-        "Sharpe Ratio",
-        """
-Rendement vs risico.
-
-**Interpretatie:**
-- >1 goed
-- >2 sterk
-"""
-    )
+    section("Sharpe Ratio", "Rendement vs risico.")
 
     sharpe = (returns.mean()*TRADING_DAYS) / vol
     st.dataframe(sharpe.to_frame("Sharpe"))
 
-    section(
-        "Correlation",
-        """
-Hoe fondsen samen bewegen.
-
-- 1 = gelijk
-- 0 = onafhankelijk
-- -1 = tegenovergesteld
-"""
-    )
+    section("Correlation", "Samenhang tussen fondsen.")
 
     fig = px.imshow(returns.corr(), text_auto=True)
     st.plotly_chart(fig, use_container_width=True)
@@ -241,16 +177,7 @@ Hoe fondsen samen bewegen.
 # HEATMAP
 # =========================
 with tab4:
-    section(
-        "Return Heatmap (%)",
-        """
-Snel overzicht van rendement.
-
-**Kleuren:**
-- Groen = winst
-- Rood = verlies
-"""
-    )
+    section("Heatmap", "Rendement per periode.")
 
     df_full = pivot_full[selected]
     latest = df_full.index.max()
@@ -273,9 +200,7 @@ Snel overzicht van rendement.
         z=heatmap.values,
         x=heatmap.columns,
         y=heatmap.index,
-        colorscale="RdYlGn",
-        text=heatmap.round(2).astype(str)+"%",
-        texttemplate="%{text}"
+        colorscale="RdYlGn"
     ))
 
     st.plotly_chart(fig, use_container_width=True)
@@ -284,15 +209,7 @@ Snel overzicht van rendement.
 # OPTIMIZER
 # =========================
 with tab5:
-    section(
-        "Optimizer",
-        """
-Voorbeeld verdeling.
-
-**Let op:**
-Dit is geen advies
-"""
-    )
+    section("Optimizer", "Voorbeeld verdeling.")
 
     w = np.random.random(len(selected))
     w /= w.sum()
@@ -303,19 +220,9 @@ Dit is geen advies
 # REBALANCE
 # =========================
 with tab6:
-    section(
-        "Rebalance Simulator",
-        """
-Simuleert portfolio groei.
+    section("Rebalance Simulator", "Simuleert portfolio groei.")
 
-**Gebruik:**
-Test verschillende verdelingen
-"""
-    )
-
-    st.warning(
-        "Deze simulatie is uitsluitend informatief. Geen advies."
-    )
+    st.warning("Geen financieel advies")
 
     capital = st.number_input("Start (€)", 100, 1000000, 10000)
 
@@ -333,10 +240,7 @@ Test verschillende verdelingen
     value = capital*(1+port).cumprod()
     st.line_chart(value)
 
-    section(
-        "Monte Carlo",
-        "Simulatie van mogelijke toekomstscenario’s"
-    )
+    section("Monte Carlo", "Simuleert toekomstscenario’s.")
 
     if len(port) >= 5:
         sims = np.random.normal(port.mean(), port.std(), (252,1000))
