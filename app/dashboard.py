@@ -113,7 +113,7 @@ st.dataframe(
 )
 
 # =========================
-# 🔥 HEATMAP (PRO)
+# 🔥 HEATMAP
 # =========================
 st.subheader("🔥 Rendement Heatmap")
 
@@ -159,31 +159,62 @@ heatmap = pd.DataFrame({
 heatmap = heatmap.loc[heatmap.index.intersection(selected)]
 
 # =========================
-# STYLING (PRO)
+# 🎨 KLEUREN (JOUW LOGICA)
 # =========================
-def color_gradient(val):
+def color_gradient(val, col):
     if pd.isna(val):
         return "background-color: #111; color: #666"
 
-    val = max(min(val, 10), -10)
+    short_cols = ["1D", "3D", "1W", "2W"]
 
-    if val > 0:
-        intensity = int(255 - (val / 10) * 155)
-        return f"background-color: rgb({intensity},255,{intensity}); color: black"
+    # 📉 KORTE TERMIJN (<1M)
+    if col in short_cols:
+        if val < -0.01:
+            return "background-color: #ff0000; color: white"
+        elif val < 0:
+            return "background-color: #f4a261"
+        elif val < 0.25:
+            return "background-color: #ffcc00"
+        elif val < 0.5:
+            return "background-color: #a8d08d"
+        elif val < 0.75:
+            return "background-color: #70ad47"
+        else:
+            return "background-color: #548235; color: white"
+
+    # 📈 LANGE TERMIJN (≥1M)
     else:
-        intensity = int(255 - (abs(val) / 10) * 155)
-        return f"background-color: rgb(255,{intensity},{intensity}); color: black"
+        if val < -0.01:
+            return "background-color: #ff0000; color: white"
+        elif val < 2.5:
+            return "background-color: #f4a261"
+        elif val < 4:
+            return "background-color: #ffcc00"
+        elif val < 10:
+            return "background-color: #a8d08d"
+        elif val < 25:
+            return "background-color: #70ad47"
+        else:
+            return "background-color: #548235; color: white"
 
-styled = (
-    heatmap.style
-    .format(lambda x: f"+{x:.2f}%" if x > 0 else f"{x:.2f}%" if pd.notna(x) else "")
-    .applymap(color_gradient)
-    .set_properties(**{
-        "text-align": "center",
-        "font-weight": "600",
-        "font-size": "13px",
-        "font-family": "monospace"
-    })
+# =========================
+# STYLING
+# =========================
+styled = heatmap.style.format(
+    lambda x: f"+{x:.2f}%" if x > 0 else f"{x:.2f}%" if pd.notna(x) else ""
 )
+
+for col in heatmap.columns:
+    styled = styled.apply(
+        lambda s: [color_gradient(v, col) for v in s],
+        subset=[col]
+    )
+
+styled = styled.set_properties(**{
+    "text-align": "center",
+    "font-weight": "600",
+    "font-size": "13px",
+    "font-family": "monospace"
+})
 
 st.dataframe(styled, use_container_width=True, height=500)
