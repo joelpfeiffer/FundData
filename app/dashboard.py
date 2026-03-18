@@ -34,18 +34,54 @@ selected = st.sidebar.multiselect("Fondsen", funds, default=funds[:5])
 if not selected:
     st.stop()
 
+# 👉 NIEUW: TIMEFRAME
+st.sidebar.markdown("---")
+st.sidebar.subheader("Timeframe")
+
+mode = st.sidebar.radio("Mode", ["Preset", "Custom"])
+
 pivot = pivot_full[selected]
+
+if mode == "Preset":
+    tf = st.sidebar.selectbox(
+        "Range",
+        ["1W","2W","1M","3M","6M","1Y","3Y","ALL"]
+    )
+
+    days_map = {
+        "1W":7,"2W":14,"1M":30,
+        "3M":90,"6M":180,
+        "1Y":365,"3Y":1095
+    }
+
+    if tf != "ALL":
+        end = pivot.index.max()
+        start = end - pd.Timedelta(days=days_map[tf])
+        pivot = pivot[pivot.index >= start]
+
+else:
+    start = st.sidebar.date_input("Start date", pivot.index.min())
+    end = st.sidebar.date_input("End date", pivot.index.max())
+
+    pivot = pivot[
+        (pivot.index >= pd.to_datetime(start)) &
+        (pivot.index <= pd.to_datetime(end))
+    ]
+
+# =========================
+# RETURNS
+# =========================
 returns = pivot.pct_change().dropna()
 
 # =========================
-# TABS
+# TABS (ONGEWIJZIGD)
 # =========================
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Overview","Performance","Risk","Heatmap","Optimizer","Rebalance"
 ])
 
 # =========================
-# OVERVIEW (NIET AANGEPAST)
+# OVERVIEW
 # =========================
 with tab1:
     st.subheader("Prijsontwikkeling")
@@ -69,7 +105,7 @@ with tab1:
     st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
-# PERFORMANCE (NIET AANGEPAST)
+# PERFORMANCE
 # =========================
 with tab2:
     st.subheader("Momentum")
@@ -83,7 +119,7 @@ with tab2:
         st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# RISK (FIX + SHARPE)
+# RISK
 # =========================
 with tab3:
     st.subheader("Volatility")
@@ -91,7 +127,6 @@ with tab3:
     vol = returns.std() * np.sqrt(TRADING_DAYS)
     st.dataframe(vol.to_frame("Volatility"))
 
-    # ✅ SHARPE RATIO
     st.subheader("Sharpe Ratio")
 
     mean_return = returns.mean() * TRADING_DAYS
@@ -99,7 +134,6 @@ with tab3:
 
     st.dataframe(sharpe.to_frame("Sharpe"))
 
-    # Correlation
     st.subheader("Correlation Matrix")
 
     corr = returns.corr()
@@ -115,7 +149,7 @@ with tab3:
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# HEATMAP (2Y + 5Y TOEGEVOEGD)
+# HEATMAP
 # =========================
 with tab4:
     st.subheader("Heatmap")
@@ -152,7 +186,7 @@ with tab4:
         st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# OPTIMIZER (NIET AANGEPAST)
+# OPTIMIZER
 # =========================
 with tab5:
     st.subheader("Optimizer")
@@ -166,7 +200,7 @@ with tab5:
     }))
 
 # =========================
-# REBALANCE (FIX MONTE CARLO)
+# REBALANCE
 # =========================
 with tab6:
     st.subheader("Rebalance Simulator")
@@ -188,42 +222,5 @@ with tab6:
     value = capital*(1+port).cumprod()
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=value.index,y=value,name="Portfolio"))
+    fig.add_trace(go.Scatter(x=value.index,y=value))
     st.plotly_chart(fig, use_container_width=True)
-
-    # =========================
-    # MONTE CARLO (FIXED)
-    # =========================
-    st.subheader("Monte Carlo Simulation")
-
-    if len(port) > 10:
-        mean = port.mean()
-        std = port.std()
-
-        horizon = 252
-        simulations = 1000
-
-        sims = np.random.normal(mean, std, (horizon, simulations))
-        sims = capital * np.cumprod(1 + sims, axis=0)
-
-        # Alleen band + gemiddelde
-        p10 = np.percentile(sims, 10, axis=1)
-        p50 = np.percentile(sims, 50, axis=1)
-        p90 = np.percentile(sims, 90, axis=1)
-
-        fig = go.Figure()
-
-        fig.add_trace(go.Scatter(y=p90, line=dict(width=0), showlegend=False))
-        fig.add_trace(go.Scatter(
-            y=p10,
-            fill='tonexty',
-            name="Band (10-90%)",
-            opacity=0.3
-        ))
-
-        fig.add_trace(go.Scatter(
-            y=p50,
-            name="Expected"
-        ))
-
-        st.plotly_chart(fig, use_container_width=True)
