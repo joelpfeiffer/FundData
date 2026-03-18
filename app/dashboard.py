@@ -11,17 +11,13 @@ TRADING_DAYS = 252
 st.set_page_config(layout="wide", page_title="Funds Dashboard")
 
 # =========================
-# TOOLTIP HELPER
+# TOOLTIP FIX (BELANGRIJK)
 # =========================
 def section(title, tooltip):
-    col1, col2 = st.columns([10,1])
-    with col1:
-        st.subheader(title)
-    with col2:
-        st.markdown(f"<span title='{tooltip}'>ℹ️</span>", unsafe_allow_html=True)
+    st.subheader(title, help=tooltip)
 
 # =========================
-# LOAD
+# LOAD DATA
 # =========================
 @st.cache_data(ttl=60)
 def load():
@@ -32,9 +28,17 @@ def load():
 
 df = load()
 
+if df.empty:
+    st.error("Geen data beschikbaar")
+    st.stop()
+
 pivot_full = df.pivot(index="date", columns="fund", values="price")
 
+# =========================
+# SIDEBAR
+# =========================
 funds = list(pivot_full.columns)
+
 selected = st.sidebar.multiselect("Fondsen", funds, default=funds[:5])
 
 if not selected:
@@ -61,6 +65,9 @@ else:
 
 returns = pivot.pct_change().dropna()
 
+# =========================
+# TABS
+# =========================
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Overview","Performance","Risk","Heatmap","Optimizer","Rebalance"
 ])
@@ -71,12 +78,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 with tab1:
     section(
         "Prijsontwikkeling (€)",
-        "Deze grafiek toont de absolute prijs van elk geselecteerd fonds over tijd.\n\n"
-        "Gebruik:\n"
-        "- Vergelijk prijsniveau en stabiliteit\n"
-        "- Kijk naar trends (stijgend/dalend)\n\n"
-        "Let op:\n"
-        "Fondsen met hogere prijzen zijn niet per se beter — kijk naar groei, niet alleen niveau."
+        "Absolute prijs per fonds over tijd"
     )
 
     fig = go.Figure()
@@ -88,13 +90,7 @@ with tab1:
 
     section(
         "Trends (genormaliseerd)",
-        "Alle fondsen starten op 100 zodat prestaties eerlijk vergeleken kunnen worden.\n\n"
-        "Gebruik:\n"
-        "- Zie welk fonds beter presteert\n"
-        "- Directe vergelijking mogelijk\n\n"
-        "Interpretatie:\n"
-        "120 = +20% rendement\n"
-        "90 = -10% verlies"
+        "Alle fondsen starten op 100 zodat prestaties vergelijkbaar zijn"
     )
 
     norm = pivot / pivot.iloc[0] * 100
@@ -103,7 +99,7 @@ with tab1:
     for col in norm.columns:
         fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
 
-    fig2.update_layout(xaxis_title="Date", yaxis_title="Index (100 = start)", hovermode="x unified")
+    fig2.update_layout(xaxis_title="Date", yaxis_title="Index (100 = start)")
     st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
@@ -112,15 +108,7 @@ with tab1:
 with tab2:
     section(
         "Momentum (%)",
-        "Momentum meet het recente rendement over een vaste periode.\n\n"
-        "Gebruik:\n"
-        "- Identificeer stijgende (sterke) fondsen\n"
-        "- Spot dalende trends\n\n"
-        "Interpretatie:\n"
-        "Positief = stijgende trend\n"
-        "Negatief = dalende trend\n\n"
-        "Let op:\n"
-        "Momentum kan snel veranderen en is geen garantie voor toekomst."
+        "Rendement over recente periode"
     )
 
     shift = min(30, len(pivot)-1)
@@ -138,12 +126,7 @@ with tab2:
 with tab3:
     section(
         "Volatility",
-        "Volatility meet hoe sterk een fonds schommelt.\n\n"
-        "Gebruik:\n"
-        "- Hoog = meer risico\n"
-        "- Laag = stabieler\n\n"
-        "Let op:\n"
-        "Hoge volatiliteit betekent grotere ups én downs."
+        "Mate van schommelingen (risico)"
     )
 
     vol = returns.std() * np.sqrt(TRADING_DAYS)
@@ -151,13 +134,7 @@ with tab3:
 
     section(
         "Sharpe Ratio",
-        "Sharpe ratio meet rendement per risico.\n\n"
-        "Gebruik:\n"
-        "- Hoger = efficiënter rendement\n\n"
-        "Interpretatie:\n"
-        ">1 = goed\n"
-        ">2 = sterk\n"
-        "<1 = zwakker risico/rendement"
+        "Rendement per eenheid risico"
     )
 
     sharpe = (returns.mean()*TRADING_DAYS) / vol
@@ -165,13 +142,7 @@ with tab3:
 
     section(
         "Correlation Matrix",
-        "Toont hoe fondsen samen bewegen.\n\n"
-        "Interpretatie:\n"
-        "1 = bewegen gelijk\n"
-        "0 = onafhankelijk\n"
-        "-1 = tegenovergesteld\n\n"
-        "Gebruik:\n"
-        "Lage correlatie = betere spreiding"
+        "Samenhang tussen fondsen"
     )
 
     fig = px.imshow(returns.corr(), text_auto=True, color_continuous_scale="RdBu", zmin=-1, zmax=1)
@@ -183,14 +154,7 @@ with tab3:
 with tab4:
     section(
         "Return Heatmap (%)",
-        "Rendement per fonds over verschillende periodes.\n\n"
-        "Gebruik:\n"
-        "- Snel overzicht van prestaties\n"
-        "- Spot korte vs lange termijn trends\n\n"
-        "Kleuren:\n"
-        "Groen = positief\n"
-        "Rood = negatief\n\n"
-        "Waarde in cel = percentage rendement"
+        "Rendement per periode per fonds"
     )
 
     df_full = pivot_full[selected]
@@ -229,11 +193,7 @@ with tab4:
 with tab5:
     section(
         "Portfolio Optimizer",
-        "Toont een voorbeeldverdeling van fondsen.\n\n"
-        "Let op:\n"
-        "Dit is een random verdeling en geen advies.\n\n"
-        "Gebruik:\n"
-        "In echte scenario’s gebruik je optimalisatie op basis van risico/rendement."
+        "Voorbeeld verdeling (random)"
     )
 
     w = np.random.random(len(selected))
@@ -250,12 +210,7 @@ with tab5:
 with tab6:
     section(
         "Rebalance Simulator",
-        "Simuleert hoe je portfolio groeit op basis van gekozen verdeling.\n\n"
-        "Gebruik:\n"
-        "- Test verschillende verdelingen\n"
-        "- Zie impact op groei\n\n"
-        "Let op:\n"
-        "Gebaseerd op historische data"
+        "Simuleert portfolio groei op basis van verdeling"
     )
 
     st.warning(
@@ -278,7 +233,7 @@ with tab6:
 
     section(
         "Historische portfolio waarde",
-        "Laat zien hoe je portfolio zich zou hebben ontwikkeld in het verleden."
+        "Werkelijke historische ontwikkeling"
     )
 
     value = capital*(1+port).cumprod()
@@ -290,13 +245,7 @@ with tab6:
 
     section(
         "Monte Carlo Simulation",
-        "Simuleert mogelijke toekomstige scenario’s.\n\n"
-        "Lijnen:\n"
-        "- Worst case = slecht scenario\n"
-        "- Expected = meest waarschijnlijk\n"
-        "- Best case = gunstig scenario\n\n"
-        "Gebruik:\n"
-        "Helpt risico en onzekerheid te begrijpen"
+        "Simulatie van mogelijke toekomstscenario’s"
     )
 
     if len(port) >= 5:
