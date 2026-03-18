@@ -24,6 +24,10 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 
+CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
+
+df = pd.read_csv(CSV_URL)
+
 from app.analytics import normalize, performance, volatility, sharpe_ratio
 
 # =========================
