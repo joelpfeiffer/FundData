@@ -74,7 +74,12 @@ with tab1:
     for col in pivot.columns:
         fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
 
-    fig.update_layout(xaxis_title="Datum", yaxis_title="Prijs (€)")
+    fig.update_layout(
+        xaxis_title="Datum",
+        yaxis_title="Prijs (€)",
+        xaxis_rangeslider_visible=True
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 
     st.subheader("Genormaliseerde groei (%)")
@@ -85,6 +90,12 @@ with tab1:
         fig2 = go.Figure()
         for col in norm.columns:
             fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
+
+        fig2.update_layout(
+            xaxis_title="Datum",
+            yaxis_title="Index (start = 100)",
+            xaxis_rangeslider_visible=True
+        )
 
         st.plotly_chart(fig2, use_container_width=True)
 
@@ -212,12 +223,10 @@ with tab6:
     if "alloc" not in st.session_state:
         st.session_state.alloc = {}
 
-    # sync remove
     st.session_state.alloc = {
         k: v for k, v in st.session_state.alloc.items() if k in selected
     }
 
-    # add missing
     for f in selected:
         if f not in st.session_state.alloc:
             st.session_state.alloc[f] = int(100/len(selected))
