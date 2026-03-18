@@ -12,7 +12,7 @@ CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/pri
 st.set_page_config(layout="wide", page_title="Funds Terminal")
 
 # =========================
-# TOOLTIP HELPER
+# TOOLTIP
 # =========================
 def title_with_tooltip(title, tooltip):
     col1, col2 = st.columns([10,1])
@@ -24,28 +24,9 @@ def title_with_tooltip(title, tooltip):
 # =========================
 # CHART STYLE (RULER)
 # =========================
-def apply_chart_style(fig):
-    fig.update_layout(
-        hovermode="x unified",
-        spikedistance=1000,
-        hoverlabel=dict(bgcolor="black")
-    )
-
-    fig.update_xaxes(
-        showspikes=True,
-        spikecolor="gray",
-        spikesnap="cursor",
-        spikemode="across",
-        spikethickness=1
-    )
-
-    fig.update_yaxes(
-        showspikes=True,
-        spikecolor="gray",
-        spikemode="across",
-        spikethickness=1
-    )
-
+def style(fig):
+    fig.update_layout(hovermode="x unified")
+    fig.update_xaxes(showspikes=True)
     return fig
 
 # =========================
@@ -58,10 +39,6 @@ def load():
     return df.sort_values("date")
 
 df = load()
-
-if df.empty:
-    st.warning("No data available")
-    st.stop()
 
 pivot_full = df.pivot(index="date", columns="fund", values="price")
 all_funds = list(pivot_full.columns)
@@ -81,52 +58,7 @@ if not selected:
     st.warning("Select at least one fund")
     st.stop()
 
-# =========================
-# TIMEFRAME SELECTOR
-# =========================
-st.sidebar.header("Timeframe")
-
-mode = st.sidebar.radio("Mode", ["Preset", "Custom"])
-
-if mode == "Preset":
-    timeframe = st.sidebar.selectbox(
-        "Range",
-        ["1W", "2W", "1M", "3M", "6M", "1Y", "3Y", "ALL"]
-    )
-
-    days_map = {
-        "1W":7, "2W":14, "1M":30,
-        "3M":90, "6M":180,
-        "1Y":365, "3Y":1095
-    }
-
-    pivot = pivot_full[selected]
-
-    if timeframe != "ALL":
-        end_date = pivot.index.max()
-        start_date = end_date - pd.Timedelta(days=days_map[timeframe])
-        pivot = pivot[pivot.index >= start_date]
-
-else:
-    min_date = pivot_full.index.min()
-    max_date = pivot_full.index.max()
-
-    start_date = st.sidebar.date_input("Start", min_date)
-    end_date = st.sidebar.date_input("End", max_date)
-
-    pivot = pivot_full[selected]
-    pivot = pivot[
-        (pivot.index >= pd.to_datetime(start_date)) &
-        (pivot.index <= pd.to_datetime(end_date))
-    ]
-
-# =========================
-# SAFETY
-# =========================
-if len(pivot) < 2:
-    st.warning("Not enough data for selected timeframe")
-    st.stop()
-
+pivot = pivot_full[selected]
 returns = pivot.pct_change().dropna()
 
 # =========================
@@ -135,7 +67,6 @@ returns = pivot.pct_change().dropna()
 perf = (pivot / pivot.iloc[0] - 1).iloc[-1] * 100
 
 col1, col2, col3 = st.columns(3)
-
 col1.metric("Best fund", perf.idxmax(), f"{perf.max():.2f}%")
 col2.metric("Worst fund", perf.idxmin(), f"{perf.min():.2f}%")
 col3.metric("Average return", "", f"{perf.mean():.2f}%")
@@ -143,47 +74,27 @@ col3.metric("Average return", "", f"{perf.mean():.2f}%")
 # =========================
 # TABS
 # =========================
-tab1, tab2, tab3, tab4 = st.tabs([
-    "Overview", "Performance", "Risk", "Heatmap"
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "Overview", "Performance", "Risk", "Heatmap", "Optimizer"
 ])
 
 # =========================
-# OVERVIEW (WITH RULER)
+# OVERVIEW
 # =========================
 with tab1:
-
-    title_with_tooltip("Fund prices", "Absolute prijs van fondsen")
     fig = go.Figure()
     for col in pivot.columns:
         fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
-    st.plotly_chart(apply_chart_style(fig), use_container_width=True)
-
-    title_with_tooltip("Normalized performance", "Relatieve groei")
-    norm = pivot / pivot.iloc[0]
-    fig = go.Figure()
-    for col in norm.columns:
-        fig.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
-    st.plotly_chart(apply_chart_style(fig), use_container_width=True)
-
-    title_with_tooltip("Drawdown", "Daling vanaf piek")
-    dd = norm / norm.cummax() - 1
-    fig = go.Figure()
-    for col in dd.columns:
-        fig.add_trace(go.Scatter(x=dd.index, y=dd[col], name=col))
-    st.plotly_chart(apply_chart_style(fig), use_container_width=True)
+    st.plotly_chart(style(fig), use_container_width=True)
 
 # =========================
 # PERFORMANCE
 # =========================
 with tab2:
-    title_with_tooltip("Momentum (30d)", "Laatste 30 dagen rendement")
-
     mom = (pivot / pivot.shift(30) - 1) * 100
     mom_last = mom.iloc[-1].dropna()
 
-    if len(mom_last) == 0:
-        st.info("Not enough data")
-    else:
+    if len(mom_last) > 0:
         fig = go.Figure()
         fig.add_trace(go.Bar(x=mom_last.index, y=mom_last.values))
         st.plotly_chart(fig, use_container_width=True)
@@ -192,71 +103,90 @@ with tab2:
 # RISK
 # =========================
 with tab3:
-    title_with_tooltip("Volatility", "Risico")
     vol = returns.std() * np.sqrt(252)
-    st.dataframe(vol.sort_values(ascending=False).to_frame("volatility"))
+    st.dataframe(vol.to_frame("volatility"))
 
-    title_with_tooltip("Sharpe ratio", "Rendement per risico")
     sharpe = returns.mean() / returns.std()
-    st.dataframe(sharpe.sort_values(ascending=False).to_frame("sharpe"))
+    st.dataframe(sharpe.to_frame("sharpe"))
 
 # =========================
-# HEATMAP (CONTRAST FIX)
+# HEATMAP
 # =========================
 with tab4:
-    title_with_tooltip("Return heatmap", "Groen = positief")
+    corr = returns.corr()
+    st.dataframe(corr)
 
-    latest_date = df["date"].max()
+# =========================
+# 🚀 OPTIMIZER
+# =========================
+with tab5:
 
-    def calc_return(days):
-        res = {}
-        for fund in df["fund"].unique():
-            f = df[df["fund"] == fund]
-            current = f.iloc[-1]["price"]
-            past = f[f["date"] <= latest_date - pd.Timedelta(days=days)]
+    st.subheader("Portfolio Optimizer (Max Sharpe)")
 
-            if past.empty:
-                res[fund] = np.nan
-            else:
-                res[fund] = (current / past.iloc[-1]["price"] - 1) * 100
-        return pd.Series(res)
+    mean_returns = returns.mean()
+    cov_matrix = returns.cov()
 
-    periods = {
-        "1D":1,"3D":3,"1W":7,"2W":14,
-        "1M":30,"3M":90,"6M":180,
-        "1Y":365,"3Y":1095,"5Y":1825
-    }
+    num_assets = len(mean_returns)
 
-    heatmap = pd.DataFrame({k: calc_return(v) for k,v in periods.items()})
-    heatmap = heatmap.loc[selected]
+    def portfolio_performance(weights):
+        returns_port = np.sum(mean_returns * weights) * 252
+        volatility = np.sqrt(np.dot(weights.T, np.dot(cov_matrix * 252, weights)))
+        sharpe = returns_port / volatility
+        return returns_port, volatility, sharpe
 
-    z = heatmap.values
-    x = heatmap.columns
-    y = heatmap.index
+    # =========================
+    # SIMULATIE
+    # =========================
+    num_portfolios = 5000
 
-    fig = go.Figure(data=go.Heatmap(
-        z=z,
-        x=x,
-        y=y,
-        colorscale=[
-            [0, "#ff4d4d"],
-            [0.5, "#ffd966"],
-            [1, "#70ad47"]
-        ],
-        colorbar=dict(title="Return %")
-    ))
+    results = []
+    weights_record = []
 
-    for i in range(len(y)):
-        for j in range(len(x)):
-            val = z[i][j]
-            if pd.notna(val):
-                color = "white" if val < 0 or val > 5 else "black"
-                fig.add_annotation(
-                    x=x[j],
-                    y=y[i],
-                    text=f"{val:.2f}%",
-                    showarrow=False,
-                    font=dict(color=color)
-                )
+    for _ in range(num_portfolios):
+        weights = np.random.random(num_assets)
+        weights /= np.sum(weights)
 
-    st.plotly_chart(fig, use_container_width=True)
+        ret, vol, sharpe = portfolio_performance(weights)
+
+        results.append([ret, vol, sharpe])
+        weights_record.append(weights)
+
+    results = np.array(results)
+
+    # =========================
+    # BESTE PORTFOLIO
+    # =========================
+    best_idx = np.argmax(results[:,2])
+    best_weights = weights_record[best_idx]
+
+    best_df = pd.DataFrame({
+        "Fund": mean_returns.index,
+        "Weight": best_weights
+    }).sort_values("Weight", ascending=False)
+
+    st.subheader("Optimal Weights")
+    st.dataframe(best_df)
+
+    # =========================
+    # PERFORMANCE CHART
+    # =========================
+    portfolio_returns = returns.copy()
+
+    for i, fund in enumerate(mean_returns.index):
+        portfolio_returns[fund] *= best_weights[i]
+
+    portfolio = portfolio_returns.sum(axis=1)
+    cumulative = (1 + portfolio).cumprod()
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=cumulative.index, y=cumulative, name="Optimized Portfolio"))
+    st.plotly_chart(style(fig), use_container_width=True)
+
+    # =========================
+    # DRAWDOWN
+    # =========================
+    drawdown = cumulative / cumulative.cummax() - 1
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=drawdown.index, y=drawdown, name="Drawdown"))
+    st.plotly_chart(style(fig), use_container_width=True)
