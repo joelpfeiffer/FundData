@@ -1,5 +1,7 @@
+import sys
 import os
-os.makedirs("data", exist_ok=True)
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pipeline.database import init_db
 init_db()
