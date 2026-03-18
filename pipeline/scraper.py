@@ -14,7 +14,7 @@ import requests
 import pandas as pd
 from io import StringIO
 
-from app.config import URL
+URL = "https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/"
 
 # =========================
 # FETCH DATA
