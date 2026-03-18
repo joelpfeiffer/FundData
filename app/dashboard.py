@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+import time
 
 # =========================
 # CONFIG
@@ -10,13 +12,17 @@ st.set_page_config(layout="wide")
 st.title("📈 Funds Intelligence Dashboard")
 
 # =========================
+# REFRESH BUTTON
+# =========================
+if st.button("🔄 Refresh data"):
+    st.cache_data.clear()
+
+# =========================
 # DATA LADEN
 # =========================
-import time
-
 @st.cache_data(ttl=60)
 def load_data():
-    url = f"{CSV_URL}?t={int(time.time())}"  # force refresh
+    url = f"{CSV_URL}?t={int(time.time())}"
     df = pd.read_csv(url)
     df["date"] = pd.to_datetime(df["date"])
     df = df.sort_values("date")
@@ -42,7 +48,7 @@ selected = st.multiselect(
 pivot = pivot[selected]
 
 # =========================
-# NORMALISATIE (% groei)
+# GROEI (%)
 # =========================
 norm = pivot / pivot.iloc[0]
 pct = (norm - 1) * 100
@@ -57,6 +63,7 @@ st.line_chart(pct)
 # ACTUELE WAARDES
 # =========================
 latest = df.sort_values("date").groupby("fund").last().reset_index()
+latest = latest[latest["fund"].isin(selected)]
 
 st.subheader("📊 Actuele waardes")
 st.dataframe(latest, use_container_width=True)
@@ -70,13 +77,11 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("🏆 Beste fondsen")
-    top = perf.head(10).to_frame(name="performance")
-    st.bar_chart(top)
+    st.bar_chart(perf.head(10).to_frame(name="performance"))
 
 with col2:
     st.subheader("📉 Slechtste fondsen")
-    worst = perf.tail(10).to_frame(name="performance")
-    st.bar_chart(worst)
+    st.bar_chart(perf.tail(10).to_frame(name="performance"))
 
 # =========================
 # METRICS
@@ -105,19 +110,15 @@ st.subheader("📋 Overzicht")
 st.dataframe(
     summary.sort_values("groei_%", ascending=False),
     use_container_width=True
+)
 
-    import numpy as np
-
-st.subheader("🔥 Rendement per periode")
-
-# Zorg voor juiste sortering
-df = df.sort_values("date")
+# =========================
+# 🔥 HEATMAP (PRO)
+# =========================
+st.subheader("🔥 Rendement Heatmap")
 
 latest_date = df["date"].max()
 
-# =========================
-# RETURN FUNCTIE (ROBUST)
-# =========================
 def calc_return(days):
     past_date = latest_date - pd.Timedelta(days=days)
 
@@ -144,9 +145,6 @@ def calc_return(days):
 
     return merged["return"]
 
-# =========================
-# PERIODES
-# =========================
 periods = {
     "1D": 1,
     "3D": 3,
@@ -160,25 +158,17 @@ periods = {
     "5Y": 365*5
 }
 
-# =========================
-# DATAFRAME
-# =========================
 heatmap = pd.DataFrame({
     name: calc_return(days)
     for name, days in periods.items()
 })
 
-# alleen geselecteerde fondsen
 heatmap = heatmap.loc[heatmap.index.intersection(selected)]
 
-# =========================
-# STYLING (PRO COLOR SCALE)
-# =========================
 def color_gradient(val):
     if pd.isna(val):
         return ""
 
-    # clamp values
     val = max(min(val, 10), -10)
 
     if val > 0:
@@ -189,8 +179,7 @@ def color_gradient(val):
         return f"background-color: rgb(255,{intensity},{intensity})"
 
 styled = (
-    heatmap
-    .style
+    heatmap.style
     .format("{:.2f}%")
     .applymap(color_gradient)
     .set_properties(**{
@@ -199,12 +188,4 @@ styled = (
     })
 )
 
-# =========================
-# DISPLAY
-# =========================
-st.dataframe(
-    styled,
-    use_container_width=True,
-    height=500
-)
-)
+st.dataframe(styled, use_container_width=True, height=500)
