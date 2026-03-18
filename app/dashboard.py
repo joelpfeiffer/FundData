@@ -10,7 +10,7 @@ st.set_page_config(layout="wide")
 st.title("📈 Funds Intelligence Dashboard")
 
 # =========================
-# DATA LADEN (met caching)
+# DATA LADEN
 # =========================
 @st.cache_data(ttl=3600)
 def load_data():
@@ -29,7 +29,6 @@ if df.empty:
 # =========================
 pivot = df.pivot(index="date", columns="fund", values="price")
 
-# selectie
 selected = st.multiselect(
     "Selecteer fondsen",
     pivot.columns,
@@ -59,7 +58,7 @@ st.subheader("📊 Actuele waardes")
 st.dataframe(latest, use_container_width=True)
 
 # =========================
-# PERFORMANCE ANALYSE
+# PERFORMANCE
 # =========================
 perf = pct.iloc[-1].sort_values(ascending=False)
 
@@ -67,11 +66,13 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("🏆 Beste fondsen")
-    st.bar_chart(perf.head(10))
+    top = perf.head(10).to_frame(name="performance")
+    st.bar_chart(top)
 
 with col2:
     st.subheader("📉 Slechtste fondsen")
-    st.bar_chart(perf.tail(10))
+    worst = perf.tail(10).to_frame(name="performance")
+    st.bar_chart(worst)
 
 # =========================
 # METRICS
@@ -91,13 +92,13 @@ with col2:
     st.metric("📉 Slechtste fonds", worst_fund, f"{worst_value:.2f}%")
 
 # =========================
-# EXTRA: SAMENVATTING TABEL
+# OVERZICHT
 # =========================
-summary = latest.copy()
-summary = summary.set_index("fund")
-
-# voeg groei toe
+summary = latest.copy().set_index("fund")
 summary["groei_%"] = perf
 
 st.subheader("📋 Overzicht")
-st.dataframe(summary.sort_values("groei_%", ascending=False), use_container_width=True)
+st.dataframe(
+    summary.sort_values("groei_%", ascending=False),
+    use_container_width=True
+)
