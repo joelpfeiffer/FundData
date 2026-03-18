@@ -40,7 +40,7 @@ pivot_full = df.pivot(index="date", columns="fund", values="price")
 all_funds = list(pivot_full.columns)
 
 # =========================
-# SIDEBAR
+# SIDEBAR - FUND SELECTIE
 # =========================
 st.sidebar.header("Filters")
 
@@ -50,32 +50,64 @@ selected = st.sidebar.multiselect(
     default=all_funds[:5]
 )
 
-timeframe = st.sidebar.selectbox(
-    "Timeframe",
-    ["1M", "3M", "6M", "1Y", "3Y", "ALL"]
-)
-
 if not selected:
     st.warning("Select at least one fund")
     st.stop()
 
-pivot = pivot_full[selected]
-
 # =========================
-# TIMEFRAME FILTER
+# SIDEBAR - TIMEFRAME
 # =========================
-end_date = pivot.index.max()
+st.sidebar.header("Timeframe")
 
-if timeframe != "ALL":
+mode = st.sidebar.radio(
+    "Mode",
+    ["Preset", "Custom"]
+)
+
+if mode == "Preset":
+
+    timeframe = st.sidebar.selectbox(
+        "Range",
+        ["1W", "2W", "1M", "3M", "6M", "1Y", "3Y", "ALL"]
+    )
+
     days_map = {
+        "1W":7,
+        "2W":14,
         "1M":30,
         "3M":90,
         "6M":180,
         "1Y":365,
         "3Y":1095
     }
-    start_date = end_date - pd.Timedelta(days=days_map[timeframe])
-    pivot = pivot[pivot.index >= start_date]
+
+    end_date = pivot_full.index.max()
+
+    pivot = pivot_full[selected]
+
+    if timeframe != "ALL":
+        start_date = end_date - pd.Timedelta(days=days_map[timeframe])
+        pivot = pivot[pivot.index >= start_date]
+
+else:
+    min_date = pivot_full.index.min()
+    max_date = pivot_full.index.max()
+
+    start_date = st.sidebar.date_input("Start", min_date)
+    end_date = st.sidebar.date_input("End", max_date)
+
+    pivot = pivot_full[selected]
+    pivot = pivot[
+        (pivot.index >= pd.to_datetime(start_date)) &
+        (pivot.index <= pd.to_datetime(end_date))
+    ]
+
+# =========================
+# SAFETY CHECK
+# =========================
+if len(pivot) < 2:
+    st.warning("Not enough data for selected timeframe")
+    st.stop()
 
 returns = pivot.pct_change().dropna()
 
@@ -98,46 +130,35 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 # =========================
-# OVERVIEW (INTERACTIVE)
+# OVERVIEW
 # =========================
 with tab1:
 
     title_with_tooltip("Fund prices", "Absolute prijs van fondsen")
-
-    fig_price = go.Figure()
+    fig = go.Figure()
     for col in pivot.columns:
-        fig_price.add_trace(go.Scatter(
-            x=pivot.index, y=pivot[col], mode='lines', name=col
-        ))
-    st.plotly_chart(fig_price, use_container_width=True)
+        fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
+    st.plotly_chart(fig, use_container_width=True)
 
     title_with_tooltip("Normalized performance", "Relatieve groei")
-
     norm = pivot / pivot.iloc[0]
-
-    fig_norm = go.Figure()
+    fig = go.Figure()
     for col in norm.columns:
-        fig_norm.add_trace(go.Scatter(
-            x=norm.index, y=norm[col], mode='lines', name=col
-        ))
-    st.plotly_chart(fig_norm, use_container_width=True)
+        fig.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
+    st.plotly_chart(fig, use_container_width=True)
 
     title_with_tooltip("Drawdown", "Daling vanaf piek")
-
     dd = norm / norm.cummax() - 1
-
-    fig_dd = go.Figure()
+    fig = go.Figure()
     for col in dd.columns:
-        fig_dd.add_trace(go.Scatter(
-            x=dd.index, y=dd[col], mode='lines', name=col
-        ))
-    st.plotly_chart(fig_dd, use_container_width=True)
+        fig.add_trace(go.Scatter(x=dd.index, y=dd[col], name=col))
+    st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # PERFORMANCE
 # =========================
 with tab2:
-    title_with_tooltip("Momentum (30 dagen)", "Laatste 30 dagen rendement")
+    title_with_tooltip("Momentum (30d)", "Laatste 30 dagen rendement")
 
     mom = (pivot / pivot.shift(30) - 1) * 100
     mom_last = mom.iloc[-1].dropna()
@@ -146,19 +167,14 @@ with tab2:
         st.info("Not enough data")
     else:
         fig = go.Figure()
-        fig.add_trace(go.Bar(
-            x=mom_last.index,
-            y=mom_last.values,
-            marker_color="#4CAF50"
-        ))
-        fig.update_layout(yaxis_title="% return")
+        fig.add_trace(go.Bar(x=mom_last.index, y=mom_last.values))
         st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # RISK
 # =========================
 with tab3:
-    title_with_tooltip("Volatility", "Risico (schommelingen)")
+    title_with_tooltip("Volatility", "Risico")
     vol = returns.std() * np.sqrt(252)
     st.dataframe(vol.sort_values(ascending=False).to_frame("volatility"))
 
@@ -167,10 +183,10 @@ with tab3:
     st.dataframe(sharpe.sort_values(ascending=False).to_frame("sharpe"))
 
 # =========================
-# HEATMAP (PERFECT CONTRAST)
+# HEATMAP
 # =========================
 with tab4:
-    title_with_tooltip("Return heatmap", "Groen = positief, rood = negatief")
+    title_with_tooltip("Return heatmap", "Groen = positief")
 
     latest_date = df["date"].max()
 
@@ -212,24 +228,17 @@ with tab4:
         colorbar=dict(title="Return %")
     ))
 
-    # TEXT + CONTRAST
     for i in range(len(y)):
         for j in range(len(x)):
             val = z[i][j]
-
-            if pd.isna(val):
-                text = ""
-                color = "gray"
-            else:
-                text = f"{val:.2f}%"
+            if pd.notna(val):
                 color = "white" if val < 0 or val > 5 else "black"
-
-            fig.add_annotation(
-                x=x[j],
-                y=y[i],
-                text=text,
-                showarrow=False,
-                font=dict(color=color, size=12)
-            )
+                fig.add_annotation(
+                    x=x[j],
+                    y=y[i],
+                    text=f"{val:.2f}%",
+                    showarrow=False,
+                    font=dict(color=color)
+                )
 
     st.plotly_chart(fig, use_container_width=True)
