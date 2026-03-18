@@ -102,107 +102,75 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # =========================
 with tab1:
 
-    # PRICE CHART
-    title_with_tooltip(
-        "Fund prices",
-        "Absolute prijs van fondsen (echte waarde)"
-    )
+    title_with_tooltip("Fund prices", "Absolute prijs van fondsen")
 
     fig_price = go.Figure()
-
     for col in pivot.columns:
         fig_price.add_trace(go.Scatter(
-            x=pivot.index,
-            y=pivot[col],
-            mode='lines',
-            name=col
+            x=pivot.index, y=pivot[col], mode='lines', name=col
         ))
-
-    fig_price.update_layout(height=400)
     st.plotly_chart(fig_price, use_container_width=True)
 
-    # NORMALIZED PERFORMANCE
-    title_with_tooltip(
-        "Normalized performance",
-        "Alle fondsen starten op 1 (relatieve groei)"
-    )
+    title_with_tooltip("Normalized performance", "Relatieve groei")
 
     norm = pivot / pivot.iloc[0]
 
     fig_norm = go.Figure()
-
     for col in norm.columns:
         fig_norm.add_trace(go.Scatter(
-            x=norm.index,
-            y=norm[col],
-            mode='lines',
-            name=col
+            x=norm.index, y=norm[col], mode='lines', name=col
         ))
-
-    fig_norm.update_layout(height=400)
     st.plotly_chart(fig_norm, use_container_width=True)
 
-    # DRAWDOWN
-    title_with_tooltip(
-        "Drawdown",
-        "Daling vanaf hoogste punt (risico indicator)"
-    )
+    title_with_tooltip("Drawdown", "Daling vanaf piek")
 
     dd = norm / norm.cummax() - 1
 
     fig_dd = go.Figure()
-
     for col in dd.columns:
         fig_dd.add_trace(go.Scatter(
-            x=dd.index,
-            y=dd[col],
-            mode='lines',
-            name=col
+            x=dd.index, y=dd[col], mode='lines', name=col
         ))
-
-    fig_dd.update_layout(height=400)
     st.plotly_chart(fig_dd, use_container_width=True)
 
 # =========================
 # PERFORMANCE
 # =========================
 with tab2:
-    title_with_tooltip(
-        "Momentum (30 dagen)",
-        "Rendement laatste 30 dagen"
-    )
+    title_with_tooltip("Momentum (30 dagen)", "Laatste 30 dagen rendement")
 
     mom = (pivot / pivot.shift(30) - 1) * 100
-    st.bar_chart(mom.iloc[-1].dropna())
+    mom_last = mom.iloc[-1].dropna()
+
+    if len(mom_last) == 0:
+        st.info("Not enough data")
+    else:
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=mom_last.index,
+            y=mom_last.values,
+            marker_color="#4CAF50"
+        ))
+        fig.update_layout(yaxis_title="% return")
+        st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # RISK
 # =========================
 with tab3:
-    title_with_tooltip(
-        "Volatility",
-        "Hoeveel een fonds fluctueert"
-    )
-
+    title_with_tooltip("Volatility", "Risico (schommelingen)")
     vol = returns.std() * np.sqrt(252)
-    st.dataframe(vol.sort_values(ascending=False))
+    st.dataframe(vol.sort_values(ascending=False).to_frame("volatility"))
 
-    title_with_tooltip(
-        "Sharpe ratio",
-        "Rendement per risico"
-    )
-
+    title_with_tooltip("Sharpe ratio", "Rendement per risico")
     sharpe = returns.mean() / returns.std()
-    st.dataframe(sharpe.sort_values(ascending=False))
+    st.dataframe(sharpe.sort_values(ascending=False).to_frame("sharpe"))
 
 # =========================
-# HEATMAP (INTERACTIVE + CONTRAST)
+# HEATMAP (PERFECT CONTRAST)
 # =========================
 with tab4:
-    title_with_tooltip(
-        "Return heatmap",
-        "Groen = positief, rood = negatief rendement"
-    )
+    title_with_tooltip("Return heatmap", "Groen = positief, rood = negatief")
 
     latest_date = df["date"].max()
 
@@ -217,7 +185,6 @@ with tab4:
                 res[fund] = np.nan
             else:
                 res[fund] = (current / past.iloc[-1]["price"] - 1) * 100
-
         return pd.Series(res)
 
     periods = {
@@ -264,7 +231,5 @@ with tab4:
                 showarrow=False,
                 font=dict(color=color, size=12)
             )
-
-    fig.update_layout(height=600)
 
     st.plotly_chart(fig, use_container_width=True)
