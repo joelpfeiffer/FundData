@@ -57,95 +57,16 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Overview","Performance","Risk","Heatmap","Optimizer","Rebalance"
 ])
 
-# -------------------------
-# OVERVIEW
-# -------------------------
-with tab1:
-    section("Prijsontwikkeling (€)", "Toont prijs")
-
-    fig = go.Figure()
-    for col in pivot.columns:
-        fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
-
-    fig.update_layout(xaxis_title="Date", yaxis_title="Price (€)", hovermode="x unified")
-    st.plotly_chart(fig, use_container_width=True)
-
-# -------------------------
-# PERFORMANCE
-# -------------------------
-with tab2:
-    section("Momentum (%)", "Rendement")
-
-    shift = min(30, len(pivot)-1)
-    mom = (pivot/pivot.shift(shift)-1)*100
-    last = mom.iloc[-1].dropna()
-
-    if not last.empty:
-        fig = go.Figure(go.Bar(x=last.index, y=last.values))
-        fig.update_layout(xaxis_title="Fund", yaxis_title="Return (%)")
-        st.plotly_chart(fig, use_container_width=True)
-
-# -------------------------
-# RISK
-# -------------------------
-with tab3:
-    section("Volatility", "Risico")
-    vol = returns.std() * np.sqrt(TRADING_DAYS)
-    st.dataframe(vol.to_frame("Volatility"))
-
-    section("Sharpe Ratio", "Rendement per risico")
-    sharpe = (returns.mean()*TRADING_DAYS) / vol
-    st.dataframe(sharpe.to_frame("Sharpe"))
-
-    section("Correlation Matrix", "Samenhang")
-    fig = px.imshow(returns.corr(), text_auto=True, color_continuous_scale="RdBu", zmin=-1, zmax=1)
-    st.plotly_chart(fig, use_container_width=True)
-
-# -------------------------
-# HEATMAP
-# -------------------------
-with tab4:
-    section("Heatmap", "Rendement")
-
-    df_full = pivot_full[selected]
-    latest = df_full.index.max()
-
-    periods = {"1D":1,"2D":2,"1W":7,"2W":14,"1M":30,"3M":90,"6M":180,"1Y":365,"2Y":730,"5Y":1825}
-
-    def calc(days):
-        past = df_full[df_full.index <= latest - pd.Timedelta(days=days)]
-        if past.empty:
-            return pd.Series(index=df_full.columns)
-        return (df_full.loc[latest]/past.iloc[-1]-1)*100
-
-    heatmap = pd.DataFrame({k: calc(v) for k,v in periods.items()}).dropna(how="all")
-
-    if not heatmap.empty:
-        fig = go.Figure(data=go.Heatmap(
-            z=heatmap.values,
-            x=heatmap.columns,
-            y=heatmap.index,
-            colorscale="RdYlGn",
-            zmid=0,
-            text=heatmap.round(2).astype(str)+"%",
-            texttemplate="%{text}"
-        ))
-        st.plotly_chart(fig, use_container_width=True)
-
-# -------------------------
-# OPTIMIZER
-# -------------------------
-with tab5:
-    section("Optimizer", "Gewichten")
-    w = np.random.random(len(selected))
-    w /= w.sum()
-    st.dataframe(pd.DataFrame({"Fund": selected, "Weight": w}))
-
-# -------------------------
-# REBALANCE + MONTE CARLO (3 LIJNEN)
-# -------------------------
+# =========================
+# REBALANCE (FIXED)
+# =========================
 with tab6:
-    section("Rebalance Simulator", "Portfolio groei")
+    section("Rebalance Simulator", "Simuleert portfolio op basis van gewichten")
+
+    st.warning(
+        "Deze simulatie is uitsluitend bedoeld voor informatieve en educatieve doeleinden. "
+        "Er kunnen geen rechten aan worden ontleend. Resultaten uit het verleden bieden geen garantie voor de toekomst."
+    )
 
     capital = st.number_input("Start (€)", 100, 1000000, 10000)
 
@@ -161,9 +82,26 @@ with tab6:
     port = (returns*w).sum(axis=1)
 
     # =========================
-    # MONTE CARLO
+    # 📈 HISTORISCHE TREND (HERSTELD)
     # =========================
-    section("Monte Carlo Simulation", "Expected vs worst vs best scenario")
+    section("Historische portfolio waarde", "Werkelijke ontwikkeling op basis van data")
+
+    value = capital*(1+port).cumprod()
+
+    fig_hist = go.Figure()
+    fig_hist.add_trace(go.Scatter(x=value.index,y=value,name="Portfolio"))
+
+    fig_hist.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Portfolio (€)"
+    )
+
+    st.plotly_chart(fig_hist, use_container_width=True)
+
+    # =========================
+    # 🎲 MONTE CARLO (3 LIJNEN)
+    # =========================
+    section("Monte Carlo Simulation", "Toekomstscenario’s")
 
     if len(port) < 5:
         st.warning("Te weinig data")
@@ -181,15 +119,15 @@ with tab6:
         expected = np.percentile(simulations, 50, axis=1)
         best = np.percentile(simulations, 90, axis=1)
 
-        fig = go.Figure()
+        fig_mc = go.Figure()
 
-        fig.add_trace(go.Scatter(y=worst, name="Worst case (P10)", line=dict(color="red")))
-        fig.add_trace(go.Scatter(y=expected, name="Expected (P50)", line=dict(color="blue")))
-        fig.add_trace(go.Scatter(y=best, name="Best case (P90)", line=dict(color="green")))
+        fig_mc.add_trace(go.Scatter(y=worst, name="Worst case (P10)", line=dict(color="red")))
+        fig_mc.add_trace(go.Scatter(y=expected, name="Expected (P50)", line=dict(color="blue")))
+        fig_mc.add_trace(go.Scatter(y=best, name="Best case (P90)", line=dict(color="green")))
 
-        fig.update_layout(
+        fig_mc.update_layout(
             xaxis_title="Days",
             yaxis_title="Portfolio (€)"
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig_mc, use_container_width=True)
