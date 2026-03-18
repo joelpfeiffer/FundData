@@ -16,10 +16,16 @@ st.set_page_config(layout="wide")
 @st.cache_data(ttl=60)
 def load():
     df = pd.read_csv(f"{CSV_URL}?t={int(time.time())}")
-    df["date"] = pd.to_datetime(df["date"])
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df = df.dropna(subset=["date","price","fund"])
     return df.sort_values("date")
 
 df = load()
+
+if df.empty:
+    st.error("Geen data beschikbaar")
+    st.stop()
+
 pivot_full = df.pivot(index="date", columns="fund", values="price")
 
 # =========================
@@ -29,14 +35,19 @@ funds = list(pivot_full.columns)
 
 selected = st.sidebar.multiselect("Fondsen", funds, default=funds[:5])
 
+if not selected:
+    st.warning("Selecteer minimaal 1 fonds")
+    st.stop()
+
 mode = st.sidebar.radio("Timeframe", ["Preset","Custom"])
 
-pivot = pivot_full[selected]
+pivot = pivot_full[selected].copy()
 
 if mode == "Preset":
     tf = st.sidebar.selectbox("Range", ["1W","2W","1M","3M","6M","1Y","ALL"])
     days_map = {"1W":7,"2W":14,"1M":30,"3M":90,"6M":180,"1Y":365}
-    if tf != "ALL":
+
+    if tf != "ALL" and len(pivot) > 0:
         pivot = pivot[pivot.index >= pivot.index.max() - pd.Timedelta(days=days_map[tf])]
 else:
     start = st.sidebar.date_input("Start", pivot.index.min())
@@ -62,16 +73,20 @@ with tab1:
     fig = go.Figure()
     for col in pivot.columns:
         fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
+
+    fig.update_layout(xaxis_title="Datum", yaxis_title="Prijs (€)")
     st.plotly_chart(fig, use_container_width=True)
 
     st.subheader("Genormaliseerde groei (%)")
 
-    norm = pivot / pivot.iloc[0] * 100
+    if len(pivot) > 0:
+        norm = pivot / pivot.iloc[0] * 100
 
-    fig2 = go.Figure()
-    for col in norm.columns:
-        fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
-    st.plotly_chart(fig2, use_container_width=True)
+        fig2 = go.Figure()
+        for col in norm.columns:
+            fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
+
+        st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
 # PERFORMANCE
@@ -80,7 +95,7 @@ with tab2:
 
     st.subheader("Momentum (%)")
 
-    if len(pivot) > 1:
+    if len(pivot) > 10:
         shift = min(30, len(pivot)-1)
         mom = (pivot / pivot.shift(shift) - 1) * 100
         last = mom.iloc[-1].dropna()
@@ -89,11 +104,20 @@ with tab2:
             df_plot = last.sort_values(ascending=False)
 
             fig = go.Figure(go.Bar(
-                x=df_plot.index,
+                x=df_plot.index.astype(str),
                 y=df_plot.values
             ))
 
+            fig.update_layout(
+                xaxis_title="Fund",
+                yaxis_title="Return (%)"
+            )
+
             st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("Geen momentum data")
+    else:
+        st.warning("Te weinig data voor momentum")
 
 # =========================
 # RISK
@@ -105,17 +129,24 @@ with tab3:
     st.dataframe(vol.to_frame("Volatility"))
 
     st.subheader("Sharpe Ratio")
-    sharpe = (returns.mean()*TRADING_DAYS)/vol
+    sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0, np.nan)
     st.dataframe(sharpe.to_frame("Sharpe"))
 
     st.subheader("Correlatie (Fund vergelijking)")
     corr = returns.corr()
 
-    fig = px.imshow(corr, text_auto=True, color_continuous_scale="RdYlGn")
+    fig = px.imshow(
+        corr,
+        text_auto=True,
+        color_continuous_scale="RdYlGn",
+        zmin=-1,
+        zmax=1
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# HEATMAP (FIXED COLORS)
+# HEATMAP
 # =========================
 with tab4:
 
@@ -136,7 +167,9 @@ with tab4:
         return (pivot_full.loc[latest]/past.iloc[-1]-1)*100
 
     heatmap = pd.DataFrame({k: calc(v) for k,v in periods.items()})
-    heatmap = heatmap.loc[selected]
+
+    safe = [f for f in selected if f in heatmap.index]
+    heatmap = heatmap.loc[safe]
 
     fig = go.Figure(data=go.Heatmap(
         z=heatmap.values,
@@ -177,16 +210,17 @@ with tab6:
     capital = st.number_input("Startkapitaal (€)", 100, 1000000, 10000)
 
     if "alloc" not in st.session_state:
-        st.session_state.alloc = {f: int(100/len(selected)) for f in selected}
+        st.session_state.alloc = {}
 
-    # sync
+    # sync remove
     st.session_state.alloc = {
         k: v for k, v in st.session_state.alloc.items() if k in selected
     }
 
+    # add missing
     for f in selected:
         if f not in st.session_state.alloc:
-            st.session_state.alloc[f] = 0
+            st.session_state.alloc[f] = int(100/len(selected))
 
     cols = st.columns(len(selected))
 
@@ -197,7 +231,7 @@ with tab6:
                 "%",
                 0, 100,
                 st.session_state.alloc[f],
-                key=f
+                key=f"alloc_{f}"
             )
 
     total = sum(st.session_state.alloc.values())
@@ -207,25 +241,47 @@ with tab6:
         st.stop()
 
     weights = pd.Series(st.session_state.alloc)/100
+    weights = weights[weights.index.isin(returns.columns)]
 
-    port = (returns[selected] * weights).sum(axis=1)
+    port = (returns[weights.index] * weights).sum(axis=1)
 
     st.subheader("Simulatie")
 
     value = capital * (1 + port).cumprod()
     st.line_chart(value)
 
+    # =========================
     # MONTE CARLO
-    st.subheader("Monte Carlo")
+    # =========================
+    st.subheader("Monte Carlo simulatie")
 
-    if len(port) > 20:
-        sims = np.random.normal(port.mean(), port.std(), (252, 200))
-        sims = capital * np.cumprod(1 + sims, axis=0)
+    if len(port) < 30:
+        st.warning("Te weinig data voor Monte Carlo")
+    else:
+        mu = port.mean()
+        sigma = port.std()
 
-        mc = pd.DataFrame({
-            "Worst": np.percentile(sims,10,axis=1),
-            "Expected": np.percentile(sims,50,axis=1),
-            "Best": np.percentile(sims,90,axis=1)
-        })
+        if np.isnan(mu) or np.isnan(sigma) or sigma == 0:
+            st.warning("Onvoldoende variatie in data")
+        else:
+            sims = np.random.normal(mu, sigma, (252, 300))
+            sims = capital * np.cumprod(1 + sims, axis=0)
 
-        st.line_chart(mc)
+            mc = pd.DataFrame({
+                "Worst": np.percentile(sims, 10, axis=1),
+                "Expected": np.percentile(sims, 50, axis=1),
+                "Best": np.percentile(sims, 90, axis=1)
+            })
+
+            fig = go.Figure()
+
+            fig.add_trace(go.Scatter(y=mc["Worst"], name="Worst", line=dict(color="red")))
+            fig.add_trace(go.Scatter(y=mc["Expected"], name="Expected", line=dict(color="yellow")))
+            fig.add_trace(go.Scatter(y=mc["Best"], name="Best", line=dict(color="green")))
+
+            fig.update_layout(
+                xaxis_title="Dagen",
+                yaxis_title="Waarde (€)"
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
