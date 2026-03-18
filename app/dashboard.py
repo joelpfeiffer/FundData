@@ -34,7 +34,12 @@ def load():
 
 df = load()
 
+if df.empty:
+    st.error("No data loaded")
+    st.stop()
+
 pivot_full = df.pivot(index="date", columns="fund", values="price")
+
 all_funds = list(pivot_full.columns)
 
 # =========================
@@ -43,10 +48,14 @@ all_funds = list(pivot_full.columns)
 selected = st.sidebar.multiselect("Funds", all_funds, default=all_funds[:5])
 
 if not selected:
+    st.warning("Select at least one fund")
     st.stop()
 
 pivot = pivot_full[selected]
 
+# =========================
+# TIMEFRAME
+# =========================
 mode = st.sidebar.radio("Timeframe", ["Preset","Custom"])
 
 if mode == "Preset":
@@ -60,21 +69,24 @@ else:
     end = st.sidebar.date_input("End", pivot.index.max())
     pivot = pivot[(pivot.index >= pd.to_datetime(start)) & (pivot.index <= pd.to_datetime(end))]
 
+if len(pivot) < 2:
+    st.error("Not enough data")
+    st.stop()
+
 returns = pivot.pct_change().dropna()
 
 # =========================
 # TABS
 # =========================
-tab1, tab2, tab3, tab4 = st.tabs([
-    "Overview","Performance","Risk","Heatmap"
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "Overview","Performance","Risk","Heatmap","Optimizer","Rebalance"
 ])
 
 # =========================
 # OVERVIEW
 # =========================
 with tab1:
-    section_title("Fund Prices",
-    "Werkelijke prijs per fonds over tijd")
+    section_title("Fund Prices", "Werkelijke prijs per fonds")
 
     fig = go.Figure()
     for col in pivot.columns:
@@ -85,33 +97,39 @@ with tab1:
 # PERFORMANCE
 # =========================
 with tab2:
-    section_title("Momentum",
-    "Recente stijging of daling (%)")
+    section_title("Momentum", "Recente stijging/daling")
 
     shift = 30 if len(pivot)>30 else 5
     mom = (pivot/pivot.shift(shift)-1)*100
-    st.bar_chart(mom.iloc[-1].dropna())
+    last = mom.iloc[-1].dropna()
+
+    if not last.empty:
+        st.bar_chart(last)
 
 # =========================
 # RISK
 # =========================
 with tab3:
-    section_title("Volatility",
-    "Hoe sterk een fonds beweegt")
+    section_title("Volatility", "Schommelingen")
 
     st.dataframe((returns.std()*np.sqrt(TRADING_DAYS)).to_frame("Vol"))
 
 # =========================
-# 🔥 HEATMAP (HERSTELD)
+# 🔥 HEATMAP (CRASH-PROOF)
 # =========================
 with tab4:
 
     section_title(
         "Return Heatmap",
-        "Elke cel toont rendement (%) over een periode. Groen = winst, rood = verlies."
+        "Rendement (%) per periode. Groen = winst, rood = verlies."
     )
 
     df_full = pivot_full[selected]
+
+    if len(df_full) < 2:
+        st.warning("Not enough data for heatmap")
+        st.stop()
+
     latest = df_full.index.max()
 
     periods = {
@@ -131,32 +149,84 @@ with tab4:
         k: calc(v) for k,v in periods.items()
     }).round(2)
 
+    heatmap = heatmap.dropna(how="all")
+
+    if heatmap.empty:
+        st.warning("No heatmap data available")
+        st.stop()
+
+    # =========================
     # SPLIT
-    short_cols = ["1D","2D","3D","4D","1W","2W","3W"]
+    # =========================
+    short_cols = [c for c in ["1D","2D","3D","4D","1W","2W","3W"] if c in heatmap.columns]
     long_cols = [c for c in heatmap.columns if c not in short_cols]
 
+    # =========================
     # SHORT TERM
-    fig1 = go.Figure(data=go.Heatmap(
-        z=heatmap[short_cols].values,
-        x=short_cols,
-        y=heatmap.index,
-        colorscale=[[0,"#ff4d4d"],[0.5,"#ffffff"],[1,"#00cc66"]],
-        zmin=-3,zmax=3,zmid=0,
-        text=heatmap[short_cols].astype(str)+"%",
-        texttemplate="%{text}"
-    ))
+    # =========================
+    if short_cols:
+        fig1 = go.Figure(data=go.Heatmap(
+            z=heatmap[short_cols].values,
+            x=short_cols,
+            y=heatmap.index,
+            colorscale=[[0,"#ff4d4d"],[0.5,"#ffffff"],[1,"#00cc66"]],
+            zmin=-3,zmax=3,zmid=0,
+            text=heatmap[short_cols].astype(str)+"%",
+            texttemplate="%{text}"
+        ))
+        st.plotly_chart(fig1, use_container_width=True)
 
-    st.plotly_chart(fig1, use_container_width=True)
-
+    # =========================
     # LONG TERM
-    fig2 = go.Figure(data=go.Heatmap(
-        z=heatmap[long_cols].values,
-        x=long_cols,
-        y=heatmap.index,
-        colorscale="RdYlGn",
-        zmid=0,
-        text=heatmap[long_cols].astype(str)+"%",
-        texttemplate="%{text}"
-    ))
+    # =========================
+    if long_cols:
+        fig2 = go.Figure(data=go.Heatmap(
+            z=heatmap[long_cols].values,
+            x=long_cols,
+            y=heatmap.index,
+            colorscale="RdYlGn",
+            zmid=0,
+            text=heatmap[long_cols].astype(str)+"%",
+            texttemplate="%{text}"
+        ))
+        st.plotly_chart(fig2, use_container_width=True)
 
-    st.plotly_chart(fig2, use_container_width=True)
+# =========================
+# OPTIMIZER
+# =========================
+with tab5:
+    section_title("Optimizer", "Beste verdeling")
+
+    mean = returns.mean()
+    cov = returns.cov()
+
+    w = np.random.random(len(mean))
+    w /= w.sum()
+
+    st.dataframe(pd.DataFrame({"Fund":mean.index,"Weight":w}))
+
+# =========================
+# REBALANCE
+# =========================
+with tab6:
+    section_title("Rebalance", "Simuleert portfolio groei")
+
+    st.warning("Geen financieel advies")
+
+    capital = st.number_input("Start (€)",100,1000000,10000)
+
+    weights = {}
+    cols = st.columns(len(selected))
+
+    for i,f in enumerate(selected):
+        weights[f] = cols[i].slider(f,0.0,1.0,1/len(selected))
+
+    w = np.array(list(weights.values()))
+    w /= w.sum()
+
+    port = (returns*w).sum(axis=1)
+    value = capital*(1+port).cumprod()
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=value.index,y=value))
+    st.plotly_chart(fig, use_container_width=True)
