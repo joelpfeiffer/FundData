@@ -12,7 +12,7 @@ st.set_page_config(layout="wide")
 st.title("📈 Funds Intelligence Dashboard")
 
 # =========================
-# REFRESH BUTTON
+# REFRESH
 # =========================
 if st.button("🔄 Refresh data"):
     st.cache_data.clear()
@@ -120,30 +120,23 @@ st.subheader("🔥 Rendement Heatmap")
 latest_date = df["date"].max()
 
 def calc_return(days):
-    past_date = latest_date - pd.Timedelta(days=days)
+    results = {}
 
-    past = (
-        df[df["date"] <= past_date]
-        .sort_values("date")
-        .groupby("fund")
-        .last()
-    )
+    for fund in df["fund"].unique():
+        fund_df = df[df["fund"] == fund].sort_values("date")
 
-    current = (
-        df.sort_values("date")
-        .groupby("fund")
-        .last()
-    )
+        current_price = fund_df.iloc[-1]["price"]
+        target_date = latest_date - pd.Timedelta(days=days)
 
-    merged = current[["price"]].join(
-        past[["price"]],
-        lsuffix="_now",
-        rsuffix="_past"
-    )
+        past_df = fund_df[fund_df["date"] <= target_date]
 
-    merged["return"] = (merged["price_now"] / merged["price_past"] - 1) * 100
+        if past_df.empty:
+            results[fund] = np.nan
+        else:
+            past_price = past_df.iloc[-1]["price"]
+            results[fund] = (current_price / past_price - 1) * 100
 
-    return merged["return"]
+    return pd.Series(results)
 
 periods = {
     "1D": 1,
@@ -165,26 +158,31 @@ heatmap = pd.DataFrame({
 
 heatmap = heatmap.loc[heatmap.index.intersection(selected)]
 
+# =========================
+# STYLING (PRO)
+# =========================
 def color_gradient(val):
     if pd.isna(val):
-        return ""
+        return "background-color: #111; color: #666"
 
     val = max(min(val, 10), -10)
 
     if val > 0:
         intensity = int(255 - (val / 10) * 155)
-        return f"background-color: rgb({intensity},255,{intensity})"
+        return f"background-color: rgb({intensity},255,{intensity}); color: black"
     else:
         intensity = int(255 - (abs(val) / 10) * 155)
-        return f"background-color: rgb(255,{intensity},{intensity})"
+        return f"background-color: rgb(255,{intensity},{intensity}); color: black"
 
 styled = (
     heatmap.style
-    .format("{:.2f}%")
+    .format(lambda x: f"+{x:.2f}%" if x > 0 else f"{x:.2f}%" if pd.notna(x) else "")
     .applymap(color_gradient)
     .set_properties(**{
         "text-align": "center",
-        "font-weight": "600"
+        "font-weight": "600",
+        "font-size": "13px",
+        "font-family": "monospace"
     })
 )
 
