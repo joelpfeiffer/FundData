@@ -8,13 +8,10 @@ import time
 # =========================
 CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
 
-st.set_page_config(
-    layout="wide",
-    page_title="Funds Dashboard"
-)
+st.set_page_config(layout="wide", page_title="Funds Dashboard")
 
 # =========================
-# STYLE (PRO LOOK)
+# STYLE
 # =========================
 st.markdown("""
 <style>
@@ -23,11 +20,6 @@ h1, h2, h3 {
 }
 .block-container {
     padding-top: 2rem;
-}
-div[data-testid="metric-container"] {
-    background-color: #111;
-    padding: 10px;
-    border-radius: 8px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -49,11 +41,14 @@ if df.empty:
     st.warning("No data available")
     st.stop()
 
+# =========================
+# PREP
+# =========================
 pivot = df.pivot(index="date", columns="fund", values="price")
 all_funds = list(pivot.columns)
 
 # =========================
-# SIDEBAR FILTER
+# SIDEBAR FILTERS
 # =========================
 st.sidebar.header("Filters")
 
@@ -113,7 +108,7 @@ else:
     st.info("Not enough data")
 
 # =========================
-# HEATMAP
+# HEATMAP (PRO + CONTRAST)
 # =========================
 st.subheader("Return heatmap")
 
@@ -142,19 +137,33 @@ periods = {
 heatmap = pd.DataFrame({k: calc_return(v) for k,v in periods.items()})
 heatmap = heatmap.loc[selected]
 
+# 🎨 CONTRAST KLEUREN
 def color(val):
     if pd.isna(val):
         return ""
+
     if val < 0:
         return "background-color:#ff4d4d;color:white"
-    elif val < 1:
-        return "background-color:#ffd966"
-    elif val < 5:
-        return "background-color:#a9d18e"
+
+    elif val < 0.5:
+        return "background-color:#ffd966;color:black"
+
+    elif val < 2:
+        return "background-color:#a9d18e;color:black"
+
     else:
         return "background-color:#70ad47;color:white"
 
-styled = heatmap.style.format("{:.2f}%").applymap(color)
+styled = (
+    heatmap.style
+    .format("{:.2f}%")
+    .applymap(color)
+    .set_properties(**{
+        "text-align": "center",
+        "font-weight": "600"
+    })
+)
+
 st.write(styled)
 
 # =========================
@@ -170,14 +179,14 @@ drawdown = (pivot / pivot.cummax() - 1) * 100
 st.line_chart(drawdown)
 
 # Volatility
-vol = returns.std() * np.sqrt(252)
 st.write("Volatility")
-st.dataframe(vol.sort_values(ascending=False).to_frame())
+vol = returns.std() * np.sqrt(252)
+st.dataframe(vol.sort_values(ascending=False).to_frame("volatility"))
 
 # Sharpe
-sharpe = returns.mean() / returns.std()
 st.write("Sharpe ratio")
-st.dataframe(sharpe.sort_values(ascending=False).to_frame())
+sharpe = returns.mean() / returns.std()
+st.dataframe(sharpe.sort_values(ascending=False).to_frame("sharpe"))
 
 # =========================
 # GLOBAL MARKET
@@ -185,17 +194,23 @@ st.dataframe(sharpe.sort_values(ascending=False).to_frame())
 st.subheader("Market overview")
 
 full = df.pivot(index="date", columns="fund", values="price")
-perf = (full / full.iloc[0] - 1).iloc[-1] * 100
-perf = perf.dropna()
+perf_all = (full / full.iloc[0] - 1).iloc[-1] * 100
+perf_all = perf_all.dropna()
 
-if len(perf) > 0:
+if len(perf_all) > 0:
+
+    top = perf_all.sort_values(ascending=False).head(10).to_frame("performance")
+    worst = perf_all.sort_values().head(10).to_frame("performance")
 
     col1, col2 = st.columns(2)
 
     with col1:
         st.write("Top performers")
-        st.bar_chart(perf.sort_values(ascending=False).head(10).to_frame("performance"))
+        st.bar_chart(top)
 
     with col2:
         st.write("Worst performers")
-        st.bar_chart(perf.sort_values().head(10).to_frame("performance"))
+        st.bar_chart(worst)
+
+else:
+    st.info("No market data available")
