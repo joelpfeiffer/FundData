@@ -12,7 +12,9 @@ from app.config import DB_PATH
 from app.analytics import normalize, performance, volatility, sharpe_ratio
 from pipeline.runner import run
 
-# === Zorg dat data bestaat ===
+# =========================
+# Zorg dat data bestaat
+# =========================
 conn = sqlite3.connect(DB_PATH)
 
 try:
@@ -25,7 +27,9 @@ conn.close()
 if count == 0:
     run()
 
-# === Dashboard ===
+# =========================
+# Dashboard UI
+# =========================
 st.set_page_config(layout="wide")
 st.title("📈 Funds Intelligence Dashboard")
 
@@ -34,22 +38,44 @@ df = pd.read_sql("SELECT * FROM prices", conn)
 conn.close()
 
 if df.empty:
-    st.warning("Geen data")
+    st.warning("Geen data beschikbaar")
     st.stop()
 
+# =========================
+# Data processing
+# =========================
 df["date"] = pd.to_datetime(df["date"])
 pivot = df.pivot(index="date", columns="fund", values="price")
 
-selected = st.multiselect("Fondsen", pivot.columns, default=list(pivot.columns)[:5])
+# =========================
+# Filters
+# =========================
+selected = st.multiselect(
+    "Selecteer fondsen",
+    pivot.columns,
+    default=list(pivot.columns)[:5]
+)
+
+if not selected:
+    st.warning("Selecteer minimaal 1 fonds")
+    st.stop()
+
 pivot = pivot[selected]
 
+# =========================
+# Analyse
+# =========================
 norm = normalize(pivot)
 
-st.subheader("📊 Groei")
+# =========================
+# Visuals
+# =========================
+st.subheader("📊 Groei (genormaliseerd)")
 st.line_chart(norm)
 
-st.subheader("🏆 Performance")
-st.dataframe(performance(norm))
+st.subheader("🏆 Performance (%)")
+perf = performance(norm)
+st.dataframe(perf)
 
 st.subheader("⚡ Volatility")
 st.dataframe(volatility(norm))
@@ -57,6 +83,9 @@ st.dataframe(volatility(norm))
 st.subheader("📉 Sharpe Ratio")
 st.dataframe(sharpe_ratio(norm))
 
-# 🔥 Bonus
-best = performance(norm).index[0]
-st.success(f"🏆 Beste fonds: {best}")
+# =========================
+# Highlight beste fonds
+# =========================
+if not perf.empty:
+    best = perf.index[0]
+    st.success(f"🏆 Beste fonds: {best}")
