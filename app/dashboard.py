@@ -22,6 +22,33 @@ def title_with_tooltip(title, tooltip):
         st.markdown(f"<span title='{tooltip}'>ℹ️</span>", unsafe_allow_html=True)
 
 # =========================
+# CHART STYLE (RULER)
+# =========================
+def apply_chart_style(fig):
+    fig.update_layout(
+        hovermode="x unified",
+        spikedistance=1000,
+        hoverlabel=dict(bgcolor="black")
+    )
+
+    fig.update_xaxes(
+        showspikes=True,
+        spikecolor="gray",
+        spikesnap="cursor",
+        spikemode="across",
+        spikethickness=1
+    )
+
+    fig.update_yaxes(
+        showspikes=True,
+        spikecolor="gray",
+        spikemode="across",
+        spikethickness=1
+    )
+
+    return fig
+
+# =========================
 # LOAD DATA
 # =========================
 @st.cache_data(ttl=60)
@@ -40,7 +67,7 @@ pivot_full = df.pivot(index="date", columns="fund", values="price")
 all_funds = list(pivot_full.columns)
 
 # =========================
-# SIDEBAR - FUND SELECTIE
+# SIDEBAR
 # =========================
 st.sidebar.header("Filters")
 
@@ -55,37 +82,28 @@ if not selected:
     st.stop()
 
 # =========================
-# SIDEBAR - TIMEFRAME
+# TIMEFRAME SELECTOR
 # =========================
 st.sidebar.header("Timeframe")
 
-mode = st.sidebar.radio(
-    "Mode",
-    ["Preset", "Custom"]
-)
+mode = st.sidebar.radio("Mode", ["Preset", "Custom"])
 
 if mode == "Preset":
-
     timeframe = st.sidebar.selectbox(
         "Range",
         ["1W", "2W", "1M", "3M", "6M", "1Y", "3Y", "ALL"]
     )
 
     days_map = {
-        "1W":7,
-        "2W":14,
-        "1M":30,
-        "3M":90,
-        "6M":180,
-        "1Y":365,
-        "3Y":1095
+        "1W":7, "2W":14, "1M":30,
+        "3M":90, "6M":180,
+        "1Y":365, "3Y":1095
     }
-
-    end_date = pivot_full.index.max()
 
     pivot = pivot_full[selected]
 
     if timeframe != "ALL":
+        end_date = pivot.index.max()
         start_date = end_date - pd.Timedelta(days=days_map[timeframe])
         pivot = pivot[pivot.index >= start_date]
 
@@ -103,7 +121,7 @@ else:
     ]
 
 # =========================
-# SAFETY CHECK
+# SAFETY
 # =========================
 if len(pivot) < 2:
     st.warning("Not enough data for selected timeframe")
@@ -130,7 +148,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 # =========================
-# OVERVIEW
+# OVERVIEW (WITH RULER)
 # =========================
 with tab1:
 
@@ -138,21 +156,21 @@ with tab1:
     fig = go.Figure()
     for col in pivot.columns:
         fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(apply_chart_style(fig), use_container_width=True)
 
     title_with_tooltip("Normalized performance", "Relatieve groei")
     norm = pivot / pivot.iloc[0]
     fig = go.Figure()
     for col in norm.columns:
         fig.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(apply_chart_style(fig), use_container_width=True)
 
     title_with_tooltip("Drawdown", "Daling vanaf piek")
     dd = norm / norm.cummax() - 1
     fig = go.Figure()
     for col in dd.columns:
         fig.add_trace(go.Scatter(x=dd.index, y=dd[col], name=col))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(apply_chart_style(fig), use_container_width=True)
 
 # =========================
 # PERFORMANCE
@@ -183,7 +201,7 @@ with tab3:
     st.dataframe(sharpe.sort_values(ascending=False).to_frame("sharpe"))
 
 # =========================
-# HEATMAP
+# HEATMAP (CONTRAST FIX)
 # =========================
 with tab4:
     title_with_tooltip("Return heatmap", "Groen = positief")
