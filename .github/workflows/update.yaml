@@ -2,7 +2,7 @@ name: Update Data
 
 on:
   schedule:
-    - cron: '30 14 * * *'
+    - cron: "13 14 * * *"  # dagelijks 06:00
   workflow_dispatch:
 
 jobs:
@@ -10,23 +10,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
       - name: Run pipeline
-        run: PYTHONPATH=. python pipeline/runner.py
+        run: python pipeline/runner.py
 
       - name: Commit changes
         run: |
           git config --global user.name "bot"
-          git config --global user.email "bot@example.com"
+          git config --global user.email "bot@github.com"
           git add .
           git commit -m "update data" || echo "no changes"
           git push
