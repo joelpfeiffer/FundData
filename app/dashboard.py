@@ -31,7 +31,11 @@ except:
 conn.close()
 
 if count == 0:
-    run()
+    with st.spinner("Data ophalen..."):
+        try:
+            run()
+        except Exception as e:
+            st.error(f"Fout bij ophalen data: {e}")
 
 # =========================
 # Dashboard UI
