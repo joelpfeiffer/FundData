@@ -11,6 +11,20 @@ TRADING_DAYS = 252
 st.set_page_config(layout="wide")
 
 # =========================
+# UI STYLE (POLISH)
+# =========================
+st.markdown("""
+<style>
+h1, h2, h3 {
+    font-weight: 600;
+}
+.block-container {
+    padding-top: 1rem;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# =========================
 # LOAD DATA
 # =========================
 @st.cache_data(ttl=60)
@@ -33,13 +47,24 @@ pivot_full = df.pivot(index="date", columns="fund", values="price")
 # =========================
 funds = list(pivot_full.columns)
 
-selected = st.sidebar.multiselect("Fondsen", funds, default=funds[:5])
+st.sidebar.title("Instellingen")
+
+selected = st.sidebar.multiselect(
+    "Selecteer fondsen",
+    funds,
+    default=funds[:5],
+    help="Kies welke fondsen je wilt analyseren"
+)
 
 if not selected:
     st.warning("Selecteer minimaal 1 fonds")
     st.stop()
 
-mode = st.sidebar.radio("Timeframe", ["Preset","Custom"])
+mode = st.sidebar.radio(
+    "Timeframe",
+    ["Preset","Custom"],
+    help="Preset = snelle selectie, Custom = eigen periode"
+)
 
 pivot = pivot_full[selected].copy()
 
@@ -47,7 +72,7 @@ if mode == "Preset":
     tf = st.sidebar.selectbox("Range", ["1W","2W","1M","3M","6M","1Y","ALL"])
     days_map = {"1W":7,"2W":14,"1M":30,"3M":90,"6M":180,"1Y":365}
 
-    if tf != "ALL" and len(pivot) > 0:
+    if tf != "ALL":
         pivot = pivot[pivot.index >= pivot.index.max() - pd.Timedelta(days=days_map[tf])]
 else:
     start = st.sidebar.date_input("Start", pivot.index.min())
@@ -68,7 +93,14 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # =========================
 with tab1:
 
-    st.subheader("Prijsontwikkeling")
+    st.subheader("Prijsontwikkeling ℹ️", help="""
+    Dit laat de werkelijke prijs van elk fonds zien door de tijd.
+
+    Hoe lees je dit:
+    - Elke lijn is een fonds
+    - Hogere lijn = hogere prijs
+    - Gebruik de verticale lijn (hover) om fondsen op dezelfde datum te vergelijken
+    """)
 
     fig = go.Figure()
     for col in pivot.columns:
@@ -82,29 +114,45 @@ with tab1:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader("Genormaliseerde groei (%)")
+    st.subheader("Genormaliseerde groei (%) ℹ️", help="""
+    Alle fondsen starten hier op dezelfde waarde (100).
 
-    if len(pivot) > 0:
-        norm = pivot / pivot.iloc[0] * 100
+    Dit laat zien:
+    - Welk fonds het beste presteert
+    - Procentuele groei t.o.v. startpunt
 
-        fig2 = go.Figure()
-        for col in norm.columns:
-            fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
+    Hoe lees je dit:
+    - 120 = +20% groei
+    - 90 = -10% daling
+    """)
 
-        fig2.update_layout(
-            xaxis_title="Datum",
-            yaxis_title="Index (start = 100)",
-            hovermode="x unified"
-        )
+    norm = pivot / pivot.iloc[0] * 100
 
-        st.plotly_chart(fig2, use_container_width=True)
+    fig2 = go.Figure()
+    for col in norm.columns:
+        fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
+
+    fig2.update_layout(
+        xaxis_title="Datum",
+        yaxis_title="Index (start = 100)",
+        hovermode="x unified"
+    )
+
+    st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
 # PERFORMANCE
 # =========================
 with tab2:
 
-    st.subheader("Momentum (%)")
+    st.subheader("Momentum (%) ℹ️", help="""
+    Momentum laat zien hoeveel een fonds is gestegen of gedaald over de laatste periode.
+
+    Hoe lees je dit:
+    - Positief = stijging
+    - Negatief = daling
+    - Hoe hoger, hoe sterker de trend
+    """)
 
     if len(pivot) > 10:
         shift = min(30, len(pivot)-1)
@@ -115,7 +163,7 @@ with tab2:
             df_plot = last.sort_values(ascending=False)
 
             fig = go.Figure(go.Bar(
-                x=df_plot.index.astype(str),
+                x=df_plot.index,
                 y=df_plot.values
             ))
 
@@ -125,35 +173,41 @@ with tab2:
             )
 
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("Geen momentum data")
-    else:
-        st.warning("Te weinig data voor momentum")
 
 # =========================
 # RISK
 # =========================
 with tab3:
 
-    st.subheader("Volatility")
+    st.subheader("Volatility ℹ️", help="""
+    Volatility meet hoeveel een fonds schommelt.
+
+    - Hoog = meer risico
+    - Laag = stabieler
+    """)
+
     vol = returns.std() * np.sqrt(TRADING_DAYS)
     st.dataframe(vol.to_frame("Volatility"))
 
-    st.subheader("Sharpe Ratio")
+    st.subheader("Sharpe Ratio ℹ️", help="""
+    Sharpe Ratio meet rendement vs risico.
+
+    - Hoger = beter rendement per risico
+    - Lager = inefficiënt
+    """)
+
     sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0, np.nan)
     st.dataframe(sharpe.to_frame("Sharpe"))
 
-    st.subheader("Correlatie (Fund vergelijking)")
-    corr = returns.corr()
+    st.subheader("Correlatie ℹ️", help="""
+    Laat zien hoe fondsen samen bewegen.
 
-    fig = px.imshow(
-        corr,
-        text_auto=True,
-        color_continuous_scale="RdYlGn",
-        zmin=-1,
-        zmax=1
-    )
+    - 1 = bewegen hetzelfde
+    - 0 = onafhankelijk
+    - -1 = tegenovergesteld
+    """)
 
+    fig = px.imshow(returns.corr(), text_auto=True, color_continuous_scale="RdYlGn", zmin=-1, zmax=1)
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
@@ -161,7 +215,13 @@ with tab3:
 # =========================
 with tab4:
 
-    st.subheader("Rendement Heatmap")
+    st.subheader("Rendement Heatmap ℹ️", help="""
+    Overzicht van rendement per periode.
+
+    - Groen = winst
+    - Rood = verlies
+    - Geel = neutraal
+    """)
 
     latest = pivot_full.index.max()
 
@@ -178,9 +238,7 @@ with tab4:
         return (pivot_full.loc[latest]/past.iloc[-1]-1)*100
 
     heatmap = pd.DataFrame({k: calc(v) for k,v in periods.items()})
-
-    safe = [f for f in selected if f in heatmap.index]
-    heatmap = heatmap.loc[safe]
+    heatmap = heatmap.loc[[f for f in selected if f in heatmap.index]]
 
     fig = go.Figure(data=go.Heatmap(
         z=heatmap.values,
@@ -195,37 +253,23 @@ with tab4:
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# OPTIMIZER
-# =========================
-with tab5:
-
-    st.subheader("Portfolio gewichten (voorbeeld)")
-
-    w = np.random.random(len(selected))
-    w /= w.sum()
-
-    df_opt = pd.DataFrame({
-        "Fund": selected,
-        "Weight (%)": (w*100).round(2)
-    })
-
-    st.dataframe(df_opt)
-
-# =========================
-# REBALANCE
+# REBALANCE + MONTE CARLO
 # =========================
 with tab6:
 
-    st.subheader("Portfolio verdeling (%)")
+    st.subheader("Portfolio verdeling (%) ℹ️", help="""
+    Verdeel je kapitaal over fondsen.
+
+    - Totaal moet 100% zijn
+    - Hiermee simuleer je je portfolio
+    """)
 
     capital = st.number_input("Startkapitaal (€)", 100, 1000000, 10000)
 
     if "alloc" not in st.session_state:
         st.session_state.alloc = {}
 
-    st.session_state.alloc = {
-        k: v for k, v in st.session_state.alloc.items() if k in selected
-    }
+    st.session_state.alloc = {k:v for k,v in st.session_state.alloc.items() if k in selected}
 
     for f in selected:
         if f not in st.session_state.alloc:
@@ -236,12 +280,7 @@ with tab6:
     for i, f in enumerate(selected):
         with cols[i]:
             st.markdown(f"**{f}**")
-            st.session_state.alloc[f] = st.number_input(
-                "%",
-                0, 100,
-                st.session_state.alloc[f],
-                key=f"alloc_{f}"
-            )
+            st.session_state.alloc[f] = st.number_input("%",0,100,st.session_state.alloc[f],key=f"alloc_{f}")
 
     total = sum(st.session_state.alloc.values())
 
@@ -250,48 +289,36 @@ with tab6:
         st.stop()
 
     weights = pd.Series(st.session_state.alloc)/100
-    weights = weights[weights.index.isin(returns.columns)]
+    port = (returns[weights.index]*weights).sum(axis=1)
 
-    port = (returns[weights.index] * weights).sum(axis=1)
+    st.subheader("Simulatie ℹ️", help="Laat zien hoe je portfolio historisch gegroeid zou zijn")
 
-    st.subheader("Simulatie")
+    st.line_chart(capital*(1+port).cumprod())
 
-    value = capital * (1 + port).cumprod()
-    st.line_chart(value)
+    st.subheader("Monte Carlo simulatie ℹ️", help="""
+    Simuleert mogelijke toekomstige scenario's.
 
-    # =========================
-    # MONTE CARLO
-    # =========================
-    st.subheader("Monte Carlo simulatie")
+    - Expected = meest waarschijnlijke
+    - Worst = slecht scenario
+    - Best = optimistisch scenario
+    """)
 
-    if len(port) < 30:
-        st.warning("Te weinig data voor Monte Carlo")
-    else:
-        mu = port.mean()
-        sigma = port.std()
+    if len(port) > 30:
+        mu, sigma = port.mean(), port.std()
 
-        if np.isnan(mu) or np.isnan(sigma) or sigma == 0:
-            st.warning("Onvoldoende variatie in data")
-        else:
-            sims = np.random.normal(mu, sigma, (252, 300))
-            sims = capital * np.cumprod(1 + sims, axis=0)
+        sims = np.random.normal(mu, sigma, (252, 300))
+        sims = capital * np.cumprod(1 + sims, axis=0)
 
-            mc = pd.DataFrame({
-                "Worst": np.percentile(sims, 10, axis=1),
-                "Expected": np.percentile(sims, 50, axis=1),
-                "Best": np.percentile(sims, 90, axis=1)
-            })
+        mc = pd.DataFrame({
+            "Worst": np.percentile(sims, 10, axis=1),
+            "Expected": np.percentile(sims, 50, axis=1),
+            "Best": np.percentile(sims, 90, axis=1)
+        })
 
-            fig = go.Figure()
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(y=mc["Worst"], name="Worst", line=dict(color="red")))
+        fig.add_trace(go.Scatter(y=mc["Expected"], name="Expected", line=dict(color="yellow")))
+        fig.add_trace(go.Scatter(y=mc["Best"], name="Best", line=dict(color="green")))
 
-            fig.add_trace(go.Scatter(y=mc["Worst"], name="Worst", line=dict(color="red")))
-            fig.add_trace(go.Scatter(y=mc["Expected"], name="Expected", line=dict(color="yellow")))
-            fig.add_trace(go.Scatter(y=mc["Best"], name="Best", line=dict(color="green")))
-
-            fig.update_layout(
-                xaxis_title="Dagen",
-                yaxis_title="Waarde (€)",
-                hovermode="x unified"
-            )
-
-            st.plotly_chart(fig, use_container_width=True)
+        fig.update_layout(hovermode="x unified")
+        st.plotly_chart(fig, use_container_width=True)
