@@ -1,45 +1,41 @@
 import requests
+from bs4 import BeautifulSoup
 import pandas as pd
-from io import StringIO
 from app.config import URL
 
 def fetch_data():
     headers = {
         "User-Agent": "Mozilla/5.0",
-        "Accept-Language": "nl-NL,nl;q=0.9"
     }
 
     response = requests.get(URL, headers=headers, timeout=30)
     response.raise_for_status()
 
-    try:
-        tables = pd.read_html(StringIO(response.text))
-    except ValueError:
-        raise ValueError("Geen tabellen gevonden op pagina")
+    soup = BeautifulSoup(response.text, "html.parser")
 
-    df = None
+    # Zoek alle rijen
+    rows = soup.find_all("tr")
 
-    for table in tables:
-        cols = [str(c).lower() for c in table.columns]
+    data = []
 
-        if any("fonds" in c for c in cols) and any("koers" in c for c in cols):
-            df = table
-            break
+    for row in rows:
+        cols = row.find_all("td")
 
-    if df is None:
-        raise ValueError("Geen juiste tabel gevonden")
+        if len(cols) >= 2:
+            fund = cols[0].get_text(strip=True)
+            price = cols[1].get_text(strip=True)
 
-    # Kolomnamen vinden
-    fund_col = [c for c in df.columns if "fonds" in str(c).lower()][0]
-    price_col = [c for c in df.columns if "koers" in str(c).lower()][0]
+            # probeer prijs te parsen
+            try:
+                price = price.replace(",", ".")
+                price = float(price)
+                data.append((fund, price))
+            except:
+                continue
 
-    df = df[[fund_col, price_col]]
-    df.columns = ["Fonds", "Koers"]
+    if not data:
+        raise ValueError("Geen data gevonden (site waarschijnlijk JS-based)")
 
-    df["Koers"] = pd.to_numeric(df["Koers"], errors="coerce")
-    df = df.dropna()
-
-    if df.empty:
-        raise ValueError("Dataframe is leeg na parsing")
+    df = pd.DataFrame(data, columns=["Fonds", "Koers"])
 
     return df
