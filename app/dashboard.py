@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
+import plotly.graph_objects as go
 import time
 
 # =========================
@@ -12,25 +12,14 @@ CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/pri
 st.set_page_config(layout="wide", page_title="Funds Terminal")
 
 # =========================
-# STYLE
+# HELPER: TOOLTIP TITLE
 # =========================
-st.markdown("""
-<style>
-html, body {
-    font-family: Inter, sans-serif;
-}
-.block-container {
-    padding-top: 1.5rem;
-}
-[data-testid="metric-container"] {
-    background: #111827;
-    border-radius: 10px;
-    padding: 15px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-st.title("Funds Intelligence Terminal")
+def title_with_tooltip(title, tooltip):
+    col1, col2 = st.columns([10,1])
+    with col1:
+        st.subheader(title)
+    with col2:
+        st.markdown(f"<span title='{tooltip}'>ℹ️</span>", unsafe_allow_html=True)
 
 # =========================
 # LOAD DATA
@@ -57,19 +46,10 @@ all_funds = list(pivot.columns)
 # =========================
 st.sidebar.header("Portfolio")
 
-if "selected_funds" not in st.session_state:
-    st.session_state.selected_funds = all_funds[:5]
-
-if st.sidebar.button("Select all"):
-    st.session_state.selected_funds = all_funds
-
-if st.sidebar.button("Clear"):
-    st.session_state.selected_funds = []
-
 selected = st.sidebar.multiselect(
     "Funds",
     all_funds,
-    key="selected_funds"
+    default=all_funds[:5]
 )
 
 if not selected:
@@ -101,11 +81,17 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # OVERVIEW
 # =========================
 with tab1:
-    st.subheader("Normalized performance")
+    title_with_tooltip(
+        "Normalized performance",
+        "Alle fondsen starten op 1. Hiermee vergelijk je relatieve groei."
+    )
     norm = pivot / pivot.iloc[0]
     st.line_chart(norm)
 
-    st.subheader("Drawdown")
+    title_with_tooltip(
+        "Drawdown",
+        "Laat zien hoeveel een fonds vanaf de piek is gedaald."
+    )
     dd = norm / norm.cummax() - 1
     st.line_chart(dd)
 
@@ -113,7 +99,10 @@ with tab1:
 # PERFORMANCE
 # =========================
 with tab2:
-    st.subheader("Momentum (30 days)")
+    title_with_tooltip(
+        "Momentum (30 dagen)",
+        "Percentage verandering over de laatste 30 dagen."
+    )
     mom = (pivot / pivot.shift(30) - 1) * 100
     st.bar_chart(mom.iloc[-1].dropna().to_frame("momentum"))
 
@@ -121,19 +110,28 @@ with tab2:
 # RISK
 # =========================
 with tab3:
-    st.subheader("Volatility")
+    title_with_tooltip(
+        "Volatility",
+        "Hoe sterk de koers schommelt. Hoger = meer risico."
+    )
     vol = returns.std() * np.sqrt(252)
     st.dataframe(vol.sort_values(ascending=False).to_frame("volatility"))
 
-    st.subheader("Sharpe ratio")
+    title_with_tooltip(
+        "Sharpe ratio",
+        "Rendement per eenheid risico. Hoger = beter."
+    )
     sharpe = returns.mean() / returns.std()
     st.dataframe(sharpe.sort_values(ascending=False).to_frame("sharpe"))
 
 # =========================
-# 🔥 INTERACTIVE HEATMAP
+# 🔥 HEATMAP (INTERACTIVE + CONTRAST)
 # =========================
 with tab4:
-    st.subheader("Return heatmap (interactive)")
+    title_with_tooltip(
+        "Return heatmap",
+        "Toont rendement per periode. Groen = positief, rood = negatief."
+    )
 
     latest_date = df["date"].max()
 
@@ -160,22 +158,52 @@ with tab4:
     heatmap = pd.DataFrame({k: calc_return(v) for k,v in periods.items()})
     heatmap = heatmap.loc[selected]
 
-    # 👉 Plotly heatmap (PRO)
-    fig = px.imshow(
-        heatmap,
-        text_auto=".2f",
-        aspect="auto",
-        color_continuous_scale=[
-            [0, "#ff4d4d"],   # red
-            [0.5, "#ffd966"], # yellow
-            [1, "#70ad47"]    # green
-        ]
-    )
+    z = heatmap.values
+    x = heatmap.columns
+    y = heatmap.index
 
-    fig.update_layout(
-        coloraxis_colorbar_title="Return %",
-        xaxis_title="Period",
-        yaxis_title="Fund"
-    )
+    # TEXT COLORS
+    text_colors = []
+    for row in z:
+        row_colors = []
+        for val in row:
+            if pd.isna(val):
+                row_colors.append("gray")
+            elif val < 0:
+                row_colors.append("white")
+            elif val < 1:
+                row_colors.append("black")
+            elif val < 5:
+                row_colors.append("black")
+            else:
+                row_colors.append("white")
+        text_colors.append(row_colors)
+
+    text = [[f"{v:.2f}%" if pd.notna(v) else "" for v in row] for row in z]
+
+    fig = go.Figure(data=go.Heatmap(
+        z=z,
+        x=x,
+        y=y,
+        colorscale=[
+            [0, "#ff4d4d"],
+            [0.5, "#ffd966"],
+            [1, "#70ad47"]
+        ],
+        colorbar=dict(title="Return %")
+    ))
+
+    # TEXT LAYER
+    for i in range(len(y)):
+        for j in range(len(x)):
+            fig.add_annotation(
+                x=x[j],
+                y=y[i],
+                text=text[i][j],
+                showarrow=False,
+                font=dict(color=text_colors[i][j], size=12)
+            )
+
+    fig.update_layout(height=600)
 
     st.plotly_chart(fig, use_container_width=True)
