@@ -29,13 +29,13 @@ def section(title, tooltip):
             st.session_state[f"show_{title}"] = False
 
 # =========================
-# ONBOARDING STATE
+# ONBOARDING
 # =========================
 if "onboarding" not in st.session_state:
     st.session_state.onboarding = True
 
 # =========================
-# LOAD DATA
+# DATA
 # =========================
 @st.cache_data(ttl=60)
 def load():
@@ -45,10 +45,6 @@ def load():
     return df.sort_values("date")
 
 df = load()
-
-if df.empty:
-    st.error("Geen data beschikbaar")
-    st.stop()
 
 pivot_full = df.pivot(index="date", columns="fund", values="price")
 
@@ -83,31 +79,30 @@ else:
 
 returns = pivot.pct_change().dropna()
 
-# onboarding reset onderaan
+# onboarding reset
 st.sidebar.markdown("---")
-if st.sidebar.button("🔄 Start onboarding opnieuw"):
+if st.sidebar.button("Start onboarding opnieuw"):
     st.session_state.onboarding = True
 
 # =========================
-# ONBOARDING
+# ONBOARDING FLOW
 # =========================
 if st.session_state.onboarding:
     st.info("""
-Welkom!
+Welkom bij het dashboard
 
-- Selecteer fondsen links
-- Kies timeframe
-- Gebruik tabs voor analyse
+Stap 1: Selecteer fondsen links  
+Stap 2: Kies timeframe  
+Stap 3: Gebruik tabs  
 
-Tabs:
 Overview → trends  
 Performance → rendement  
 Risk → risico  
 Heatmap → overzicht  
-Rebalance → simulatie
+Rebalance → simulaties
 """)
 
-    if st.button("Start dashboard"):
+    if st.button("Start"):
         st.session_state.onboarding = False
         st.rerun()
 
@@ -122,7 +117,18 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # OVERVIEW
 # =========================
 with tab1:
-    section("Prijsontwikkeling (€)", "Prijs per fonds over tijd")
+    section("Prijsontwikkeling (€)", """
+Wat zie je:
+De prijs van elk fonds over tijd.
+
+Hoe lees je dit:
+Elke lijn = een fonds
+Stijging = waarde neemt toe
+
+Waar op letten:
+Prijs ≠ performance
+Kijk naar trend, niet alleen niveau
+""")
 
     fig = go.Figure()
     for col in pivot.columns:
@@ -131,7 +137,17 @@ with tab1:
     fig.update_layout(xaxis_title="Datum", yaxis_title="Prijs (€)")
     st.plotly_chart(fig, use_container_width=True)
 
-    section("Trends (genormaliseerd)", "Start op 100 voor vergelijking")
+    section("Genormaliseerde groei", """
+Wat zie je:
+Alle fondsen starten op 100.
+
+Hoe lees je dit:
+120 = +20%
+80 = -20%
+
+Waar op letten:
+Beste vergelijking tussen fondsen
+""")
 
     norm = pivot / pivot.iloc[0] * 100
 
@@ -142,10 +158,20 @@ with tab1:
     st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
-# PERFORMANCE (FIXED)
+# PERFORMANCE
 # =========================
 with tab2:
-    section("Momentum (%)", "Recente performance")
+    section("Momentum (%)", """
+Wat zie je:
+Recente performance.
+
+Hoe lees je:
+Positief = stijging
+Negatief = daling
+
+Waar op letten:
+Korte termijn indicator
+""")
 
     shift = min(30, len(pivot)-1)
     mom = (pivot/pivot.shift(shift)-1)*100
@@ -159,30 +185,52 @@ with tab2:
             y=df_plot.values
         ))
 
-        fig.update_layout(
-            xaxis_title="Fund",
-            yaxis_title="Return (%)"
-        )
-
+        fig.update_layout(xaxis_title="Fund", yaxis_title="Return (%)")
         st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.warning("Geen data beschikbaar")
 
 # =========================
 # RISK
 # =========================
 with tab3:
-    section("Volatility", "Risico")
+    section("Volatility", """
+Wat zie je:
+Schommelingen (risico).
+
+Hoe lees je:
+Hoger = risicovoller
+
+Waar op letten:
+Meer risico ≠ slecht
+""")
 
     vol = returns.std() * np.sqrt(TRADING_DAYS)
     st.dataframe(vol.to_frame("Volatility"))
 
-    section("Sharpe Ratio", "Rendement vs risico")
+    section("Sharpe Ratio", """
+Wat zie je:
+Rendement vs risico.
+
+Hoe lees je:
+Hoger = beter
+
+Waar op letten:
+Belangrijkste metric
+""")
 
     sharpe = (returns.mean()*TRADING_DAYS) / vol
     st.dataframe(sharpe.to_frame("Sharpe"))
 
-    section("Correlation", "Samenhang")
+    section("Correlatie", """
+Wat zie je:
+Samenhang tussen fondsen.
+
+Hoe lees je:
+1 = hetzelfde
+0 = onafhankelijk
+
+Waar op letten:
+Lage correlatie = goede spreiding
+""")
 
     fig = px.imshow(returns.corr(), text_auto=True)
     st.plotly_chart(fig, use_container_width=True)
@@ -191,14 +239,26 @@ with tab3:
 # HEATMAP
 # =========================
 with tab4:
-    section("Heatmap", "Rendement per periode")
+    section("Rendement Heatmap", """
+Wat zie je:
+Rendement over verschillende periodes.
+
+Hoe lees je:
+Groen = winst
+Rood = verlies
+
+Waar op letten:
+Horizontaal = tijd
+Verticaal = fonds
+""")
 
     df_full = pivot_full[selected]
     latest = df_full.index.max()
 
     periods = {
-        "1D":1,"2D":2,"1W":7,"2W":14,
-        "1M":30,"3M":90,"6M":180,
+        "1D":1,"2D":2,"3D":3,"4D":4,
+        "1W":7,"2W":14,"3W":21,
+        "1M":30,"2M":60,"3M":90,"6M":180,
         "1Y":365,"2Y":730,"5Y":1825
     }
 
@@ -225,7 +285,16 @@ with tab4:
 # OPTIMIZER
 # =========================
 with tab5:
-    section("Optimizer", "Voorbeeld verdeling")
+    section("Portfolio verdeling", """
+Wat zie je:
+Verdeling van investeringen.
+
+Hoe lees je:
+Weight = percentage
+
+Waar op letten:
+Spreiding verlaagt risico
+""")
 
     w = np.random.random(len(selected))
     w /= w.sum()
@@ -236,11 +305,20 @@ with tab5:
 # REBALANCE
 # =========================
 with tab6:
-    section("Rebalance Simulator", "Simuleert groei")
+    section("Simulatie", """
+Wat zie je:
+Groei van je portfolio.
 
-    st.warning("Geen financieel advies")
+Hoe lees je:
+Lijn = waarde
 
-    capital = st.number_input("Start (€)", 100, 1000000, 10000)
+Waar op letten:
+Gebaseerd op historische data
+""")
+
+    st.warning("Dit is geen financieel advies")
+
+    capital = st.number_input("Startkapitaal (€)", 100, 1000000, 10000)
 
     weights = {}
     cols = st.columns(len(selected))
@@ -256,10 +334,21 @@ with tab6:
     value = capital*(1+port).cumprod()
     st.line_chart(value)
 
-    section("Monte Carlo", "Toekomstscenario’s")
+    section("Monte Carlo", """
+Wat zie je:
+Toekomstscenario’s.
 
-    if len(port) >= 5:
-        sims = np.random.normal(port.mean(), port.std(), (252,1000))
+Hoe lees je:
+Expected = gemiddelde
+Worst = slecht
+Best = goed
+
+Waar op letten:
+Geen voorspelling
+""")
+
+    if len(port) > 10:
+        sims = np.random.normal(port.mean(), port.std(), (252,500))
         sims = capital*np.cumprod(1+sims,axis=0)
 
         st.line_chart(pd.DataFrame({
