@@ -18,15 +18,13 @@ if st.button("🔄 Refresh data"):
     st.cache_data.clear()
 
 # =========================
-# DATA LADEN
+# LOAD DATA
 # =========================
 @st.cache_data(ttl=60)
 def load_data():
-    url = f"{CSV_URL}?t={int(time.time())}"
-    df = pd.read_csv(url)
+    df = pd.read_csv(f"{CSV_URL}?t={int(time.time())}")
     df["date"] = pd.to_datetime(df["date"])
-    df = df.sort_values("date")
-    return df
+    return df.sort_values("date")
 
 df = load_data()
 
@@ -35,20 +33,17 @@ if df.empty:
     st.stop()
 
 # =========================
-# DATA PREP
+# PIVOT
 # =========================
 pivot = df.pivot(index="date", columns="fund", values="price")
 all_funds = list(pivot.columns)
 
 # =========================
-# STATE INIT
+# STATE
 # =========================
 if "selected_funds" not in st.session_state:
     st.session_state.selected_funds = all_funds[:5]
 
-# =========================
-# SELECTIE KNOPPEN
-# =========================
 col1, col2 = st.columns(2)
 
 with col1:
@@ -59,56 +54,37 @@ with col2:
     if st.button("❌ Deselecteer alles"):
         st.session_state.selected_funds = []
 
-# =========================
-# MULTISELECT (STABLE)
-# =========================
-selected = st.multiselect(
-    "Selecteer fondsen",
-    all_funds,
-    key="selected_funds"
-)
-
-st.caption(f"{len(selected)} fondsen geselecteerd")
+selected = st.multiselect("Selecteer fondsen", all_funds, key="selected_funds")
 
 if len(selected) == 0:
-    st.info("👆 Selecteer minimaal één fonds")
+    st.warning("Selecteer minimaal 1 fonds")
     st.stop()
 
 pivot = pivot[selected]
 
 # =========================
-# GROEI
+# PERFORMANCE
 # =========================
-norm = pivot / pivot.iloc[0]
-pct = (norm - 1) * 100
+pct = (pivot / pivot.iloc[0] - 1) * 100
 
 st.subheader("📈 Groei (%)")
 st.line_chart(pct)
 
 # =========================
-# ACTUELE WAARDES
+# MOMENTUM (FIXED)
 # =========================
-latest = df.groupby("fund").last().reset_index()
-latest = latest[latest["fund"].isin(selected)]
+st.subheader("⚡ Momentum (30 dagen)")
 
-st.subheader("📊 Actuele waardes")
-st.dataframe(latest, use_container_width=True)
+momentum = (pivot / pivot.shift(30) - 1) * 100
+momentum_last = momentum.iloc[-1].dropna()
 
-# =========================
-# METRICS
-# =========================
-perf = pct.iloc[-1].dropna()
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.metric("🏆 Beste", perf.idxmax(), f"{perf.max():.2f}%")
-
-with col2:
-    st.metric("📉 Slechtste", perf.idxmin(), f"{perf.min():.2f}%")
+if not momentum_last.empty:
+    st.bar_chart(momentum_last.sort_values(ascending=False))
+else:
+    st.info("Niet genoeg data voor momentum")
 
 # =========================
-# HEATMAP
+# HEATMAP (FIXED COLORS)
 # =========================
 st.subheader("🔥 Rendement Heatmap")
 
@@ -120,10 +96,12 @@ def calc_return(days):
         f = df[df["fund"] == fund]
         current = f.iloc[-1]["price"]
         past = f[f["date"] <= latest_date - pd.Timedelta(days=days)]
+
         if past.empty:
             res[fund] = np.nan
         else:
             res[fund] = (current / past.iloc[-1]["price"] - 1) * 100
+
     return pd.Series(res)
 
 periods = {
@@ -135,12 +113,37 @@ periods = {
 heatmap = pd.DataFrame({k: calc_return(v) for k,v in periods.items()})
 heatmap = heatmap.loc[selected]
 
-styled = heatmap.style.format(lambda x: f"{x:.2f}%" if pd.notna(x) else "")
+# 🎨 KLEUR FUNCTIE
+def color(val, col):
+    if pd.isna(val):
+        return "background-color:#111;color:#666"
+
+    short = ["1D","3D","1W","2W"]
+
+    if col in short:
+        if val < -0.01: return "background:#ff0000;color:white"
+        elif val < 0: return "background:#f4a261"
+        elif val < 0.25: return "background:#ffcc00"
+        elif val < 0.5: return "background:#a8d08d"
+        elif val < 0.75: return "background:#70ad47"
+        else: return "background:#548235;color:white"
+    else:
+        if val < -0.01: return "background:#ff0000;color:white"
+        elif val < 2.5: return "background:#f4a261"
+        elif val < 4: return "background:#ffcc00"
+        elif val < 10: return "background:#a8d08d"
+        elif val < 25: return "background:#70ad47"
+        else: return "background:#548235;color:white"
+
+styled = heatmap.style.format("{:.2f}%")
+
+for c in heatmap.columns:
+    styled = styled.apply(lambda s: [color(v, c) for v in s], subset=[c])
 
 st.dataframe(styled, use_container_width=True)
 
 # =========================
-# 🧠 ADVANCED ANALYTICS
+# ADVANCED ANALYTICS
 # =========================
 st.divider()
 st.header("🧠 Advanced Analytics")
@@ -158,39 +161,26 @@ vol = returns.std() * np.sqrt(252)
 st.dataframe(vol.sort_values(ascending=False).to_frame())
 
 # Sharpe
-st.subheader("🏆 Sharpe Ratio")
+st.subheader("🏆 Sharpe")
 sharpe = returns.mean() / returns.std()
 st.dataframe(sharpe.sort_values(ascending=False).to_frame())
 
-# Momentum
-st.subheader("⚡ Momentum (30d)")
-momentum = (pivot / pivot.shift(30) - 1) * 100
-st.bar_chart(momentum.iloc[-1])
-
-# Correlation
-st.subheader("🔗 Correlation")
-st.dataframe(returns.corr())
-
-# Portfolio
-st.subheader("💼 Portfolio")
-weights = np.repeat(1/len(selected), len(selected))
-portfolio = (returns * weights).sum(axis=1)
-st.line_chart((1+portfolio).cumprod())
-
 # =========================
-# 🌍 GLOBAL
+# GLOBAL PERFORMANCE
 # =========================
 st.divider()
 st.header("🌍 Markt overzicht")
 
 full = df.pivot(index="date", columns="fund", values="price")
 full_pct = (full / full.iloc[0] - 1) * 100
-perf = full_pct.iloc[-1].dropna().sort_values()
+perf = full_pct.iloc[-1].dropna()
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.bar_chart(perf.tail(10))
+    st.subheader("🏆 Beste fondsen")
+    st.bar_chart(perf.sort_values(ascending=False).head(10))
 
 with col2:
-    st.bar_chart(perf.head(10))
+    st.subheader("📉 Slechtste fondsen")
+    st.bar_chart(perf.sort_values().head(10))
