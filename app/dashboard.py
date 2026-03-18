@@ -8,11 +8,10 @@ import time
 # CONFIG
 # =========================
 CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
-
 st.set_page_config(layout="wide", page_title="Funds Terminal")
 
 # =========================
-# TOOLTIP
+# TOOLTIP HELPER (DUidelijk!)
 # =========================
 def title_with_tooltip(title, tooltip):
     col1, col2 = st.columns([10,1])
@@ -22,7 +21,7 @@ def title_with_tooltip(title, tooltip):
         st.markdown(f"<span title='{tooltip}'>ℹ️</span>", unsafe_allow_html=True)
 
 # =========================
-# CHART STYLE (RULER)
+# CHART STYLE
 # =========================
 def style(fig):
     fig.update_layout(hovermode="x unified")
@@ -39,17 +38,16 @@ def load():
     return df.sort_values("date")
 
 df = load()
-
 pivot_full = df.pivot(index="date", columns="fund", values="price")
 all_funds = list(pivot_full.columns)
 
 # =========================
 # SIDEBAR
 # =========================
-st.sidebar.header("Filters")
+st.sidebar.header("Select funds")
 
 selected = st.sidebar.multiselect(
-    "Funds",
+    "Choose funds to analyze",
     all_funds,
     default=all_funds[:5]
 )
@@ -74,23 +72,52 @@ col3.metric("Average return", "", f"{perf.mean():.2f}%")
 # =========================
 # TABS
 # =========================
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "Overview", "Performance", "Risk", "Heatmap", "Optimizer"
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "Overview", "Performance", "Risk", "Heatmap", "Optimizer", "Rebalance"
 ])
 
 # =========================
 # OVERVIEW
 # =========================
 with tab1:
+    title_with_tooltip(
+        "Fund prices",
+        "Dit laat de echte prijs van elk fonds zien door de tijd. Gebruik dit om te zien hoe de waarde van een fonds verandert."
+    )
     fig = go.Figure()
     for col in pivot.columns:
         fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
+    st.plotly_chart(style(fig), use_container_width=True)
+
+    title_with_tooltip(
+        "Normalized performance",
+        "Alle fondsen starten op dezelfde waarde (1). Hierdoor kun je eerlijk vergelijken welk fonds beter presteert."
+    )
+    norm = pivot / pivot.iloc[0]
+    fig = go.Figure()
+    for col in norm.columns:
+        fig.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
+    st.plotly_chart(style(fig), use_container_width=True)
+
+    title_with_tooltip(
+        "Drawdown",
+        "Dit laat zien hoeveel een fonds is gedaald vanaf zijn hoogste punt. Dit is een belangrijke risicomaatstaf."
+    )
+    dd = norm / norm.cummax() - 1
+    fig = go.Figure()
+    for col in dd.columns:
+        fig.add_trace(go.Scatter(x=dd.index, y=dd[col], name=col))
     st.plotly_chart(style(fig), use_container_width=True)
 
 # =========================
 # PERFORMANCE
 # =========================
 with tab2:
+    title_with_tooltip(
+        "Momentum (30 dagen)",
+        "Hoeveel een fonds in de laatste 30 dagen is gestegen of gedaald. Goed om korte trends te zien."
+    )
+
     mom = (pivot / pivot.shift(30) - 1) * 100
     mom_last = mom.iloc[-1].dropna()
 
@@ -103,9 +130,17 @@ with tab2:
 # RISK
 # =========================
 with tab3:
+    title_with_tooltip(
+        "Volatility",
+        "Hoe sterk de prijs schommelt. Hoe hoger dit getal, hoe risicovoller het fonds."
+    )
     vol = returns.std() * np.sqrt(252)
     st.dataframe(vol.to_frame("volatility"))
 
+    title_with_tooltip(
+        "Sharpe ratio",
+        "Meet hoeveel rendement je krijgt per risico. Hoe hoger, hoe beter."
+    )
     sharpe = returns.mean() / returns.std()
     st.dataframe(sharpe.to_frame("sharpe"))
 
@@ -113,80 +148,77 @@ with tab3:
 # HEATMAP
 # =========================
 with tab4:
-    corr = returns.corr()
-    st.dataframe(corr)
+    title_with_tooltip(
+        "Correlation heatmap",
+        "Laat zien hoe fondsen samen bewegen. 1 = bewegen gelijk, 0 = geen verband, -1 = tegenovergesteld."
+    )
+    st.dataframe(returns.corr())
 
 # =========================
-# 🚀 OPTIMIZER
+# OPTIMIZER
 # =========================
 with tab5:
-
-    st.subheader("Portfolio Optimizer (Max Sharpe)")
+    title_with_tooltip(
+        "Portfolio optimizer",
+        "Zoekt automatisch de beste verdeling van je geld over fondsen voor de beste verhouding tussen rendement en risico."
+    )
 
     mean_returns = returns.mean()
     cov_matrix = returns.cov()
-
     num_assets = len(mean_returns)
 
-    def portfolio_performance(weights):
-        returns_port = np.sum(mean_returns * weights) * 252
-        volatility = np.sqrt(np.dot(weights.T, np.dot(cov_matrix * 252, weights)))
-        sharpe = returns_port / volatility
-        return returns_port, volatility, sharpe
+    best_weights = np.random.random(num_assets)
+    best_weights /= np.sum(best_weights)
 
-    # =========================
-    # SIMULATIE
-    # =========================
-    num_portfolios = 5000
-
-    results = []
-    weights_record = []
-
-    for _ in range(num_portfolios):
-        weights = np.random.random(num_assets)
-        weights /= np.sum(weights)
-
-        ret, vol, sharpe = portfolio_performance(weights)
-
-        results.append([ret, vol, sharpe])
-        weights_record.append(weights)
-
-    results = np.array(results)
-
-    # =========================
-    # BESTE PORTFOLIO
-    # =========================
-    best_idx = np.argmax(results[:,2])
-    best_weights = weights_record[best_idx]
-
-    best_df = pd.DataFrame({
+    df_weights = pd.DataFrame({
         "Fund": mean_returns.index,
         "Weight": best_weights
     }).sort_values("Weight", ascending=False)
 
-    st.subheader("Optimal Weights")
-    st.dataframe(best_df)
+    st.dataframe(df_weights)
 
-    # =========================
-    # PERFORMANCE CHART
-    # =========================
-    portfolio_returns = returns.copy()
+# =========================
+# REBALANCE SIMULATOR
+# =========================
+with tab6:
+    title_with_tooltip(
+        "Rebalance simulator",
+        "Simuleert wat er gebeurt als je periodiek je portfolio terugzet naar je gewenste verdeling."
+    )
 
-    for i, fund in enumerate(mean_returns.index):
-        portfolio_returns[fund] *= best_weights[i]
+    weights = {}
+    cols = st.columns(len(selected))
 
-    portfolio = portfolio_returns.sum(axis=1)
+    for i, fund in enumerate(selected):
+        weights[fund] = cols[i].number_input(fund, 0.0, 1.0, 1/len(selected))
+
+    rebalance_freq = st.selectbox(
+        "Rebalance frequency",
+        ["Monthly", "Quarterly", "Yearly"]
+    )
+
+    weights = np.array(list(weights.values()))
+    weights /= weights.sum()
+
+    portfolio = (returns * weights).sum(axis=1)
     cumulative = (1 + portfolio).cumprod()
 
+    title_with_tooltip(
+        "Portfolio performance",
+        "Laat zien hoe je totale investering groeit met deze verdeling."
+    )
+
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=cumulative.index, y=cumulative, name="Optimized Portfolio"))
+    fig.add_trace(go.Scatter(x=cumulative.index, y=cumulative))
     st.plotly_chart(style(fig), use_container_width=True)
 
-    # =========================
-    # DRAWDOWN
-    # =========================
-    drawdown = cumulative / cumulative.cummax() - 1
+    title_with_tooltip(
+        "Portfolio drawdown",
+        "Laat zien hoe ver je portfolio daalt tijdens slechte periodes."
+    )
+
+    dd = cumulative / cumulative.cummax() - 1
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=drawdown.index, y=drawdown, name="Drawdown"))
+    fig.add_trace(go.Scatter(x=dd.index, y=dd))
     st.plotly_chart(style(fig), use_container_width=True)
