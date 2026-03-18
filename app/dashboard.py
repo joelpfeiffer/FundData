@@ -11,7 +11,7 @@ CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/pri
 st.set_page_config(layout="wide", page_title="Funds Terminal")
 
 # =========================
-# TOOLTIP HELPER (DUidelijk!)
+# TOOLTIP HELPER
 # =========================
 def title_with_tooltip(title, tooltip):
     col1, col2 = st.columns([10,1])
@@ -21,7 +21,7 @@ def title_with_tooltip(title, tooltip):
         st.markdown(f"<span title='{tooltip}'>ℹ️</span>", unsafe_allow_html=True)
 
 # =========================
-# CHART STYLE
+# CHART STYLE (RULER)
 # =========================
 def style(fig):
     fig.update_layout(hovermode="x unified")
@@ -38,6 +38,11 @@ def load():
     return df.sort_values("date")
 
 df = load()
+
+if df.empty:
+    st.warning("No data available")
+    st.stop()
+
 pivot_full = df.pivot(index="date", columns="fund", values="price")
 all_funds = list(pivot_full.columns)
 
@@ -47,7 +52,7 @@ all_funds = list(pivot_full.columns)
 st.sidebar.header("Select funds")
 
 selected = st.sidebar.multiselect(
-    "Choose funds to analyze",
+    "Choose funds",
     all_funds,
     default=all_funds[:5]
 )
@@ -56,7 +61,53 @@ if not selected:
     st.warning("Select at least one fund")
     st.stop()
 
+# =========================
+# TIMEFRAME SELECTOR
+# =========================
+st.sidebar.markdown("---")
+st.sidebar.header("Timeframe")
+
+mode = st.sidebar.radio("Mode", ["Preset", "Custom"])
+
 pivot = pivot_full[selected]
+
+if mode == "Preset":
+
+    timeframe = st.sidebar.selectbox(
+        "Range",
+        ["1W", "2W", "1M", "3M", "6M", "1Y", "3Y", "ALL"]
+    )
+
+    days_map = {
+        "1W":7, "2W":14, "1M":30,
+        "3M":90, "6M":180,
+        "1Y":365, "3Y":1095
+    }
+
+    if timeframe != "ALL":
+        end_date = pivot.index.max()
+        start_date = end_date - pd.Timedelta(days=days_map[timeframe])
+        pivot = pivot[pivot.index >= start_date]
+
+else:
+    min_date = pivot.index.min()
+    max_date = pivot.index.max()
+
+    start_date = st.sidebar.date_input("Start date", min_date)
+    end_date = st.sidebar.date_input("End date", max_date)
+
+    pivot = pivot[
+        (pivot.index >= pd.to_datetime(start_date)) &
+        (pivot.index <= pd.to_datetime(end_date))
+    ]
+
+# =========================
+# SAFETY
+# =========================
+if len(pivot) < 2:
+    st.warning("Not enough data for selected timeframe")
+    st.stop()
+
 returns = pivot.pct_change().dropna()
 
 # =========================
@@ -80,29 +131,23 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # OVERVIEW
 # =========================
 with tab1:
-    title_with_tooltip(
-        "Fund prices",
-        "Dit laat de echte prijs van elk fonds zien door de tijd. Gebruik dit om te zien hoe de waarde van een fonds verandert."
-    )
+    title_with_tooltip("Fund prices",
+        "Dit toont de echte prijs van elk fonds over tijd.")
     fig = go.Figure()
     for col in pivot.columns:
         fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
     st.plotly_chart(style(fig), use_container_width=True)
 
-    title_with_tooltip(
-        "Normalized performance",
-        "Alle fondsen starten op dezelfde waarde (1). Hierdoor kun je eerlijk vergelijken welk fonds beter presteert."
-    )
+    title_with_tooltip("Normalized performance",
+        "Alle fondsen starten gelijk (op 1), zodat je prestaties kunt vergelijken.")
     norm = pivot / pivot.iloc[0]
     fig = go.Figure()
     for col in norm.columns:
         fig.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
     st.plotly_chart(style(fig), use_container_width=True)
 
-    title_with_tooltip(
-        "Drawdown",
-        "Dit laat zien hoeveel een fonds is gedaald vanaf zijn hoogste punt. Dit is een belangrijke risicomaatstaf."
-    )
+    title_with_tooltip("Drawdown",
+        "Laat zien hoe ver een fonds daalt vanaf zijn hoogste punt.")
     dd = norm / norm.cummax() - 1
     fig = go.Figure()
     for col in dd.columns:
@@ -113,11 +158,8 @@ with tab1:
 # PERFORMANCE
 # =========================
 with tab2:
-    title_with_tooltip(
-        "Momentum (30 dagen)",
-        "Hoeveel een fonds in de laatste 30 dagen is gestegen of gedaald. Goed om korte trends te zien."
-    )
-
+    title_with_tooltip("Momentum (30 dagen)",
+        "Laatste 30 dagen rendement.")
     mom = (pivot / pivot.shift(30) - 1) * 100
     mom_last = mom.iloc[-1].dropna()
 
@@ -130,17 +172,13 @@ with tab2:
 # RISK
 # =========================
 with tab3:
-    title_with_tooltip(
-        "Volatility",
-        "Hoe sterk de prijs schommelt. Hoe hoger dit getal, hoe risicovoller het fonds."
-    )
+    title_with_tooltip("Volatility",
+        "Hoe sterk de prijs schommelt (risico).")
     vol = returns.std() * np.sqrt(252)
     st.dataframe(vol.to_frame("volatility"))
 
-    title_with_tooltip(
-        "Sharpe ratio",
-        "Meet hoeveel rendement je krijgt per risico. Hoe hoger, hoe beter."
-    )
+    title_with_tooltip("Sharpe ratio",
+        "Rendement per risico. Hoger = beter.")
     sharpe = returns.mean() / returns.std()
     st.dataframe(sharpe.to_frame("sharpe"))
 
@@ -148,43 +186,33 @@ with tab3:
 # HEATMAP
 # =========================
 with tab4:
-    title_with_tooltip(
-        "Correlation heatmap",
-        "Laat zien hoe fondsen samen bewegen. 1 = bewegen gelijk, 0 = geen verband, -1 = tegenovergesteld."
-    )
+    title_with_tooltip("Correlation heatmap",
+        "Laat zien hoe fondsen samen bewegen.")
     st.dataframe(returns.corr())
 
 # =========================
 # OPTIMIZER
 # =========================
 with tab5:
-    title_with_tooltip(
-        "Portfolio optimizer",
-        "Zoekt automatisch de beste verdeling van je geld over fondsen voor de beste verhouding tussen rendement en risico."
-    )
+    title_with_tooltip("Portfolio optimizer",
+        "Zoekt een slimme verdeling van je geld over fondsen.")
 
-    mean_returns = returns.mean()
-    cov_matrix = returns.cov()
-    num_assets = len(mean_returns)
-
-    best_weights = np.random.random(num_assets)
-    best_weights /= np.sum(best_weights)
+    weights = np.random.random(len(selected))
+    weights /= weights.sum()
 
     df_weights = pd.DataFrame({
-        "Fund": mean_returns.index,
-        "Weight": best_weights
+        "Fund": selected,
+        "Weight": weights
     }).sort_values("Weight", ascending=False)
 
     st.dataframe(df_weights)
 
 # =========================
-# REBALANCE SIMULATOR
+# REBALANCE
 # =========================
 with tab6:
-    title_with_tooltip(
-        "Rebalance simulator",
-        "Simuleert wat er gebeurt als je periodiek je portfolio terugzet naar je gewenste verdeling."
-    )
+    title_with_tooltip("Rebalance simulator",
+        "Simuleert hoe je portfolio groeit met periodiek herbalanceren.")
 
     weights = {}
     cols = st.columns(len(selected))
@@ -192,33 +220,12 @@ with tab6:
     for i, fund in enumerate(selected):
         weights[fund] = cols[i].number_input(fund, 0.0, 1.0, 1/len(selected))
 
-    rebalance_freq = st.selectbox(
-        "Rebalance frequency",
-        ["Monthly", "Quarterly", "Yearly"]
-    )
-
     weights = np.array(list(weights.values()))
     weights /= weights.sum()
 
     portfolio = (returns * weights).sum(axis=1)
     cumulative = (1 + portfolio).cumprod()
 
-    title_with_tooltip(
-        "Portfolio performance",
-        "Laat zien hoe je totale investering groeit met deze verdeling."
-    )
-
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=cumulative.index, y=cumulative))
-    st.plotly_chart(style(fig), use_container_width=True)
-
-    title_with_tooltip(
-        "Portfolio drawdown",
-        "Laat zien hoe ver je portfolio daalt tijdens slechte periodes."
-    )
-
-    dd = cumulative / cumulative.cummax() - 1
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=dd.index, y=dd))
     st.plotly_chart(style(fig), use_container_width=True)
