@@ -74,23 +74,10 @@ st.subheader("📊 Actuele waardes")
 st.dataframe(latest, use_container_width=True)
 
 # =========================
-# PERFORMANCE
+# METRICS (SELECTIE)
 # =========================
-perf = pct.iloc[-1].dropna().sort_values(ascending=False)
+perf = pct.iloc[-1].dropna()
 
-col1, col2 = st.columns(2)
-
-with col1:
-    st.subheader("🏆 Beste fondsen")
-    st.bar_chart(perf.head(10).to_frame(name="performance"))
-
-with col2:
-    st.subheader("📉 Slechtste fondsen")
-    st.bar_chart(perf.tail(10).to_frame(name="performance"))
-
-# =========================
-# METRICS (VEILIG)
-# =========================
 if not perf.empty:
     best_fund = perf.idxmax()
     best_value = perf.max()
@@ -101,10 +88,10 @@ if not perf.empty:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.metric("🏆 Beste fonds", best_fund, f"{best_value:.2f}%")
+        st.metric("🏆 Beste (selectie)", best_fund, f"{best_value:.2f}%")
 
     with col2:
-        st.metric("📉 Slechtste fonds", worst_fund, f"{worst_value:.2f}%")
+        st.metric("📉 Slechtste (selectie)", worst_fund, f"{worst_value:.2f}%")
 
 # =========================
 # OVERZICHT
@@ -165,7 +152,7 @@ heatmap = pd.DataFrame({
 heatmap = heatmap.loc[heatmap.index.intersection(selected)]
 
 # =========================
-# KLEUREN
+# 🎨 KLEUREN
 # =========================
 def color_gradient(val, col):
     if pd.isna(val):
@@ -173,6 +160,7 @@ def color_gradient(val, col):
 
     short_cols = ["1D", "3D", "1W", "2W"]
 
+    # korte termijn (<1M)
     if col in short_cols:
         if val < -0.01:
             return "background-color: #ff0000; color: white"
@@ -186,6 +174,8 @@ def color_gradient(val, col):
             return "background-color: #70ad47"
         else:
             return "background-color: #548235; color: white"
+
+    # lange termijn (≥1M)
     else:
         if val < -0.01:
             return "background-color: #ff0000; color: white"
@@ -218,3 +208,26 @@ styled = styled.set_properties(**{
 })
 
 st.dataframe(styled, use_container_width=True, height=500)
+
+# =========================
+# 🌍 GLOBAL PERFORMANCE
+# =========================
+st.divider()
+st.header("🌍 Markt overzicht")
+
+full_pivot = df.pivot(index="date", columns="fund", values="price")
+
+full_norm = full_pivot / full_pivot.iloc[0]
+full_pct = (full_norm - 1) * 100
+
+full_perf = full_pct.iloc[-1].dropna().sort_values(ascending=False)
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("🏆 Beste fondsen (alle)")
+    st.bar_chart(full_perf.head(10).to_frame(name="performance"))
+
+with col2:
+    st.subheader("📉 Slechtste fondsen (alle)")
+    st.bar_chart(full_perf.tail(10).to_frame(name="performance"))
