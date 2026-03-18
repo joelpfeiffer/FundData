@@ -8,7 +8,7 @@ sys.path.append(BASE_DIR)
 import sqlite3
 from datetime import datetime
 
-from app.config import DB_PATH
+DB_PATH = "data/pension.db"
 from pipeline.scraper import fetch_data
 from pipeline.database import init_db
 
