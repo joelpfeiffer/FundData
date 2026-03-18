@@ -41,7 +41,7 @@ pivot = df.pivot(index="date", columns="fund", values="price")
 all_funds = list(pivot.columns)
 
 # =========================
-# INIT STATE (BELANGRIJK)
+# STATE INIT
 # =========================
 if "selected_funds" not in st.session_state:
     st.session_state.selected_funds = all_funds[:5]
@@ -60,7 +60,7 @@ with col2:
         st.session_state.selected_funds = []
 
 # =========================
-# MULTISELECT (KEY FIX)
+# MULTISELECT (STABLE)
 # =========================
 selected = st.multiselect(
     "Selecteer fondsen",
@@ -70,31 +70,25 @@ selected = st.multiselect(
 
 st.caption(f"{len(selected)} fondsen geselecteerd")
 
-# =========================
-# UX FIX
-# =========================
 if len(selected) == 0:
-    st.info("👆 Selecteer minimaal één fonds om data te zien")
+    st.info("👆 Selecteer minimaal één fonds")
     st.stop()
 
 pivot = pivot[selected]
 
 # =========================
-# GROEI (%)
+# GROEI
 # =========================
 norm = pivot / pivot.iloc[0]
 pct = (norm - 1) * 100
 
-# =========================
-# GRAFIEK
-# =========================
 st.subheader("📈 Groei (%)")
 st.line_chart(pct)
 
 # =========================
 # ACTUELE WAARDES
 # =========================
-latest = df.sort_values("date").groupby("fund").last().reset_index()
+latest = df.groupby("fund").last().reset_index()
 latest = latest[latest["fund"].isin(selected)]
 
 st.subheader("📊 Actuele waardes")
@@ -105,150 +99,98 @@ st.dataframe(latest, use_container_width=True)
 # =========================
 perf = pct.iloc[-1].dropna()
 
-if not perf.empty:
-    best_fund = perf.idxmax()
-    best_value = perf.max()
+col1, col2 = st.columns(2)
 
-    worst_fund = perf.idxmin()
-    worst_value = perf.min()
+with col1:
+    st.metric("🏆 Beste", perf.idxmax(), f"{perf.max():.2f}%")
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.metric("🏆 Beste (selectie)", best_fund, f"{best_value:.2f}%")
-
-    with col2:
-        st.metric("📉 Slechtste (selectie)", worst_fund, f"{worst_value:.2f}%")
+with col2:
+    st.metric("📉 Slechtste", perf.idxmin(), f"{perf.min():.2f}%")
 
 # =========================
-# OVERZICHT
-# =========================
-summary = latest.copy().set_index("fund")
-summary["groei_%"] = perf
-
-st.subheader("📋 Overzicht")
-st.dataframe(
-    summary.sort_values("groei_%", ascending=False),
-    use_container_width=True
-)
-
-# =========================
-# 🔥 HEATMAP
+# HEATMAP
 # =========================
 st.subheader("🔥 Rendement Heatmap")
 
 latest_date = df["date"].max()
 
 def calc_return(days):
-    results = {}
-
+    res = {}
     for fund in df["fund"].unique():
-        fund_df = df[df["fund"] == fund].sort_values("date")
-
-        current_price = fund_df.iloc[-1]["price"]
-        target_date = latest_date - pd.Timedelta(days=days)
-
-        past_df = fund_df[fund_df["date"] <= target_date]
-
-        if past_df.empty:
-            results[fund] = np.nan
+        f = df[df["fund"] == fund]
+        current = f.iloc[-1]["price"]
+        past = f[f["date"] <= latest_date - pd.Timedelta(days=days)]
+        if past.empty:
+            res[fund] = np.nan
         else:
-            past_price = past_df.iloc[-1]["price"]
-            results[fund] = (current_price / past_price - 1) * 100
-
-    return pd.Series(results)
+            res[fund] = (current / past.iloc[-1]["price"] - 1) * 100
+    return pd.Series(res)
 
 periods = {
-    "1D": 1,
-    "3D": 3,
-    "1W": 7,
-    "2W": 14,
-    "1M": 30,
-    "3M": 90,
-    "6M": 180,
-    "1Y": 365,
-    "3Y": 365*3,
-    "5Y": 365*5
+    "1D":1,"3D":3,"1W":7,"2W":14,
+    "1M":30,"3M":90,"6M":180,
+    "1Y":365,"3Y":1095,"5Y":1825
 }
 
-heatmap = pd.DataFrame({
-    name: calc_return(days)
-    for name, days in periods.items()
-})
+heatmap = pd.DataFrame({k: calc_return(v) for k,v in periods.items()})
+heatmap = heatmap.loc[selected]
 
-heatmap = heatmap.loc[heatmap.index.intersection(selected)]
+styled = heatmap.style.format(lambda x: f"{x:.2f}%" if pd.notna(x) else "")
 
-def color_gradient(val, col):
-    if pd.isna(val):
-        return "background-color: #111; color: #666"
-
-    short_cols = ["1D", "3D", "1W", "2W"]
-
-    if col in short_cols:
-        if val < -0.01:
-            return "background-color: #ff0000; color: white"
-        elif val < 0:
-            return "background-color: #f4a261"
-        elif val < 0.25:
-            return "background-color: #ffcc00"
-        elif val < 0.5:
-            return "background-color: #a8d08d"
-        elif val < 0.75:
-            return "background-color: #70ad47"
-        else:
-            return "background-color: #548235; color: white"
-    else:
-        if val < -0.01:
-            return "background-color: #ff0000; color: white"
-        elif val < 2.5:
-            return "background-color: #f4a261"
-        elif val < 4:
-            return "background-color: #ffcc00"
-        elif val < 10:
-            return "background-color: #a8d08d"
-        elif val < 25:
-            return "background-color: #70ad47"
-        else:
-            return "background-color: #548235; color: white"
-
-styled = heatmap.style.format(
-    lambda x: f"+{x:.2f}%" if x > 0 else f"{x:.2f}%" if pd.notna(x) else ""
-)
-
-for col in heatmap.columns:
-    styled = styled.apply(
-        lambda s: [color_gradient(v, col) for v in s],
-        subset=[col]
-    )
-
-styled = styled.set_properties(**{
-    "text-align": "center",
-    "font-weight": "600",
-    "font-size": "13px",
-    "font-family": "monospace"
-})
-
-st.dataframe(styled, use_container_width=True, height=500)
+st.dataframe(styled, use_container_width=True)
 
 # =========================
-# 🌍 GLOBAL PERFORMANCE
+# 🧠 ADVANCED ANALYTICS
+# =========================
+st.divider()
+st.header("🧠 Advanced Analytics")
+
+returns = pivot.pct_change().dropna()
+
+# Drawdown
+st.subheader("📉 Drawdown")
+drawdown = (pivot / pivot.cummax() - 1) * 100
+st.line_chart(drawdown)
+
+# Volatility
+st.subheader("⚖️ Volatility")
+vol = returns.std() * np.sqrt(252)
+st.dataframe(vol.sort_values(ascending=False).to_frame())
+
+# Sharpe
+st.subheader("🏆 Sharpe Ratio")
+sharpe = returns.mean() / returns.std()
+st.dataframe(sharpe.sort_values(ascending=False).to_frame())
+
+# Momentum
+st.subheader("⚡ Momentum (30d)")
+momentum = (pivot / pivot.shift(30) - 1) * 100
+st.bar_chart(momentum.iloc[-1])
+
+# Correlation
+st.subheader("🔗 Correlation")
+st.dataframe(returns.corr())
+
+# Portfolio
+st.subheader("💼 Portfolio")
+weights = np.repeat(1/len(selected), len(selected))
+portfolio = (returns * weights).sum(axis=1)
+st.line_chart((1+portfolio).cumprod())
+
+# =========================
+# 🌍 GLOBAL
 # =========================
 st.divider()
 st.header("🌍 Markt overzicht")
 
-full_pivot = df.pivot(index="date", columns="fund", values="price")
-
-full_norm = full_pivot / full_pivot.iloc[0]
-full_pct = (full_norm - 1) * 100
-
-full_perf = full_pct.iloc[-1].dropna().sort_values(ascending=False)
+full = df.pivot(index="date", columns="fund", values="price")
+full_pct = (full / full.iloc[0] - 1) * 100
+perf = full_pct.iloc[-1].dropna().sort_values()
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("🏆 Beste fondsen (alle)")
-    st.bar_chart(full_perf.head(10).to_frame(name="performance"))
+    st.bar_chart(perf.tail(10))
 
 with col2:
-    st.subheader("📉 Slechtste fondsen (alle)")
-    st.bar_chart(full_perf.tail(10).to_frame(name="performance"))
+    st.bar_chart(perf.head(10))
