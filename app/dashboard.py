@@ -105,4 +105,106 @@ st.subheader("📋 Overzicht")
 st.dataframe(
     summary.sort_values("groei_%", ascending=False),
     use_container_width=True
+
+    import numpy as np
+
+st.subheader("🔥 Rendement per periode")
+
+# Zorg voor juiste sortering
+df = df.sort_values("date")
+
+latest_date = df["date"].max()
+
+# =========================
+# RETURN FUNCTIE (ROBUST)
+# =========================
+def calc_return(days):
+    past_date = latest_date - pd.Timedelta(days=days)
+
+    past = (
+        df[df["date"] <= past_date]
+        .sort_values("date")
+        .groupby("fund")
+        .last()
+    )
+
+    current = (
+        df.sort_values("date")
+        .groupby("fund")
+        .last()
+    )
+
+    merged = current[["price"]].join(
+        past[["price"]],
+        lsuffix="_now",
+        rsuffix="_past"
+    )
+
+    merged["return"] = (merged["price_now"] / merged["price_past"] - 1) * 100
+
+    return merged["return"]
+
+# =========================
+# PERIODES
+# =========================
+periods = {
+    "1D": 1,
+    "3D": 3,
+    "1W": 7,
+    "2W": 14,
+    "1M": 30,
+    "3M": 90,
+    "6M": 180,
+    "1Y": 365,
+    "3Y": 365*3,
+    "5Y": 365*5
+}
+
+# =========================
+# DATAFRAME
+# =========================
+heatmap = pd.DataFrame({
+    name: calc_return(days)
+    for name, days in periods.items()
+})
+
+# alleen geselecteerde fondsen
+heatmap = heatmap.loc[heatmap.index.intersection(selected)]
+
+# =========================
+# STYLING (PRO COLOR SCALE)
+# =========================
+def color_gradient(val):
+    if pd.isna(val):
+        return ""
+
+    # clamp values
+    val = max(min(val, 10), -10)
+
+    if val > 0:
+        intensity = int(255 - (val / 10) * 155)
+        return f"background-color: rgb({intensity},255,{intensity})"
+    else:
+        intensity = int(255 - (abs(val) / 10) * 155)
+        return f"background-color: rgb(255,{intensity},{intensity})"
+
+styled = (
+    heatmap
+    .style
+    .format("{:.2f}%")
+    .applymap(color_gradient)
+    .set_properties(**{
+        "text-align": "center",
+        "font-weight": "600"
+    })
+)
+
+# =========================
+# DISPLAY
+# =========================
+st.dataframe(
+    styled,
+    use_container_width=True,
+    height=500
+)
 )
