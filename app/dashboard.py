@@ -38,42 +38,41 @@ if df.empty:
 # DATA PREP
 # =========================
 pivot = df.pivot(index="date", columns="fund", values="price")
-
 all_funds = list(pivot.columns)
+
+# =========================
+# INIT STATE (BELANGRIJK)
+# =========================
+if "selected_funds" not in st.session_state:
+    st.session_state.selected_funds = all_funds[:5]
 
 # =========================
 # SELECTIE KNOPPEN
 # =========================
-col1, col2 = st.columns([1,1])
+col1, col2 = st.columns(2)
 
 with col1:
     if st.button("✅ Selecteer alles"):
-        st.session_state["selected_funds"] = all_funds
+        st.session_state.selected_funds = all_funds
 
 with col2:
     if st.button("❌ Deselecteer alles"):
-        st.session_state["selected_funds"] = []
+        st.session_state.selected_funds = []
 
 # =========================
-# DEFAULT STATE
-# =========================
-if "selected_funds" not in st.session_state:
-    st.session_state["selected_funds"] = all_funds[:5]
-
-# =========================
-# MULTISELECT
+# MULTISELECT (KEY FIX)
 # =========================
 selected = st.multiselect(
     "Selecteer fondsen",
     all_funds,
-    default=st.session_state["selected_funds"]
+    key="selected_funds"
 )
-
-st.session_state["selected_funds"] = selected
 
 st.caption(f"{len(selected)} fondsen geselecteerd")
 
-# 👉 UX FIX
+# =========================
+# UX FIX
+# =========================
 if len(selected) == 0:
     st.info("👆 Selecteer minimaal één fonds om data te zien")
     st.stop()
@@ -102,7 +101,7 @@ st.subheader("📊 Actuele waardes")
 st.dataframe(latest, use_container_width=True)
 
 # =========================
-# METRICS (SELECTIE)
+# METRICS
 # =========================
 perf = pct.iloc[-1].dropna()
 
