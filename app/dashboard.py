@@ -39,11 +39,39 @@ if df.empty:
 # =========================
 pivot = df.pivot(index="date", columns="fund", values="price")
 
+all_funds = list(pivot.columns)
+
+# =========================
+# SELECTIE KNOPPEN
+# =========================
+col1, col2 = st.columns([1,1])
+
+with col1:
+    if st.button("✅ Selecteer alles"):
+        st.session_state["selected_funds"] = all_funds
+
+with col2:
+    if st.button("❌ Deselecteer alles"):
+        st.session_state["selected_funds"] = []
+
+# =========================
+# DEFAULT STATE
+# =========================
+if "selected_funds" not in st.session_state:
+    st.session_state["selected_funds"] = all_funds[:5]
+
+# =========================
+# MULTISELECT
+# =========================
 selected = st.multiselect(
     "Selecteer fondsen",
-    pivot.columns,
-    default=list(pivot.columns)[:5]
+    all_funds,
+    default=st.session_state["selected_funds"]
 )
+
+st.session_state["selected_funds"] = selected
+
+st.caption(f"{len(selected)} fondsen geselecteerd")
 
 # 👉 UX FIX
 if len(selected) == 0:
@@ -151,16 +179,12 @@ heatmap = pd.DataFrame({
 
 heatmap = heatmap.loc[heatmap.index.intersection(selected)]
 
-# =========================
-# 🎨 KLEUREN
-# =========================
 def color_gradient(val, col):
     if pd.isna(val):
         return "background-color: #111; color: #666"
 
     short_cols = ["1D", "3D", "1W", "2W"]
 
-    # korte termijn (<1M)
     if col in short_cols:
         if val < -0.01:
             return "background-color: #ff0000; color: white"
@@ -174,8 +198,6 @@ def color_gradient(val, col):
             return "background-color: #70ad47"
         else:
             return "background-color: #548235; color: white"
-
-    # lange termijn (≥1M)
     else:
         if val < -0.01:
             return "background-color: #ff0000; color: white"
