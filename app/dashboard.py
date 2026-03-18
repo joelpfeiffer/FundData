@@ -90,12 +90,7 @@ if st.sidebar.button("Start onboarding opnieuw"):
 # ONBOARDING
 # =========================
 if st.session_state.onboarding:
-    st.info("""
-Welkom!
-
-Selecteer fondsen links  
-Gebruik tabs voor analyse  
-""")
+    st.info("Welkom! Selecteer fondsen en gebruik de tabs.")
     if st.button("Start"):
         st.session_state.onboarding = False
         st.rerun()
@@ -216,26 +211,52 @@ with tab5:
     st.dataframe(pd.DataFrame({"Fund": selected, "Weight": w}))
 
 # =========================
-# REBALANCE (UPDATED)
+# REBALANCE (NEW UI)
 # =========================
 with tab6:
 
-    section("Portfolio verdeling (%)", "Verdeling moet 100% zijn")
+    section("Portfolio verdeling (%)", "Voer percentages in — totaal moet 100% zijn")
 
     capital = st.number_input("Startkapitaal (€)", 100, 1000000, 10000)
 
-    perc = {}
-    cols = st.columns(len(selected))
+    st.markdown("### Verdeling (%)")
 
-    for i, fund in enumerate(selected):
-        perc[fund] = cols[i].slider(
-            fund,
-            min_value=0,
-            max_value=100,
-            value=int(100/len(selected))
-        )
+    # init state
+    if "alloc" not in st.session_state:
+        st.session_state.alloc = {
+            fund: int(100/len(selected)) for fund in selected
+        }
 
-    total = sum(perc.values())
+    # sync funds
+    for fund in selected:
+        if fund not in st.session_state.alloc:
+            st.session_state.alloc[fund] = 0
+
+    # UI
+    for fund in selected:
+        col1, col2, col3, col4 = st.columns([3,1,2,1])
+
+        with col1:
+            st.write(fund)
+
+        with col2:
+            if st.button("➖", key=f"minus_{fund}"):
+                st.session_state.alloc[fund] = max(0, st.session_state.alloc[fund] - 1)
+
+        with col3:
+            st.session_state.alloc[fund] = st.number_input(
+                label="",
+                min_value=0,
+                max_value=100,
+                value=st.session_state.alloc[fund],
+                key=f"input_{fund}"
+            )
+
+        with col4:
+            if st.button("➕", key=f"plus_{fund}"):
+                st.session_state.alloc[fund] = min(100, st.session_state.alloc[fund] + 1)
+
+    total = sum(st.session_state.alloc.values())
 
     if total != 100:
         st.error(f"Totaal is {total}% — moet 100% zijn")
@@ -243,21 +264,20 @@ with tab6:
     else:
         st.success("Totaal = 100%")
 
-    w = np.array(list(perc.values())) / 100
+    w = np.array(list(st.session_state.alloc.values())) / 100
 
     port = (returns[selected] * w).sum(axis=1)
 
-    section("Historische simulatie", "Portfolio groei")
+    section("Historische simulatie", "Portfolio waarde over tijd")
 
     value = capital * (1 + port).cumprod()
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=value.index, y=value.values))
-
     fig.update_layout(xaxis_title="Datum", yaxis_title="Waarde (€)")
     st.plotly_chart(fig, use_container_width=True)
 
-    section("Monte Carlo", "Toekomstscenario’s")
+    section("Monte Carlo", "Simulatie van scenario’s")
 
     if len(port) > 10:
         sims = np.random.normal(port.mean(), port.std(), (252,500))
