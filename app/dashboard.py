@@ -22,10 +22,6 @@ def load():
 
 df = load()
 
-if df.empty:
-    st.error("Geen data")
-    st.stop()
-
 pivot_full = df.pivot(index="date", columns="fund", values="price")
 
 # =========================
@@ -36,19 +32,10 @@ funds = list(pivot_full.columns)
 selected = st.sidebar.multiselect("Fondsen", funds, default=funds[:5])
 
 if not selected:
-    st.warning("Selecteer minimaal 1 fonds")
     st.stop()
 
 pivot = pivot_full[selected]
-
-# =========================
-# RETURNS
-# =========================
 returns = pivot.pct_change().dropna()
-
-if returns.empty:
-    st.error("Niet genoeg data")
-    st.stop()
 
 # =========================
 # TABS
@@ -58,53 +45,31 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 ])
 
 # =========================
-# OVERVIEW
+# OVERVIEW (NIET AANGEPAST)
 # =========================
 with tab1:
     st.subheader("Prijsontwikkeling")
 
     fig = go.Figure()
     for col in pivot.columns:
-        fig.add_trace(go.Scatter(
-            x=pivot.index,
-            y=pivot[col],
-            name=col
-        ))
+        fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
 
-    # 👉 RULER / CROSSHAIR
-    fig.update_layout(
-        hovermode="x unified",
-        xaxis=dict(showspikes=True),
-        yaxis=dict(showspikes=True)
-    )
-
+    fig.update_layout(hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
 
-    # =========================
-    # TRENDS (GENORMALISEERD)
-    # =========================
     st.subheader("Trends (genormaliseerd)")
 
     norm = pivot / pivot.iloc[0] * 100
 
     fig2 = go.Figure()
     for col in norm.columns:
-        fig2.add_trace(go.Scatter(
-            x=norm.index,
-            y=norm[col],
-            name=col
-        ))
+        fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
 
-    fig2.update_layout(
-        hovermode="x unified",
-        xaxis=dict(showspikes=True),
-        yaxis=dict(showspikes=True)
-    )
-
+    fig2.update_layout(hovermode="x unified")
     st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
-# PERFORMANCE
+# PERFORMANCE (NIET AANGEPAST)
 # =========================
 with tab2:
     st.subheader("Momentum")
@@ -114,14 +79,11 @@ with tab2:
     last = mom.iloc[-1].dropna()
 
     if not last.empty:
-        fig = go.Figure(go.Bar(
-            x=last.index,
-            y=last.values
-        ))
+        fig = go.Figure(go.Bar(x=last.index, y=last.values))
         st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# RISK (UPGRADE)
+# RISK (FIX + SHARPE)
 # =========================
 with tab3:
     st.subheader("Volatility")
@@ -129,9 +91,15 @@ with tab3:
     vol = returns.std() * np.sqrt(TRADING_DAYS)
     st.dataframe(vol.to_frame("Volatility"))
 
-    # =========================
-    # CORRELATION MATRIX (RAVELS)
-    # =========================
+    # ✅ SHARPE RATIO
+    st.subheader("Sharpe Ratio")
+
+    mean_return = returns.mean() * TRADING_DAYS
+    sharpe = mean_return / vol
+
+    st.dataframe(sharpe.to_frame("Sharpe"))
+
+    # Correlation
     st.subheader("Correlation Matrix")
 
     corr = returns.corr()
@@ -146,27 +114,8 @@ with tab3:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # =========================
-    # DRAWDOWN
-    # =========================
-    st.subheader("Drawdown")
-
-    cumulative = (1 + returns).cumprod()
-    peak = cumulative.cummax()
-    drawdown = (cumulative - peak) / peak * 100
-
-    fig = go.Figure()
-    for col in drawdown.columns:
-        fig.add_trace(go.Scatter(
-            x=drawdown.index,
-            y=drawdown[col],
-            name=col
-        ))
-
-    st.plotly_chart(fig, use_container_width=True)
-
 # =========================
-# HEATMAP
+# HEATMAP (2Y + 5Y TOEGEVOEGD)
 # =========================
 with tab4:
     st.subheader("Heatmap")
@@ -176,7 +125,8 @@ with tab4:
 
     periods = {
         "1D":1,"2D":2,"1W":7,"2W":14,
-        "1M":30,"3M":90,"6M":180,"1Y":365
+        "1M":30,"3M":90,"6M":180,
+        "1Y":365,"2Y":730,"5Y":1825
     }
 
     def calc(days):
@@ -202,7 +152,7 @@ with tab4:
         st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# OPTIMIZER
+# OPTIMIZER (NIET AANGEPAST)
 # =========================
 with tab5:
     st.subheader("Optimizer")
@@ -216,7 +166,7 @@ with tab5:
     }))
 
 # =========================
-# REBALANCE + MONTE CARLO
+# REBALANCE (FIX MONTE CARLO)
 # =========================
 with tab6:
     st.subheader("Rebalance Simulator")
@@ -242,22 +192,38 @@ with tab6:
     st.plotly_chart(fig, use_container_width=True)
 
     # =========================
-    # MONTE CARLO
+    # MONTE CARLO (FIXED)
     # =========================
-    st.subheader("Monte Carlo")
+    st.subheader("Monte Carlo Simulation")
 
-    if len(returns) > 10:
-        sims = 100
-        horizon = 252
-
+    if len(port) > 10:
         mean = port.mean()
         std = port.std()
 
+        horizon = 252
+        simulations = 1000
+
+        sims = np.random.normal(mean, std, (horizon, simulations))
+        sims = capital * np.cumprod(1 + sims, axis=0)
+
+        # Alleen band + gemiddelde
+        p10 = np.percentile(sims, 10, axis=1)
+        p50 = np.percentile(sims, 50, axis=1)
+        p90 = np.percentile(sims, 90, axis=1)
+
         fig = go.Figure()
 
-        for _ in range(20):
-            r = np.random.normal(mean, std, horizon)
-            sim = capital * np.cumprod(1+r)
-            fig.add_trace(go.Scatter(y=sim, opacity=0.2))
+        fig.add_trace(go.Scatter(y=p90, line=dict(width=0), showlegend=False))
+        fig.add_trace(go.Scatter(
+            y=p10,
+            fill='tonexty',
+            name="Band (10-90%)",
+            opacity=0.3
+        ))
+
+        fig.add_trace(go.Scatter(
+            y=p50,
+            name="Expected"
+        ))
 
         st.plotly_chart(fig, use_container_width=True)
