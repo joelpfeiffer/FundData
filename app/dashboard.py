@@ -2,28 +2,16 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+import plotly.express as px
 import time
 
-# =========================
-# CONFIG
-# =========================
 CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
 TRADING_DAYS = 252
 
 st.set_page_config(layout="wide", page_title="Funds Dashboard")
 
 # =========================
-# TOOLTIP
-# =========================
-def section(title, tooltip):
-    col1, col2 = st.columns([10,1])
-    with col1:
-        st.subheader(title)
-    with col2:
-        st.markdown(f"<span title='{tooltip}'>ℹ️</span>", unsafe_allow_html=True)
-
-# =========================
-# LOAD DATA
+# LOAD
 # =========================
 @st.cache_data(ttl=60)
 def load():
@@ -35,7 +23,7 @@ def load():
 df = load()
 
 if df.empty:
-    st.error("Geen data geladen")
+    st.error("Geen data")
     st.stop()
 
 pivot_full = df.pivot(index="date", columns="fund", values="price")
@@ -45,11 +33,7 @@ pivot_full = df.pivot(index="date", columns="fund", values="price")
 # =========================
 funds = list(pivot_full.columns)
 
-selected = st.sidebar.multiselect(
-    "Selecteer fondsen",
-    funds,
-    default=funds[:5]
-)
+selected = st.sidebar.multiselect("Fondsen", funds, default=funds[:5])
 
 if not selected:
     st.warning("Selecteer minimaal 1 fonds")
@@ -58,26 +42,13 @@ if not selected:
 pivot = pivot_full[selected]
 
 # =========================
-# TIMEFRAME
+# RETURNS
 # =========================
-mode = st.sidebar.radio("Timeframe", ["Preset","Custom"])
+returns = pivot.pct_change().dropna()
 
-if mode == "Preset":
-    tf = st.sidebar.selectbox("Range", ["1W","2W","1M","3M","6M","1Y","ALL"])
-    days_map = {"1W":7,"2W":14,"1M":30,"3M":90,"6M":180,"1Y":365}
-
-    if tf != "ALL":
-        pivot = pivot[pivot.index >= pivot.index.max() - pd.Timedelta(days=days_map[tf])]
-else:
-    start = st.sidebar.date_input("Start", pivot.index.min())
-    end = st.sidebar.date_input("End", pivot.index.max())
-    pivot = pivot[(pivot.index >= pd.to_datetime(start)) & (pivot.index <= pd.to_datetime(end))]
-
-if len(pivot) < 2:
+if returns.empty:
     st.error("Niet genoeg data")
     st.stop()
-
-returns = pivot.pct_change().dropna()
 
 # =========================
 # TABS
@@ -90,68 +61,122 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # OVERVIEW
 # =========================
 with tab1:
-    section("Prijsontwikkeling", "Prijs per fonds over tijd")
+    st.subheader("Prijsontwikkeling")
 
     fig = go.Figure()
     for col in pivot.columns:
-        fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
+        fig.add_trace(go.Scatter(
+            x=pivot.index,
+            y=pivot[col],
+            name=col
+        ))
+
+    # 👉 RULER / CROSSHAIR
+    fig.update_layout(
+        hovermode="x unified",
+        xaxis=dict(showspikes=True),
+        yaxis=dict(showspikes=True)
+    )
+
     st.plotly_chart(fig, use_container_width=True)
+
+    # =========================
+    # TRENDS (GENORMALISEERD)
+    # =========================
+    st.subheader("Trends (genormaliseerd)")
+
+    norm = pivot / pivot.iloc[0] * 100
+
+    fig2 = go.Figure()
+    for col in norm.columns:
+        fig2.add_trace(go.Scatter(
+            x=norm.index,
+            y=norm[col],
+            name=col
+        ))
+
+    fig2.update_layout(
+        hovermode="x unified",
+        xaxis=dict(showspikes=True),
+        yaxis=dict(showspikes=True)
+    )
+
+    st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
 # PERFORMANCE
 # =========================
 with tab2:
-    section("Momentum", "Rendement over recente periode")
+    st.subheader("Momentum")
 
     shift = min(30, len(pivot)-1)
     mom = (pivot/pivot.shift(shift)-1)*100
     last = mom.iloc[-1].dropna()
 
-    if last.empty:
-        st.warning("Geen data")
-    else:
+    if not last.empty:
         fig = go.Figure(go.Bar(
             x=last.index,
             y=last.values
         ))
         st.plotly_chart(fig, use_container_width=True)
 
-    # Ranking
-    section("Ranking", "Beste en slechtste fondsen")
-
-    perf = last.sort_values(ascending=False)
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.write("Top performers")
-        st.dataframe(perf.head(5))
-
-    with col2:
-        st.write("Slechtste performers")
-        st.dataframe(perf.tail(5))
-
 # =========================
-# RISK
+# RISK (UPGRADE)
 # =========================
 with tab3:
-    section("Volatility", "Schommelingen van fondsen")
+    st.subheader("Volatility")
 
     vol = returns.std() * np.sqrt(TRADING_DAYS)
     st.dataframe(vol.to_frame("Volatility"))
+
+    # =========================
+    # CORRELATION MATRIX (RAVELS)
+    # =========================
+    st.subheader("Correlation Matrix")
+
+    corr = returns.corr()
+
+    fig = px.imshow(
+        corr,
+        text_auto=True,
+        color_continuous_scale="RdBu",
+        zmin=-1,
+        zmax=1
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # =========================
+    # DRAWDOWN
+    # =========================
+    st.subheader("Drawdown")
+
+    cumulative = (1 + returns).cumprod()
+    peak = cumulative.cummax()
+    drawdown = (cumulative - peak) / peak * 100
+
+    fig = go.Figure()
+    for col in drawdown.columns:
+        fig.add_trace(go.Scatter(
+            x=drawdown.index,
+            y=drawdown[col],
+            name=col
+        ))
+
+    st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # HEATMAP
 # =========================
 with tab4:
-    section("Heatmap", "Rendement per periode (%)")
+    st.subheader("Heatmap")
 
     df_full = pivot_full[selected]
     latest = df_full.index.max()
 
     periods = {
-        "1D":1,"2D":2,"3D":3,"1W":7,"2W":14,
-        "1M":30,"3M":90,"6M":180,"1Y":365,"2Y":730
+        "1D":1,"2D":2,"1W":7,"2W":14,
+        "1M":30,"3M":90,"6M":180,"1Y":365
     }
 
     def calc(days):
@@ -164,9 +189,7 @@ with tab4:
         k: calc(v) for k,v in periods.items()
     }).dropna(how="all")
 
-    if heatmap.empty:
-        st.warning("Geen heatmap data")
-    else:
+    if not heatmap.empty:
         fig = go.Figure(data=go.Heatmap(
             z=heatmap.values,
             x=heatmap.columns,
@@ -182,25 +205,25 @@ with tab4:
 # OPTIMIZER
 # =========================
 with tab5:
-    section("Portfolio Optimizer", "Simpele gewichtsverdeling")
+    st.subheader("Optimizer")
 
-    weights = np.random.random(len(selected))
-    weights /= weights.sum()
+    w = np.random.random(len(selected))
+    w /= w.sum()
 
     st.dataframe(pd.DataFrame({
         "Fund": selected,
-        "Weight": weights
+        "Weight": w
     }))
 
 # =========================
-# REBALANCE
+# REBALANCE + MONTE CARLO
 # =========================
 with tab6:
-    section("Rebalance Simulator", "Simuleert portfolio groei")
+    st.subheader("Rebalance Simulator")
 
     st.warning("Dit is geen financieel advies")
 
-    capital = st.number_input("Start bedrag", 100, 1000000, 10000)
+    capital = st.number_input("Start (€)", 100, 1000000, 10000)
 
     weights = {}
     cols = st.columns(len(selected))
@@ -215,5 +238,26 @@ with tab6:
     value = capital*(1+port).cumprod()
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=value.index,y=value))
+    fig.add_trace(go.Scatter(x=value.index,y=value,name="Portfolio"))
     st.plotly_chart(fig, use_container_width=True)
+
+    # =========================
+    # MONTE CARLO
+    # =========================
+    st.subheader("Monte Carlo")
+
+    if len(returns) > 10:
+        sims = 100
+        horizon = 252
+
+        mean = port.mean()
+        std = port.std()
+
+        fig = go.Figure()
+
+        for _ in range(20):
+            r = np.random.normal(mean, std, horizon)
+            sim = capital * np.cumprod(1+r)
+            fig.add_trace(go.Scatter(y=sim, opacity=0.2))
+
+        st.plotly_chart(fig, use_container_width=True)
