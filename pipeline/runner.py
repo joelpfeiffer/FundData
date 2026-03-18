@@ -47,6 +47,20 @@ def run():
     else:
         print("Data al up-to-date")
 
+    import pandas as pd
+
+export_df = pd.read_sql_query(
+    "SELECT date, fund, price FROM prices ORDER BY date, fund",
+    conn
+)
+
+import os
+os.makedirs("data", exist_ok=True)
+
+CSV_PATH = "data/prices.csv"
+export_df.to_csv(CSV_PATH, index=False)
+print("CSV bijgewerkt:", CSV_PATH)
+
     conn.close()
     print("=== EINDE PIPELINE ===")
 
