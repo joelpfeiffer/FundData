@@ -54,9 +54,11 @@ st.title("📈 Funds Intelligence Dashboard")
 # =========================
 # DATA LADEN
 # =========================
-conn = sqlite3.connect(DB_PATH)
-df = pd.read_sql("SELECT * FROM prices", conn)
-conn.close()
+import pandas as pd
+
+CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
+
+df = pd.read_csv(CSV_URL)
 
 if df.empty:
     st.warning("Geen data beschikbaar")
