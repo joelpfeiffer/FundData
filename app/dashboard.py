@@ -12,10 +12,14 @@ st.title("📈 Funds Intelligence Dashboard")
 # =========================
 # DATA LADEN
 # =========================
-@st.cache_data(ttl=3600)
+import time
+
+@st.cache_data(ttl=60)
 def load_data():
-    df = pd.read_csv(CSV_URL)
+    url = f"{CSV_URL}?t={int(time.time())}"  # force refresh
+    df = pd.read_csv(url)
     df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date")
     return df
 
 df = load_data()
