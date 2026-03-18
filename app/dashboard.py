@@ -11,6 +11,16 @@ TRADING_DAYS = 252
 st.set_page_config(layout="wide", page_title="Funds Dashboard")
 
 # =========================
+# TOOLTIP HELPER
+# =========================
+def section(title, tooltip):
+    col1, col2 = st.columns([10,1])
+    with col1:
+        st.subheader(title)
+    with col2:
+        st.markdown(f"<span title='{tooltip}'>ℹ️</span>", unsafe_allow_html=True)
+
+# =========================
 # LOAD
 # =========================
 @st.cache_data(ttl=60)
@@ -34,7 +44,6 @@ selected = st.sidebar.multiselect("Fondsen", funds, default=funds[:5])
 if not selected:
     st.stop()
 
-# 👉 NIEUW: TIMEFRAME
 st.sidebar.markdown("---")
 st.sidebar.subheader("Timeframe")
 
@@ -68,13 +77,10 @@ else:
         (pivot.index <= pd.to_datetime(end))
     ]
 
-# =========================
-# RETURNS
-# =========================
 returns = pivot.pct_change().dropna()
 
 # =========================
-# TABS (ONGEWIJZIGD)
+# TABS
 # =========================
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Overview","Performance","Risk","Heatmap","Optimizer","Rebalance"
@@ -84,16 +90,21 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # OVERVIEW
 # =========================
 with tab1:
-    st.subheader("Prijsontwikkeling")
+    section("Prijsontwikkeling (€)", "Toont de absolute prijs van elk fonds over tijd")
 
     fig = go.Figure()
     for col in pivot.columns:
         fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
 
-    fig.update_layout(hovermode="x unified")
+    fig.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Price (€)",
+        hovermode="x unified"
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader("Trends (genormaliseerd)")
+    section("Trends (genormaliseerd)", "Alle fondsen starten op 100 zodat prestaties vergelijkbaar zijn")
 
     norm = pivot / pivot.iloc[0] * 100
 
@@ -101,14 +112,19 @@ with tab1:
     for col in norm.columns:
         fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
 
-    fig2.update_layout(hovermode="x unified")
+    fig2.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Index (100 = start)",
+        hovermode="x unified"
+    )
+
     st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
 # PERFORMANCE
 # =========================
 with tab2:
-    st.subheader("Momentum")
+    section("Momentum (%)", "Rendement over recente periode")
 
     shift = min(30, len(pivot)-1)
     mom = (pivot/pivot.shift(shift)-1)*100
@@ -116,25 +132,31 @@ with tab2:
 
     if not last.empty:
         fig = go.Figure(go.Bar(x=last.index, y=last.values))
+
+        fig.update_layout(
+            xaxis_title="Fund",
+            yaxis_title="Return (%)"
+        )
+
         st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # RISK
 # =========================
 with tab3:
-    st.subheader("Volatility")
+    section("Volatility", "Hoe sterk een fonds schommelt (risico)")
 
     vol = returns.std() * np.sqrt(TRADING_DAYS)
     st.dataframe(vol.to_frame("Volatility"))
 
-    st.subheader("Sharpe Ratio")
+    section("Sharpe Ratio", "Rendement per risico-eenheid (hoger = beter)")
 
     mean_return = returns.mean() * TRADING_DAYS
     sharpe = mean_return / vol
 
     st.dataframe(sharpe.to_frame("Sharpe"))
 
-    st.subheader("Correlation Matrix")
+    section("Correlation Matrix", "Laat zien hoe fondsen samen bewegen (-1 tot 1)")
 
     corr = returns.corr()
 
@@ -146,13 +168,18 @@ with tab3:
         zmax=1
     )
 
+    fig.update_layout(
+        xaxis_title="Fund",
+        yaxis_title="Fund"
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # HEATMAP
 # =========================
 with tab4:
-    st.subheader("Heatmap")
+    section("Return Heatmap (%)", "Rendement per periode. Groen = positief, rood = negatief")
 
     df_full = pivot_full[selected]
     latest = df_full.index.max()
@@ -183,13 +210,19 @@ with tab4:
             text=heatmap.round(2).astype(str)+"%",
             texttemplate="%{text}"
         ))
+
+        fig.update_layout(
+            xaxis_title="Period",
+            yaxis_title="Fund"
+        )
+
         st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # OPTIMIZER
 # =========================
 with tab5:
-    st.subheader("Optimizer")
+    section("Portfolio Optimizer", "Random gewichten ter illustratie")
 
     w = np.random.random(len(selected))
     w /= w.sum()
@@ -203,7 +236,7 @@ with tab5:
 # REBALANCE
 # =========================
 with tab6:
-    st.subheader("Rebalance Simulator")
+    section("Rebalance Simulator", "Simuleert portfolio groei op basis van gewichten")
 
     st.warning("Dit is geen financieel advies")
 
@@ -223,4 +256,10 @@ with tab6:
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=value.index,y=value))
+
+    fig.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Portfolio value (€)"
+    )
+
     st.plotly_chart(fig, use_container_width=True)
