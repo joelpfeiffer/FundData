@@ -46,7 +46,7 @@ pivot_full = pivot_full.dropna(how="all")
 all_funds = list(pivot_full.columns)
 
 # =========================
-# SIDEBAR - FUNDS
+# SIDEBAR
 # =========================
 st.sidebar.header("Funds")
 
@@ -63,7 +63,7 @@ if not selected:
 pivot = pivot_full[selected]
 
 # =========================
-# SIDEBAR - TIMEFRAME
+# TIMEFRAME
 # =========================
 st.sidebar.markdown("---")
 st.sidebar.header("Timeframe")
@@ -96,11 +96,8 @@ else:
         (pivot.index <= pd.to_datetime(end))
     ]
 
-# =========================
-# VALIDATIE
-# =========================
 if len(pivot) < 2:
-    st.error("Not enough data in selected timeframe")
+    st.error("Not enough data in timeframe")
     st.stop()
 
 # =========================
@@ -108,10 +105,6 @@ if len(pivot) < 2:
 # =========================
 returns = pivot.pct_change().dropna()
 returns_full = pivot_full[selected].pct_change().dropna()
-
-if returns.empty:
-    st.error("No return data")
-    st.stop()
 
 # =========================
 # KPI
@@ -146,23 +139,18 @@ with tab1:
     st.plotly_chart(style(fig,"Index (start=1)"), use_container_width=True)
 
 # =========================
-# PERFORMANCE (FIXED)
+# PERFORMANCE
 # =========================
 with tab2:
-    st.subheader("Momentum")
-
     if len(pivot) < 30:
-        shift_days = max(1, int(len(pivot) / 2))
-        st.info(f"Using {shift_days}-day momentum (limited data)")
+        shift_days = max(1, int(len(pivot)/2))
     else:
         shift_days = 30
 
     mom = (pivot / pivot.shift(shift_days) - 1) * 100
     last = mom.iloc[-1].dropna()
 
-    if last.empty:
-        st.warning("No momentum data available")
-    else:
+    if not last.empty:
         fig = go.Figure()
         fig.add_trace(go.Bar(x=last.index, y=last.values))
         fig.update_layout(xaxis_title="Fund", yaxis_title="Return (%)")
@@ -179,31 +167,57 @@ with tab3:
     st.dataframe(sharpe.to_frame("Sharpe"))
 
 # =========================
-# HEATMAP (FIXED)
+# 🔥 RETURN HEATMAP (PRO)
 # =========================
 with tab4:
-    st.subheader("Correlation heatmap (full dataset)")
+    st.subheader("Return heatmap")
 
-    if returns_full.empty:
-        st.warning("Not enough data for heatmap")
-    else:
-        corr = returns_full.corr()
+    df_full = pivot_full[selected]
 
-        fig = go.Figure(data=go.Heatmap(
-            z=corr,
-            x=corr.columns,
-            y=corr.index,
-            colorscale="RdYlGn",
-            zmin=-1,
-            zmax=1
-        ))
+    latest_date = df_full.index.max()
 
-        fig.update_layout(
-            xaxis_title="Fund",
-            yaxis_title="Fund"
-        )
+    periods = {
+        "1D":1,"2D":2,"3D":3,"4D":4,
+        "1W":7,"2W":14,"3W":21,
+        "1M":30,"2M":60,"3M":90,
+        "6M":180,"1Y":365,"2Y":730,"5Y":1825
+    }
 
-        st.plotly_chart(fig, use_container_width=True)
+    def calc_return(days):
+        past_date = latest_date - pd.Timedelta(days=days)
+        past_df = df_full[df_full.index <= past_date]
+
+        if past_df.empty:
+            return pd.Series(index=df_full.columns, dtype=float)
+
+        past = past_df.iloc[-1]
+        current = df_full.loc[latest_date]
+
+        return (current / past - 1) * 100
+
+    heatmap = pd.DataFrame({
+        name: calc_return(days)
+        for name, days in periods.items()
+    }).round(2)
+
+    text_values = heatmap.astype(str) + "%"
+
+    fig = go.Figure(data=go.Heatmap(
+        z=heatmap.values,
+        x=heatmap.columns,
+        y=heatmap.index,
+        colorscale="RdYlGn",
+        zmid=0,
+        text=text_values.values,
+        texttemplate="%{text}"
+    ))
+
+    fig.update_layout(
+        xaxis_title="Period",
+        yaxis_title="Fund"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # OPTIMIZER
@@ -231,16 +245,12 @@ with tab5:
             best_s = s
             best_w = w
 
-    if best_w is None:
-        st.error("Optimization failed")
-        st.stop()
-
     st.dataframe(pd.DataFrame({
         "Fund":mean.index,
         "Weight":best_w
     }).sort_values("Weight", ascending=False))
 
-    port = (returns * best_w).sum(axis=1)
+    port = (returns*best_w).sum(axis=1)
     cum = (1+port).cumprod()
 
     fig = go.Figure()
@@ -248,7 +258,7 @@ with tab5:
     st.plotly_chart(style(fig,"Index"), use_container_width=True)
 
 # =========================
-# REBALANCE
+# REBALANCE + MONTE CARLO
 # =========================
 with tab6:
     st.warning("Dit is geen financieel advies")
@@ -269,4 +279,34 @@ with tab6:
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=value.index,y=value))
+    st.plotly_chart(style(fig,"Portfolio (€)"), use_container_width=True)
+
+    # Monte Carlo
+    sims = 200
+    days = 252
+
+    results = []
+
+    for _ in range(sims):
+        path = [capital]
+        sampled = np.random.choice(port, size=days, replace=True)
+
+        for r in sampled:
+            path.append(path[-1]*(1+r))
+
+        results.append(path)
+
+    sim_df = pd.DataFrame(results).T
+
+    future_dates = pd.date_range(
+        start=value.index[-1],
+        periods=days+1,
+        freq="B"
+    )
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=future_dates, y=sim_df.quantile(0.5,axis=1), name="Expected"))
+    fig.add_trace(go.Scatter(x=future_dates, y=sim_df.quantile(0.1,axis=1), name="Worst"))
+    fig.add_trace(go.Scatter(x=future_dates, y=sim_df.quantile(0.9,axis=1), name="Best"))
+
     st.plotly_chart(style(fig,"Portfolio (€)"), use_container_width=True)
