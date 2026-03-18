@@ -45,6 +45,11 @@ selected = st.multiselect(
     default=list(pivot.columns)[:5]
 )
 
+# 👉 UX FIX
+if len(selected) == 0:
+    st.info("👆 Selecteer minimaal één fonds om data te zien")
+    st.stop()
+
 pivot = pivot[selected]
 
 # =========================
@@ -71,7 +76,7 @@ st.dataframe(latest, use_container_width=True)
 # =========================
 # PERFORMANCE
 # =========================
-perf = pct.iloc[-1].sort_values(ascending=False)
+perf = pct.iloc[-1].dropna().sort_values(ascending=False)
 
 col1, col2 = st.columns(2)
 
@@ -84,21 +89,22 @@ with col2:
     st.bar_chart(perf.tail(10).to_frame(name="performance"))
 
 # =========================
-# METRICS
+# METRICS (VEILIG)
 # =========================
-best_fund = perf.idxmax()
-best_value = perf.max()
+if not perf.empty:
+    best_fund = perf.idxmax()
+    best_value = perf.max()
 
-worst_fund = perf.idxmin()
-worst_value = perf.min()
+    worst_fund = perf.idxmin()
+    worst_value = perf.min()
 
-col1, col2 = st.columns(2)
+    col1, col2 = st.columns(2)
 
-with col1:
-    st.metric("🏆 Beste fonds", best_fund, f"{best_value:.2f}%")
+    with col1:
+        st.metric("🏆 Beste fonds", best_fund, f"{best_value:.2f}%")
 
-with col2:
-    st.metric("📉 Slechtste fonds", worst_fund, f"{worst_value:.2f}%")
+    with col2:
+        st.metric("📉 Slechtste fonds", worst_fund, f"{worst_value:.2f}%")
 
 # =========================
 # OVERZICHT
@@ -159,7 +165,7 @@ heatmap = pd.DataFrame({
 heatmap = heatmap.loc[heatmap.index.intersection(selected)]
 
 # =========================
-# 🎨 KLEUREN (JOUW LOGICA)
+# KLEUREN
 # =========================
 def color_gradient(val, col):
     if pd.isna(val):
@@ -167,7 +173,6 @@ def color_gradient(val, col):
 
     short_cols = ["1D", "3D", "1W", "2W"]
 
-    # 📉 KORTE TERMIJN (<1M)
     if col in short_cols:
         if val < -0.01:
             return "background-color: #ff0000; color: white"
@@ -181,8 +186,6 @@ def color_gradient(val, col):
             return "background-color: #70ad47"
         else:
             return "background-color: #548235; color: white"
-
-    # 📈 LANGE TERMIJN (≥1M)
     else:
         if val < -0.01:
             return "background-color: #ff0000; color: white"
@@ -197,9 +200,6 @@ def color_gradient(val, col):
         else:
             return "background-color: #548235; color: white"
 
-# =========================
-# STYLING
-# =========================
 styled = heatmap.style.format(
     lambda x: f"+{x:.2f}%" if x > 0 else f"{x:.2f}%" if pd.notna(x) else ""
 )
