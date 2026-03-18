@@ -15,10 +15,8 @@ st.set_page_config(layout="wide", page_title="Funds Dashboard")
 # =========================
 def section(title, tooltip):
     col1, col2 = st.columns([20,1])
-
     with col1:
         st.subheader(title)
-
     with col2:
         if st.button("ℹ️", key=title):
             st.session_state[f"show_{title}"] = True
@@ -45,6 +43,10 @@ def load():
     return df.sort_values("date")
 
 df = load()
+
+if df.empty:
+    st.error("Geen data beschikbaar")
+    st.stop()
 
 pivot_full = df.pivot(index="date", columns="fund", values="price")
 
@@ -85,17 +87,15 @@ if st.sidebar.button("Start onboarding opnieuw"):
     st.session_state.onboarding = True
 
 # =========================
-# ONBOARDING FLOW
+# ONBOARDING
 # =========================
 if st.session_state.onboarding:
     st.info("""
-Welkom bij het dashboard
+Welkom!
 
-Stap 1: Selecteer fondsen links  
-Stap 2: Kies timeframe  
-Stap 3: Gebruik tabs  
+Selecteer fondsen links  
+Gebruik tabs voor analyse  
 """)
-
     if st.button("Start"):
         st.session_state.onboarding = False
         st.rerun()
@@ -108,22 +108,121 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 ])
 
 # =========================
-# (ALLE ANDERE TABS BLIJVEN EXACT HETZELFDE)
+# OVERVIEW
 # =========================
+with tab1:
+    section("Prijsontwikkeling (€)", "Prijs van fondsen over tijd")
 
+    fig = go.Figure()
+    for col in pivot.columns:
+        fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
+
+    fig.update_layout(xaxis_title="Datum", yaxis_title="Prijs (€)")
+    st.plotly_chart(fig, use_container_width=True)
+
+    section("Genormaliseerde groei", "Vergelijk prestaties vanaf 100")
+
+    norm = pivot / pivot.iloc[0] * 100
+
+    fig2 = go.Figure()
+    for col in norm.columns:
+        fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
+
+    st.plotly_chart(fig2, use_container_width=True)
+
+# =========================
+# PERFORMANCE
+# =========================
+with tab2:
+    section("Momentum (%)", "Recente performance")
+
+    shift = min(30, len(pivot)-1)
+    mom = (pivot/pivot.shift(shift)-1)*100
+    last = mom.iloc[-1].dropna()
+
+    if not last.empty:
+        df_plot = last.sort_values(ascending=False)
+
+        fig = go.Figure(go.Bar(
+            x=df_plot.index,
+            y=df_plot.values
+        ))
+
+        fig.update_layout(xaxis_title="Fund", yaxis_title="Return (%)")
+        st.plotly_chart(fig, use_container_width=True)
+
+# =========================
+# RISK
+# =========================
+with tab3:
+    section("Volatility", "Risico")
+
+    vol = returns.std() * np.sqrt(TRADING_DAYS)
+    st.dataframe(vol.to_frame("Volatility"))
+
+    section("Sharpe Ratio", "Rendement vs risico")
+
+    sharpe = (returns.mean()*TRADING_DAYS) / vol
+    st.dataframe(sharpe.to_frame("Sharpe"))
+
+    section("Correlatie", "Samenhang")
+
+    fig = px.imshow(returns.corr(), text_auto=True)
+    st.plotly_chart(fig, use_container_width=True)
+
+# =========================
+# HEATMAP
+# =========================
+with tab4:
+    section("Heatmap", "Rendement per periode")
+
+    df_full = pivot_full[selected]
+    latest = df_full.index.max()
+
+    periods = {
+        "1D":1,"2D":2,"1W":7,"2W":14,
+        "1M":30,"3M":90,"6M":180,
+        "1Y":365,"2Y":730,"5Y":1825
+    }
+
+    def calc(days):
+        past = df_full[df_full.index <= latest - pd.Timedelta(days=days)]
+        if past.empty:
+            return pd.Series(index=df_full.columns)
+        return (df_full.loc[latest]/past.iloc[-1]-1)*100
+
+    heatmap = pd.DataFrame({k: calc(v) for k,v in periods.items()})
+
+    fig = go.Figure(data=go.Heatmap(
+        z=heatmap.values,
+        x=heatmap.columns,
+        y=heatmap.index,
+        colorscale="RdYlGn",
+        text=heatmap.round(2).astype(str)+"%",
+        texttemplate="%{text}"
+    ))
+
+    st.plotly_chart(fig, use_container_width=True)
+
+# =========================
+# OPTIMIZER
+# =========================
+with tab5:
+    section("Optimizer", "Voorbeeld verdeling")
+
+    w = np.random.random(len(selected))
+    w /= w.sum()
+
+    st.dataframe(pd.DataFrame({"Fund": selected, "Weight": w}))
+
+# =========================
+# REBALANCE (UPDATED)
+# =========================
 with tab6:
 
-    section("Portfolio verdeling (%)", """
-Stel je portefeuille samen.
-
-Hoe lees je:
-- Percentage = deel van je investering
-- Totaal moet 100% zijn
-""")
+    section("Portfolio verdeling (%)", "Verdeling moet 100% zijn")
 
     capital = st.number_input("Startkapitaal (€)", 100, 1000000, 10000)
-
-    st.markdown("### Verdeling (%)")
 
     perc = {}
     cols = st.columns(len(selected))
@@ -138,46 +237,27 @@ Hoe lees je:
 
     total = sum(perc.values())
 
-    # =========================
-    # CHECK 100%
-    # =========================
     if total != 100:
-        st.error(f"Totaal is {total}%. Dit moet exact 100% zijn.")
+        st.error(f"Totaal is {total}% — moet 100% zijn")
         st.stop()
     else:
-        st.success("Verdeling klopt (100%)")
+        st.success("Totaal = 100%")
 
-    # =========================
-    # OMZETTEN NAAR WEIGHTS
-    # =========================
     w = np.array(list(perc.values())) / 100
 
-    # =========================
-    # PORTFOLIO RETURNS
-    # =========================
     port = (returns[selected] * w).sum(axis=1)
 
-    # =========================
-    # HISTORIE
-    # =========================
-    section("Historische simulatie", """
-Toont hoe je portfolio zich had ontwikkeld.
-""")
+    section("Historische simulatie", "Portfolio groei")
 
     value = capital * (1 + port).cumprod()
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=value.index, y=value.values))
-    fig.update_layout(xaxis_title="Datum", yaxis_title="Waarde (€)")
 
+    fig.update_layout(xaxis_title="Datum", yaxis_title="Waarde (€)")
     st.plotly_chart(fig, use_container_width=True)
 
-    # =========================
-    # MONTE CARLO
-    # =========================
-    section("Monte Carlo", """
-Simulatie van mogelijke toekomstscenario’s.
-""")
+    section("Monte Carlo", "Toekomstscenario’s")
 
     if len(port) > 10:
         sims = np.random.normal(port.mean(), port.std(), (252,500))
