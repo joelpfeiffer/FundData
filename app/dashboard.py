@@ -17,7 +17,7 @@ st.set_page_config(layout="wide")
 def load():
     df = pd.read_csv(f"{CSV_URL}?t={int(time.time())}")
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df = df.dropna(subset=["date","price","fund"])
+    df = df.dropna(subset=["date", "price", "fund"])
     return df.sort_values("date")
 
 df = load()
@@ -39,7 +39,7 @@ if not selected:
     st.warning("Selecteer minimaal 1 fonds")
     st.stop()
 
-mode = st.sidebar.radio("Timeframe", ["Preset","Custom"])
+mode = st.sidebar.radio("Timeframe", ["Preset", "Custom"])
 
 pivot = pivot_full[selected].copy()
 
@@ -69,17 +69,23 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 with tab1:
 
     st.subheader("Prijsontwikkeling")
-    st.caption("Werkelijke prijzen van fondsen door de tijd.")
+    st.caption("Werkelijke prijs van fondsen")
 
     fig = go.Figure()
     for col in pivot.columns:
         fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
 
-    fig.update_layout(hovermode="x unified")
+    fig.update_layout(
+        hovermode="x unified",
+        spikedistance=1000,
+        xaxis=dict(showspikes=True),
+        yaxis=dict(showspikes=True)
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 
     st.subheader("Genormaliseerde groei (%)")
-    st.caption("Vergelijkt prestaties vanaf hetzelfde startpunt (100).")
+    st.caption("Vergelijk prestaties vanaf 100")
 
     if len(pivot) > 0:
         norm = pivot / pivot.iloc[0] * 100
@@ -88,7 +94,13 @@ with tab1:
         for col in norm.columns:
             fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
 
-        fig2.update_layout(hovermode="x unified")
+        fig2.update_layout(
+            hovermode="x unified",
+            spikedistance=1000,
+            xaxis=dict(showspikes=True),
+            yaxis=dict(showspikes=True)
+        )
+
         st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
@@ -97,20 +109,25 @@ with tab1:
 with tab2:
 
     st.subheader("Momentum (%)")
-    st.caption("Recente stijging of daling van fondsen.")
+    st.caption("Trend over ~30 dagen")
 
-    if len(pivot) > 10:
-        shift = min(30, len(pivot)-1)
+    if len(pivot) < 30:
+        st.warning("Te weinig data voor momentum (<30)")
+    else:
+        shift = 30
         mom = (pivot / pivot.shift(shift) - 1) * 100
         last = mom.iloc[-1].dropna()
 
         if not last.empty:
-            df_plot = last.sort_values(ascending=False)
-
             fig = go.Figure(go.Bar(
-                x=df_plot.index.astype(str),
-                y=df_plot.values
+                x=last.index,
+                y=last.values
             ))
+
+            fig.update_layout(
+                xaxis_title="Fund",
+                yaxis_title="Return (%)"
+            )
 
             st.plotly_chart(fig, use_container_width=True)
 
@@ -120,19 +137,14 @@ with tab2:
 with tab3:
 
     st.subheader("Volatility")
-    st.caption("Mate van schommelingen (risico).")
-
     vol = returns.std() * np.sqrt(TRADING_DAYS)
     st.dataframe(vol.to_frame("Volatility"))
 
     st.subheader("Sharpe Ratio")
-    st.caption("Rendement per eenheid risico.")
-
     sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0, np.nan)
     st.dataframe(sharpe.to_frame("Sharpe"))
 
     st.subheader("Correlatie")
-    st.caption("Hoe fondsen samen bewegen.")
 
     fig = px.imshow(
         returns.corr(),
@@ -141,6 +153,7 @@ with tab3:
         zmin=-1,
         zmax=1
     )
+
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
@@ -149,7 +162,6 @@ with tab3:
 with tab4:
 
     st.subheader("Rendement Heatmap")
-    st.caption("Groen = winst, Rood = verlies.")
 
     latest = pivot_full.index.max()
 
@@ -185,18 +197,15 @@ with tab4:
 # =========================
 with tab5:
 
-    st.subheader("Portfolio verdeling (voorbeeld)")
-    st.caption("Simpele verdeling ter illustratie.")
+    st.subheader("Portfolio (voorbeeld)")
 
     w = np.random.random(len(selected))
     w /= w.sum()
 
-    df_opt = pd.DataFrame({
+    st.dataframe(pd.DataFrame({
         "Fund": selected,
         "Weight (%)": (w*100).round(2)
-    })
-
-    st.dataframe(df_opt)
+    }))
 
 # =========================
 # REBALANCE
@@ -204,16 +213,13 @@ with tab5:
 with tab6:
 
     st.subheader("Portfolio verdeling (%)")
-    st.caption("Verdeel je kapitaal over fondsen (totaal = 100%).")
 
     capital = st.number_input("Startkapitaal (€)", 100, 1000000, 10000)
 
     if "alloc" not in st.session_state:
         st.session_state.alloc = {}
 
-    st.session_state.alloc = {
-        k: v for k, v in st.session_state.alloc.items() if k in selected
-    }
+    st.session_state.alloc = {k:v for k,v in st.session_state.alloc.items() if k in selected}
 
     for f in selected:
         if f not in st.session_state.alloc:
@@ -245,10 +251,14 @@ with tab6:
 
     st.subheader("Monte Carlo simulatie")
 
-    if len(port) > 30:
+    if len(port) < 50:
+        st.warning("Te weinig data voor Monte Carlo (<50)")
+    else:
         mu, sigma = port.mean(), port.std()
 
-        if not np.isnan(mu) and not np.isnan(sigma) and sigma > 0:
+        if np.isnan(mu) or np.isnan(sigma) or sigma == 0:
+            st.warning("Onvoldoende variatie")
+        else:
             sims = np.random.normal(mu, sigma, (252, 300))
             sims = capital * np.cumprod(1 + sims, axis=0)
 
@@ -263,6 +273,9 @@ with tab6:
             fig.add_trace(go.Scatter(y=mc["Expected"], name="Expected", line=dict(color="yellow")))
             fig.add_trace(go.Scatter(y=mc["Best"], name="Best", line=dict(color="green")))
 
-            fig.update_layout(hovermode="x unified")
+            fig.update_layout(
+                hovermode="x unified",
+                spikedistance=1000
+            )
 
             st.plotly_chart(fig, use_container_width=True)
