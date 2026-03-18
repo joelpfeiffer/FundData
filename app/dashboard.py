@@ -11,7 +11,7 @@ CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/pri
 st.set_page_config(layout="wide", page_title="Funds Terminal")
 
 # =========================
-# TOOLTIP HELPER
+# TOOLTIP
 # =========================
 def title_with_tooltip(title, tooltip):
     col1, col2 = st.columns([10,1])
@@ -21,12 +21,13 @@ def title_with_tooltip(title, tooltip):
         st.markdown(f"<span title='{tooltip}'>ℹ️</span>", unsafe_allow_html=True)
 
 # =========================
-# CHART STYLE (RULER)
+# STYLE
 # =========================
-def style(fig):
+def style(fig, y_label):
     fig.update_layout(
         hovermode="x unified",
-        spikedistance=1000
+        xaxis_title="Date",
+        yaxis_title=y_label
     )
     fig.update_xaxes(showspikes=True)
     return fig
@@ -42,15 +43,11 @@ def load():
 
 df = load()
 
-if df.empty:
-    st.warning("No data available")
-    st.stop()
-
 pivot_full = df.pivot(index="date", columns="fund", values="price")
 all_funds = list(pivot_full.columns)
 
 # =========================
-# SIDEBAR - FUNDS
+# SIDEBAR
 # =========================
 st.sidebar.header("Select funds")
 
@@ -67,12 +64,12 @@ if not selected:
 pivot = pivot_full[selected]
 
 # =========================
-# SIDEBAR - TIMEFRAME
+# TIMEFRAME
 # =========================
 st.sidebar.markdown("---")
 st.sidebar.header("Timeframe")
 
-mode = st.sidebar.radio("Mode", ["Preset", "Custom"])
+mode = st.sidebar.radio("Mode", ["Preset","Custom"])
 
 if mode == "Preset":
     timeframe = st.sidebar.selectbox(
@@ -92,11 +89,8 @@ if mode == "Preset":
         pivot = pivot[pivot.index >= start_date]
 
 else:
-    min_date = pivot.index.min()
-    max_date = pivot.index.max()
-
-    start_date = st.sidebar.date_input("Start date", min_date)
-    end_date = st.sidebar.date_input("End date", max_date)
+    start_date = st.sidebar.date_input("Start", pivot.index.min())
+    end_date = st.sidebar.date_input("End", pivot.index.max())
 
     pivot = pivot[
         (pivot.index >= pd.to_datetime(start_date)) &
@@ -104,7 +98,7 @@ else:
     ]
 
 if len(pivot) < 2:
-    st.warning("Not enough data for timeframe")
+    st.warning("Not enough data")
     st.stop()
 
 returns = pivot.pct_change().dropna()
@@ -114,7 +108,7 @@ returns = pivot.pct_change().dropna()
 # =========================
 perf = (pivot / pivot.iloc[0] - 1).iloc[-1] * 100
 
-col1, col2, col3 = st.columns(3)
+col1,col2,col3 = st.columns(3)
 col1.metric("Best fund", perf.idxmax(), f"{perf.max():.2f}%")
 col2.metric("Worst fund", perf.idxmin(), f"{perf.min():.2f}%")
 col3.metric("Average return", "", f"{perf.mean():.2f}%")
@@ -122,7 +116,7 @@ col3.metric("Average return", "", f"{perf.mean():.2f}%")
 # =========================
 # TABS
 # =========================
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1,tab2,tab3,tab4,tab5,tab6 = st.tabs([
     "Overview","Performance","Risk","Heatmap","Optimizer","Rebalance"
 ])
 
@@ -130,86 +124,98 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # OVERVIEW
 # =========================
 with tab1:
-    title_with_tooltip("Fund prices",
-        "Werkelijke prijs van elk fonds.")
+    title_with_tooltip("Fund prices","Werkelijke prijs in euro")
+
     fig = go.Figure()
     for col in pivot.columns:
         fig.add_trace(go.Scatter(x=pivot.index,y=pivot[col],name=col))
-    st.plotly_chart(style(fig), use_container_width=True)
+    st.plotly_chart(style(fig,"Price (€)"), use_container_width=True)
 
-    title_with_tooltip("Normalized performance",
-        "Vergelijk prestaties vanaf hetzelfde startpunt.")
+    title_with_tooltip("Normalized performance","Vergelijk groei")
+
     norm = pivot / pivot.iloc[0]
     fig = go.Figure()
     for col in norm.columns:
         fig.add_trace(go.Scatter(x=norm.index,y=norm[col],name=col))
-    st.plotly_chart(style(fig), use_container_width=True)
+    st.plotly_chart(style(fig,"Index (start = 1)"), use_container_width=True)
 
-    title_with_tooltip("Drawdown",
-        "Maximale daling vanaf piek.")
+    title_with_tooltip("Drawdown","Daling vanaf piek")
+
     dd = norm / norm.cummax() - 1
     fig = go.Figure()
     for col in dd.columns:
         fig.add_trace(go.Scatter(x=dd.index,y=dd[col],name=col))
-    st.plotly_chart(style(fig), use_container_width=True)
+    st.plotly_chart(style(fig,"Drawdown (%)"), use_container_width=True)
 
 # =========================
 # PERFORMANCE
 # =========================
 with tab2:
-    title_with_tooltip("Momentum (30d)",
-        "Rendement laatste 30 dagen.")
+    title_with_tooltip("Momentum (30d)","Laatste 30 dagen rendement")
+
     mom = (pivot / pivot.shift(30) - 1) * 100
     mom_last = mom.iloc[-1].dropna()
 
-    if len(mom_last) > 0:
-        fig = go.Figure()
-        fig.add_trace(go.Bar(x=mom_last.index,y=mom_last.values))
-        st.plotly_chart(fig, use_container_width=True)
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=mom_last.index,y=mom_last.values))
+    fig.update_layout(
+        xaxis_title="Fund",
+        yaxis_title="Return (%)"
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # RISK
 # =========================
 with tab3:
-    title_with_tooltip("Volatility",
-        "Hoe sterk prijzen schommelen.")
     vol = returns.std()*np.sqrt(252)
-    st.dataframe(vol.to_frame("volatility"))
+    st.dataframe(vol.to_frame("Volatility"))
 
-    title_with_tooltip("Sharpe ratio",
-        "Rendement per risico.")
     sharpe = returns.mean()/returns.std()
-    st.dataframe(sharpe.to_frame("sharpe"))
+    st.dataframe(sharpe.to_frame("Sharpe"))
 
 # =========================
 # HEATMAP
 # =========================
 with tab4:
-    title_with_tooltip("Correlation heatmap",
-        "Laat zien hoe fondsen samen bewegen.")
-    st.dataframe(returns.corr())
+    corr = returns.corr()
+
+    fig = go.Figure(data=go.Heatmap(
+        z=corr,
+        x=corr.columns,
+        y=corr.index,
+        colorscale="RdYlGn"
+    ))
+
+    fig.update_layout(
+        xaxis_title="Fund",
+        yaxis_title="Fund"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # OPTIMIZER
 # =========================
 with tab5:
-    title_with_tooltip("Portfolio optimizer",
-        "Genereert een slimme verdeling van je portfolio.")
-
     weights = np.random.random(len(selected))
     weights /= weights.sum()
 
     st.dataframe(pd.DataFrame({
-        "Fund": selected,
-        "Weight": weights
-    }).sort_values("Weight", ascending=False))
+        "Fund":selected,
+        "Weight":weights
+    }))
 
 # =========================
-# REBALANCE + AI + MONTE CARLO
+# REBALANCE + DISCLAIMER
 # =========================
 with tab6:
-    title_with_tooltip("Rebalance simulator + AI",
-        "Simuleert portfolio groei en geeft advies.")
+
+    st.warning(
+        "⚠️ Dit is geen financieel advies. "
+        "De berekeningen zijn gebaseerd op historische data en simulaties. "
+        "Er kunnen geen rechten of garanties aan worden ontleend."
+    )
 
     capital = st.number_input("Start (€)",100,1000000,10000)
 
@@ -222,53 +228,10 @@ with tab6:
     weights = np.array(list(weights.values()))
     weights /= weights.sum()
 
-    port_returns = (returns * weights).sum(axis=1)
+    port_returns = (returns*weights).sum(axis=1)
     cumulative = (1+port_returns).cumprod()
     value = capital * cumulative
 
-    st.metric("Final (€)", f"{value.iloc[-1]:,.0f}")
-
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=value.index,y=value))
-    st.plotly_chart(style(fig), use_container_width=True)
-
-    # =========================
-    # AI ADVICE
-    # =========================
-    st.markdown("### AI Advice")
-
-    vol = port_returns.std()*np.sqrt(252)
-    sharpe = port_returns.mean()/port_returns.std()
-
-    if vol > 0.25:
-        st.write("⚠️ High risk portfolio")
-    if sharpe > 1:
-        st.write("✅ Good risk/reward")
-    if weights.max() > 0.5:
-        st.write("⚠️ Too concentrated")
-
-    # =========================
-    # MONTE CARLO
-    # =========================
-    st.markdown("### Scenario Simulation")
-
-    sims = 300
-    days = 252
-
-    sim = []
-
-    for _ in range(sims):
-        path = [capital]
-        for _ in range(days):
-            r = np.random.choice(port_returns)
-            path.append(path[-1]*(1+r))
-        sim.append(path)
-
-    sim_df = pd.DataFrame(sim).T
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(y=sim_df.quantile(0.5,axis=1),name="Expected"))
-    fig.add_trace(go.Scatter(y=sim_df.quantile(0.1,axis=1),name="Worst"))
-    fig.add_trace(go.Scatter(y=sim_df.quantile(0.9,axis=1),name="Best"))
-
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(style(fig,"Portfolio value (€)"), use_container_width=True)
