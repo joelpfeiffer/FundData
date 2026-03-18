@@ -2,32 +2,56 @@ name: Update Data
 
 on:
   schedule:
-    - cron: "13 14 * * *"  # dagelijks 06:00
+    - cron: "0 6 * * *"   # elke dag om 06:00 UTC
   workflow_dispatch:
 
 jobs:
   run:
     runs-on: ubuntu-latest
 
+    # ✅ Force Node 24 (future-proof)
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
-      - name: Checkout repo
+      # =========================
+      # CHECKOUT
+      # =========================
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # =========================
+      # PYTHON SETUP
+      # =========================
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
+      # =========================
+      # INSTALL DEPENDENCIES
+      # =========================
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Run pipeline
+      # =========================
+      # RUN PIPELINE
+      # =========================
+      - name: Run data pipeline
         run: python pipeline/runner.py
 
-      - name: Commit changes
+      # =========================
+      # COMMIT NIEUWE DATA
+      # =========================
+      - name: Commit & push data
         run: |
-          git config --global user.name "bot"
-          git config --global user.email "bot@github.com"
-          git add .
-          git commit -m "update data" || echo "no changes"
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+          git add data/
+
+          git diff --quiet && git diff --staged --quiet || git commit -m "📊 Auto update fund data"
+
           git push
