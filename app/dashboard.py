@@ -3,6 +3,10 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from app.config import DB_PATH
+
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
 from pipeline.database import init_db
 init_db()
 
