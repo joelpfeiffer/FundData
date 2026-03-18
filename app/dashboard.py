@@ -11,7 +11,7 @@ TRADING_DAYS = 252
 st.set_page_config(layout="wide", page_title="Funds Dashboard")
 
 # =========================
-# 🔥 TOOLTIP POPUP (FIX)
+# TOOLTIP POPUP
 # =========================
 def section(title, tooltip):
     col1, col2 = st.columns([20,1])
@@ -23,13 +23,10 @@ def section(title, tooltip):
         if st.button("ℹ️", key=title):
             st.session_state[f"show_{title}"] = True
 
-    # popup
     if st.session_state.get(f"show_{title}", False):
-        with st.container():
-            st.info(tooltip)
-            if st.button("Sluiten", key=f"close_{title}"):
-                st.session_state[f"show_{title}"] = False
-
+        st.info(tooltip)
+        if st.button("Sluiten", key=f"close_{title}"):
+            st.session_state[f"show_{title}"] = False
 
 # =========================
 # ONBOARDING STATE
@@ -86,9 +83,8 @@ else:
 
 returns = pivot.pct_change().dropna()
 
-# 👉 SIDEBAR ONDERAAN
+# onboarding reset onderaan
 st.sidebar.markdown("---")
-st.sidebar.markdown("### ")
 if st.sidebar.button("🔄 Start onboarding opnieuw"):
     st.session_state.onboarding = True
 
@@ -97,14 +93,19 @@ if st.sidebar.button("🔄 Start onboarding opnieuw"):
 # =========================
 if st.session_state.onboarding:
     st.info("""
-    👋 Welkom!
+Welkom!
 
-    - Kies fondsen links
-    - Gebruik tabs voor analyse
-    - Bekijk risico en simulaties
+- Selecteer fondsen links
+- Kies timeframe
+- Gebruik tabs voor analyse
 
-    Klik hieronder om te starten
-    """)
+Tabs:
+Overview → trends  
+Performance → rendement  
+Risk → risico  
+Heatmap → overzicht  
+Rebalance → simulatie
+""")
 
     if st.button("Start dashboard"):
         st.session_state.onboarding = False
@@ -121,7 +122,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # OVERVIEW
 # =========================
 with tab1:
-    section("Prijsontwikkeling (€)", "Toont prijsontwikkeling van fondsen.")
+    section("Prijsontwikkeling (€)", "Prijs per fonds over tijd")
 
     fig = go.Figure()
     for col in pivot.columns:
@@ -130,7 +131,7 @@ with tab1:
     fig.update_layout(xaxis_title="Datum", yaxis_title="Prijs (€)")
     st.plotly_chart(fig, use_container_width=True)
 
-    section("Trends (genormaliseerd)", "Vergelijkt prestaties vanaf startpunt 100.")
+    section("Trends (genormaliseerd)", "Start op 100 voor vergelijking")
 
     norm = pivot / pivot.iloc[0] * 100
 
@@ -138,37 +139,50 @@ with tab1:
     for col in norm.columns:
         fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
 
-    fig2.update_layout(xaxis_title="Datum", yaxis_title="Index")
     st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
-# PERFORMANCE
+# PERFORMANCE (FIXED)
 # =========================
 with tab2:
-    section("Momentum (%)", "Toont recente rendementen.")
+    section("Momentum (%)", "Recente performance")
 
     shift = min(30, len(pivot)-1)
     mom = (pivot/pivot.shift(shift)-1)*100
     last = mom.iloc[-1].dropna()
 
     if not last.empty:
-        st.bar_chart(last)
+        df_plot = last.sort_values(ascending=False)
+
+        fig = go.Figure(go.Bar(
+            x=df_plot.index,
+            y=df_plot.values
+        ))
+
+        fig.update_layout(
+            xaxis_title="Fund",
+            yaxis_title="Return (%)"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("Geen data beschikbaar")
 
 # =========================
 # RISK
 # =========================
 with tab3:
-    section("Volatility", "Meet risico.")
+    section("Volatility", "Risico")
 
     vol = returns.std() * np.sqrt(TRADING_DAYS)
     st.dataframe(vol.to_frame("Volatility"))
 
-    section("Sharpe Ratio", "Rendement vs risico.")
+    section("Sharpe Ratio", "Rendement vs risico")
 
     sharpe = (returns.mean()*TRADING_DAYS) / vol
     st.dataframe(sharpe.to_frame("Sharpe"))
 
-    section("Correlation", "Samenhang tussen fondsen.")
+    section("Correlation", "Samenhang")
 
     fig = px.imshow(returns.corr(), text_auto=True)
     st.plotly_chart(fig, use_container_width=True)
@@ -177,7 +191,7 @@ with tab3:
 # HEATMAP
 # =========================
 with tab4:
-    section("Heatmap", "Rendement per periode.")
+    section("Heatmap", "Rendement per periode")
 
     df_full = pivot_full[selected]
     latest = df_full.index.max()
@@ -200,7 +214,9 @@ with tab4:
         z=heatmap.values,
         x=heatmap.columns,
         y=heatmap.index,
-        colorscale="RdYlGn"
+        colorscale="RdYlGn",
+        text=heatmap.round(2).astype(str)+"%",
+        texttemplate="%{text}"
     ))
 
     st.plotly_chart(fig, use_container_width=True)
@@ -209,7 +225,7 @@ with tab4:
 # OPTIMIZER
 # =========================
 with tab5:
-    section("Optimizer", "Voorbeeld verdeling.")
+    section("Optimizer", "Voorbeeld verdeling")
 
     w = np.random.random(len(selected))
     w /= w.sum()
@@ -220,7 +236,7 @@ with tab5:
 # REBALANCE
 # =========================
 with tab6:
-    section("Rebalance Simulator", "Simuleert portfolio groei.")
+    section("Rebalance Simulator", "Simuleert groei")
 
     st.warning("Geen financieel advies")
 
@@ -240,7 +256,7 @@ with tab6:
     value = capital*(1+port).cumprod()
     st.line_chart(value)
 
-    section("Monte Carlo", "Simuleert toekomstscenario’s.")
+    section("Monte Carlo", "Toekomstscenario’s")
 
     if len(port) >= 5:
         sims = np.random.normal(port.mean(), port.std(), (252,1000))
