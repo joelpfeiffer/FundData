@@ -1,68 +1,24 @@
-# =========================
-# FIX IMPORT PATH
-# =========================
-import sys
-import os
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(BASE_DIR)
-
-# =========================
-# CONFIG + DB SETUP
-# =========================
-from app.config import DB_PATH
-from pipeline.database import init_db
-from pipeline.runner import run
-
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-init_db()
-
-# =========================
-# LIBRARIES
-# =========================
 import streamlit as st
-import sqlite3
 import pandas as pd
 
+# =========================
+# CONFIG
+# =========================
 CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
 
-df = pd.read_csv(CSV_URL)
-
-from app.analytics import normalize, performance, volatility, sharpe_ratio
-
-# =========================
-# ZORG DAT DATA BESTAAT
-# =========================
-conn = sqlite3.connect(DB_PATH)
-
-try:
-    count = conn.execute("SELECT COUNT(*) FROM prices").fetchone()[0]
-except:
-    count = 0
-
-conn.close()
-
-if count == 0:
-    with st.spinner("Data ophalen..."):
-        try:
-            run()
-        except Exception as e:
-            st.error(f"Fout bij ophalen data: {e}")
-
-# =========================
-# DASHBOARD UI
-# =========================
 st.set_page_config(layout="wide")
 st.title("📈 Funds Intelligence Dashboard")
 
 # =========================
-# DATA LADEN
+# DATA LADEN (met caching)
 # =========================
-import pandas as pd
+@st.cache_data(ttl=3600)
+def load_data():
+    df = pd.read_csv(CSV_URL)
+    df["date"] = pd.to_datetime(df["date"])
+    return df
 
-CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
-
-df = pd.read_csv(CSV_URL)
+df = load_data()
 
 if df.empty:
     st.warning("Geen data beschikbaar")
@@ -71,48 +27,77 @@ if df.empty:
 # =========================
 # DATA PREP
 # =========================
-df["date"] = pd.to_datetime(df["date"])
 pivot = df.pivot(index="date", columns="fund", values="price")
 
-# =========================
-# FILTERS
-# =========================
+# selectie
 selected = st.multiselect(
     "Selecteer fondsen",
     pivot.columns,
     default=list(pivot.columns)[:5]
 )
 
-if not selected:
-    st.warning("Selecteer minimaal 1 fonds")
-    st.stop()
-
 pivot = pivot[selected]
 
 # =========================
-# ANALYSE
+# NORMALISATIE (% groei)
 # =========================
-norm = normalize(pivot)
-perf = performance(norm)
+norm = pivot / pivot.iloc[0]
+pct = (norm - 1) * 100
 
 # =========================
-# VISUALS
+# GRAFIEK
 # =========================
-st.subheader("📊 Groei (genormaliseerd)")
-st.line_chart(norm)
-
-st.subheader("🏆 Performance (%)")
-st.dataframe(perf)
-
-st.subheader("⚡ Volatility")
-st.dataframe(volatility(norm))
-
-st.subheader("📉 Sharpe Ratio")
-st.dataframe(sharpe_ratio(norm))
+st.subheader("📈 Groei (%)")
+st.line_chart(pct)
 
 # =========================
-# BESTE FONDS
+# ACTUELE WAARDES
 # =========================
-if not perf.empty:
-    best = perf.index[0]
-    st.success(f"🏆 Beste fonds: {best}")
+latest = df.sort_values("date").groupby("fund").last().reset_index()
+
+st.subheader("📊 Actuele waardes")
+st.dataframe(latest, use_container_width=True)
+
+# =========================
+# PERFORMANCE ANALYSE
+# =========================
+perf = pct.iloc[-1].sort_values(ascending=False)
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("🏆 Beste fondsen")
+    st.bar_chart(perf.head(10))
+
+with col2:
+    st.subheader("📉 Slechtste fondsen")
+    st.bar_chart(perf.tail(10))
+
+# =========================
+# METRICS
+# =========================
+best_fund = perf.idxmax()
+best_value = perf.max()
+
+worst_fund = perf.idxmin()
+worst_value = perf.min()
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.metric("🏆 Beste fonds", best_fund, f"{best_value:.2f}%")
+
+with col2:
+    st.metric("📉 Slechtste fonds", worst_fund, f"{worst_value:.2f}%")
+
+# =========================
+# EXTRA: SAMENVATTING TABEL
+# =========================
+summary = latest.copy()
+summary = summary.set_index("fund")
+
+# voeg groei toe
+summary["groei_%"] = perf
+
+st.subheader("📋 Overzicht")
+st.dataframe(summary.sort_values("groei_%", ascending=False), use_container_width=True)
