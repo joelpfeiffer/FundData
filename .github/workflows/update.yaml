@@ -17,8 +17,11 @@ jobs:
         with:
           python-version: '3.11'
 
-      - run: pip install -r requirements.txt
-      - run: PYTHONPATH=. python pipeline/runner.py
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pipeline
+        run: PYTHONPATH=. python pipeline/runner.py
 
       - name: Commit changes
         run: |
