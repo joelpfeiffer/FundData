@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.express as px
 import time
 
 # =========================
@@ -42,6 +43,10 @@ def load():
 
 df = load()
 
+if df.empty:
+    st.warning("No data available")
+    st.stop()
+
 pivot = df.pivot(index="date", columns="fund", values="price")
 returns = pivot.pct_change().dropna()
 
@@ -52,10 +57,19 @@ all_funds = list(pivot.columns)
 # =========================
 st.sidebar.header("Portfolio")
 
+if "selected_funds" not in st.session_state:
+    st.session_state.selected_funds = all_funds[:5]
+
+if st.sidebar.button("Select all"):
+    st.session_state.selected_funds = all_funds
+
+if st.sidebar.button("Clear"):
+    st.session_state.selected_funds = []
+
 selected = st.sidebar.multiselect(
     "Funds",
     all_funds,
-    default=all_funds[:5]
+    key="selected_funds"
 )
 
 if not selected:
@@ -74,13 +88,13 @@ col1, col2, col3 = st.columns(3)
 
 col1.metric("Best fund", perf.idxmax(), f"{perf.max():.2f}%")
 col2.metric("Worst fund", perf.idxmin(), f"{perf.min():.2f}%")
-col3.metric("Avg return", "", f"{perf.mean():.2f}%")
+col3.metric("Average return", "", f"{perf.mean():.2f}%")
 
 # =========================
 # TABS
 # =========================
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "Overview", "Momentum", "Risk", "Portfolio", "Correlation"
+tab1, tab2, tab3, tab4 = st.tabs([
+    "Overview", "Performance", "Risk", "Heatmap"
 ])
 
 # =========================
@@ -96,104 +110,72 @@ with tab1:
     st.line_chart(dd)
 
 # =========================
-# MOMENTUM
+# PERFORMANCE
 # =========================
 with tab2:
-    st.subheader("30-day momentum")
-    mom30 = (pivot / pivot.shift(30) - 1) * 100
-    st.bar_chart(mom30.iloc[-1].dropna())
-
-    st.subheader("90-day momentum")
-    mom90 = (pivot / pivot.shift(90) - 1) * 100
-    st.bar_chart(mom90.iloc[-1].dropna())
+    st.subheader("Momentum (30 days)")
+    mom = (pivot / pivot.shift(30) - 1) * 100
+    st.bar_chart(mom.iloc[-1].dropna().to_frame("momentum"))
 
 # =========================
 # RISK
 # =========================
 with tab3:
-    st.subheader("Volatility (annualized)")
+    st.subheader("Volatility")
     vol = returns.std() * np.sqrt(252)
-    st.dataframe(vol.sort_values(ascending=False).to_frame("vol"))
+    st.dataframe(vol.sort_values(ascending=False).to_frame("volatility"))
 
     st.subheader("Sharpe ratio")
     sharpe = returns.mean() / returns.std()
     st.dataframe(sharpe.sort_values(ascending=False).to_frame("sharpe"))
 
-    st.subheader("Rolling volatility (30d)")
-    rolling_vol = returns.rolling(30).std() * np.sqrt(252)
-    st.line_chart(rolling_vol)
-
 # =========================
-# PORTFOLIO SIMULATOR
+# 🔥 INTERACTIVE HEATMAP
 # =========================
 with tab4:
-    st.subheader("Portfolio allocation")
+    st.subheader("Return heatmap (interactive)")
 
-    weights = {}
-    cols = st.columns(len(selected))
+    latest_date = df["date"].max()
 
-    for i, fund in enumerate(selected):
-        weights[fund] = cols[i].number_input(
-            fund, min_value=0.0, max_value=1.0, value=1/len(selected)
-        )
+    def calc_return(days):
+        res = {}
+        for fund in df["fund"].unique():
+            f = df[df["fund"] == fund]
+            current = f.iloc[-1]["price"]
+            past = f[f["date"] <= latest_date - pd.Timedelta(days=days)]
 
-    total_weight = sum(weights.values())
+            if past.empty:
+                res[fund] = np.nan
+            else:
+                res[fund] = (current / past.iloc[-1]["price"] - 1) * 100
 
-    if total_weight == 0:
-        st.warning("Weights must be > 0")
-    else:
-        weights = {k: v/total_weight for k,v in weights.items()}
+        return pd.Series(res)
 
-        portfolio_returns = returns.copy()
-        for fund in selected:
-            portfolio_returns[fund] *= weights[fund]
+    periods = {
+        "1D":1,"3D":3,"1W":7,"2W":14,
+        "1M":30,"3M":90,"6M":180,
+        "1Y":365,"3Y":1095,"5Y":1825
+    }
 
-        portfolio = portfolio_returns.sum(axis=1)
+    heatmap = pd.DataFrame({k: calc_return(v) for k,v in periods.items()})
+    heatmap = heatmap.loc[selected]
 
-        st.subheader("Portfolio performance")
-        st.line_chart((1 + portfolio).cumprod())
+    # 👉 Plotly heatmap (PRO)
+    fig = px.imshow(
+        heatmap,
+        text_auto=".2f",
+        aspect="auto",
+        color_continuous_scale=[
+            [0, "#ff4d4d"],   # red
+            [0.5, "#ffd966"], # yellow
+            [1, "#70ad47"]    # green
+        ]
+    )
 
-        st.subheader("Portfolio drawdown")
-        cum = (1 + portfolio).cumprod()
-        dd = cum / cum.cummax() - 1
-        st.line_chart(dd)
+    fig.update_layout(
+        coloraxis_colorbar_title="Return %",
+        xaxis_title="Period",
+        yaxis_title="Fund"
+    )
 
-# =========================
-# CORRELATION
-# =========================
-with tab5:
-    st.subheader("Correlation matrix")
-
-    corr = returns.corr()
-
-    def color(val):
-        if val > 0.7:
-            return "background-color:#70ad47;color:white"
-        elif val > 0.3:
-            return "background-color:#a9d18e;color:black"
-        elif val > 0:
-            return "background-color:#ffd966;color:black"
-        else:
-            return "background-color:#ff4d4d;color:white"
-
-    styled = corr.style.applymap(color).format("{:.2f}")
-    st.write(styled)
-
-# =========================
-# SMART INSIGHTS
-# =========================
-st.subheader("Insights")
-
-col1, col2, col3 = st.columns(3)
-
-# momentum
-mom = (pivot / pivot.shift(30) - 1).iloc[-1]
-col1.metric("Best momentum", mom.idxmax(), f"{mom.max()*100:.2f}%")
-
-# risk
-vol = returns.std()
-col2.metric("Lowest risk", vol.idxmin(), f"{vol.min():.4f}")
-
-# consistency
-consistency = returns.std()
-col3.metric("Most stable", consistency.idxmin(), "")
+    st.plotly_chart(fig, use_container_width=True)
