@@ -12,7 +12,7 @@ CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/pri
 st.set_page_config(layout="wide", page_title="Funds Terminal")
 
 # =========================
-# HELPER: TOOLTIP TITLE
+# TOOLTIP HELPER
 # =========================
 def title_with_tooltip(title, tooltip):
     col1, col2 = st.columns([10,1])
@@ -36,15 +36,13 @@ if df.empty:
     st.warning("No data available")
     st.stop()
 
-pivot = df.pivot(index="date", columns="fund", values="price")
-returns = pivot.pct_change().dropna()
-
-all_funds = list(pivot.columns)
+pivot_full = df.pivot(index="date", columns="fund", values="price")
+all_funds = list(pivot_full.columns)
 
 # =========================
 # SIDEBAR
 # =========================
-st.sidebar.header("Portfolio")
+st.sidebar.header("Filters")
 
 selected = st.sidebar.multiselect(
     "Funds",
@@ -52,11 +50,33 @@ selected = st.sidebar.multiselect(
     default=all_funds[:5]
 )
 
+timeframe = st.sidebar.selectbox(
+    "Timeframe",
+    ["1M", "3M", "6M", "1Y", "3Y", "ALL"]
+)
+
 if not selected:
     st.warning("Select at least one fund")
     st.stop()
 
-pivot = pivot[selected]
+pivot = pivot_full[selected]
+
+# =========================
+# TIMEFRAME FILTER
+# =========================
+end_date = pivot.index.max()
+
+if timeframe != "ALL":
+    days_map = {
+        "1M":30,
+        "3M":90,
+        "6M":180,
+        "1Y":365,
+        "3Y":1095
+    }
+    start_date = end_date - pd.Timedelta(days=days_map[timeframe])
+    pivot = pivot[pivot.index >= start_date]
+
 returns = pivot.pct_change().dropna()
 
 # =========================
@@ -78,22 +98,70 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 # =========================
-# OVERVIEW
+# OVERVIEW (INTERACTIVE)
 # =========================
 with tab1:
+
+    # PRICE CHART
+    title_with_tooltip(
+        "Fund prices",
+        "Absolute prijs van fondsen (echte waarde)"
+    )
+
+    fig_price = go.Figure()
+
+    for col in pivot.columns:
+        fig_price.add_trace(go.Scatter(
+            x=pivot.index,
+            y=pivot[col],
+            mode='lines',
+            name=col
+        ))
+
+    fig_price.update_layout(height=400)
+    st.plotly_chart(fig_price, use_container_width=True)
+
+    # NORMALIZED PERFORMANCE
     title_with_tooltip(
         "Normalized performance",
-        "Alle fondsen starten op 1. Hiermee vergelijk je relatieve groei."
+        "Alle fondsen starten op 1 (relatieve groei)"
     )
-    norm = pivot / pivot.iloc[0]
-    st.line_chart(norm)
 
+    norm = pivot / pivot.iloc[0]
+
+    fig_norm = go.Figure()
+
+    for col in norm.columns:
+        fig_norm.add_trace(go.Scatter(
+            x=norm.index,
+            y=norm[col],
+            mode='lines',
+            name=col
+        ))
+
+    fig_norm.update_layout(height=400)
+    st.plotly_chart(fig_norm, use_container_width=True)
+
+    # DRAWDOWN
     title_with_tooltip(
         "Drawdown",
-        "Laat zien hoeveel een fonds vanaf de piek is gedaald."
+        "Daling vanaf hoogste punt (risico indicator)"
     )
+
     dd = norm / norm.cummax() - 1
-    st.line_chart(dd)
+
+    fig_dd = go.Figure()
+
+    for col in dd.columns:
+        fig_dd.add_trace(go.Scatter(
+            x=dd.index,
+            y=dd[col],
+            mode='lines',
+            name=col
+        ))
+
+    fig_dd.update_layout(height=400)
+    st.plotly_chart(fig_dd, use_container_width=True)
 
 # =========================
 # PERFORMANCE
@@ -101,10 +169,11 @@ with tab1:
 with tab2:
     title_with_tooltip(
         "Momentum (30 dagen)",
-        "Percentage verandering over de laatste 30 dagen."
+        "Rendement laatste 30 dagen"
     )
+
     mom = (pivot / pivot.shift(30) - 1) * 100
-    st.bar_chart(mom.iloc[-1].dropna().to_frame("momentum"))
+    st.bar_chart(mom.iloc[-1].dropna())
 
 # =========================
 # RISK
@@ -112,25 +181,27 @@ with tab2:
 with tab3:
     title_with_tooltip(
         "Volatility",
-        "Hoe sterk de koers schommelt. Hoger = meer risico."
+        "Hoeveel een fonds fluctueert"
     )
+
     vol = returns.std() * np.sqrt(252)
-    st.dataframe(vol.sort_values(ascending=False).to_frame("volatility"))
+    st.dataframe(vol.sort_values(ascending=False))
 
     title_with_tooltip(
         "Sharpe ratio",
-        "Rendement per eenheid risico. Hoger = beter."
+        "Rendement per risico"
     )
+
     sharpe = returns.mean() / returns.std()
-    st.dataframe(sharpe.sort_values(ascending=False).to_frame("sharpe"))
+    st.dataframe(sharpe.sort_values(ascending=False))
 
 # =========================
-# 🔥 HEATMAP (INTERACTIVE + CONTRAST)
+# HEATMAP (INTERACTIVE + CONTRAST)
 # =========================
 with tab4:
     title_with_tooltip(
         "Return heatmap",
-        "Toont rendement per periode. Groen = positief, rood = negatief."
+        "Groen = positief, rood = negatief rendement"
     )
 
     latest_date = df["date"].max()
@@ -162,25 +233,6 @@ with tab4:
     x = heatmap.columns
     y = heatmap.index
 
-    # TEXT COLORS
-    text_colors = []
-    for row in z:
-        row_colors = []
-        for val in row:
-            if pd.isna(val):
-                row_colors.append("gray")
-            elif val < 0:
-                row_colors.append("white")
-            elif val < 1:
-                row_colors.append("black")
-            elif val < 5:
-                row_colors.append("black")
-            else:
-                row_colors.append("white")
-        text_colors.append(row_colors)
-
-    text = [[f"{v:.2f}%" if pd.notna(v) else "" for v in row] for row in z]
-
     fig = go.Figure(data=go.Heatmap(
         z=z,
         x=x,
@@ -193,15 +245,24 @@ with tab4:
         colorbar=dict(title="Return %")
     ))
 
-    # TEXT LAYER
+    # TEXT + CONTRAST
     for i in range(len(y)):
         for j in range(len(x)):
+            val = z[i][j]
+
+            if pd.isna(val):
+                text = ""
+                color = "gray"
+            else:
+                text = f"{val:.2f}%"
+                color = "white" if val < 0 or val > 5 else "black"
+
             fig.add_annotation(
                 x=x[j],
                 y=y[i],
-                text=text[i][j],
+                text=text,
                 showarrow=False,
-                font=dict(color=text_colors[i][j], size=12)
+                font=dict(color=color, size=12)
             )
 
     fig.update_layout(height=600)
