@@ -6,3 +6,4 @@ lxml
 fastapi
 uvicorn
 beautifulsoup4
+plotly==5.22.0
