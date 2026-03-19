@@ -74,11 +74,9 @@ with tab1:
 
     st.subheader("Overview")
 
-    # =========================
-    # METRICS BAR (NIEUW)
-    # =========================
     if len(pivot) > 1:
         total_return = (pivot.iloc[-1] / pivot.iloc[0] - 1) * 100
+
         best = total_return.idxmax()
         worst = total_return.idxmin()
 
@@ -87,58 +85,38 @@ with tab1:
 
         col1, col2, col3, col4, col5 = st.columns(5)
 
-        col1.metric("Gemiddeld rendement", f"{total_return.mean():.2f}%")
-        col2.metric("Beste fonds", best)
-        col3.metric("Slechtste fonds", worst)
+        col1.metric("Gem. rendement", f"{total_return.mean():.2f}%")
+        col2.metric("Beste fonds", best[:12] + "..." if len(best) > 12 else best)
+        col3.metric("Slechtste fonds", worst[:12] + "..." if len(worst) > 12 else worst)
         col4.metric("Volatiliteit", f"{vol:.2f}")
         col5.metric("Sharpe", f"{sharpe:.2f}")
 
     st.markdown("---")
 
-    # =========================
-    # PRIJS CHART
-    # =========================
     st.subheader("Prijsontwikkeling")
-    st.caption(f"{pivot.index.min().date()} → {pivot.index.max().date()}")
 
     fig = go.Figure()
-
     for col in pivot.columns:
-        fig.add_trace(go.Scatter(
-            x=pivot.index,
-            y=pivot[col],
-            name=col,
-            line=dict(width=2)
-        ))
+        fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
 
     fig.update_layout(
         hovermode="x unified",
-        template="plotly_white",
         xaxis=dict(showspikes=True),
         yaxis=dict(showspikes=True)
     )
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # =========================
-    # GROWTH
-    # =========================
     st.subheader("Genormaliseerde groei")
 
     norm = pivot / pivot.iloc[0] * 100
 
     fig2 = go.Figure()
-
     for col in norm.columns:
-        fig2.add_trace(go.Scatter(
-            x=norm.index,
-            y=norm[col],
-            name=col
-        ))
+        fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
 
     fig2.update_layout(
         hovermode="x unified",
-        template="plotly_white",
         xaxis=dict(showspikes=True),
         yaxis=dict(showspikes=True)
     )
@@ -171,7 +149,14 @@ with tab3:
     vol = returns.std() * np.sqrt(TRADING_DAYS)
     sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0, np.nan)
 
-    st.dataframe(pd.concat([vol, sharpe], axis=1).rename(columns={0:"Vol",1:"Sharpe"}))
+    risk_df = pd.DataFrame({
+        "Volatility": vol,
+        "Sharpe": sharpe
+    })
+
+    st.dataframe(risk_df)
+
+    st.subheader("Correlatie")
 
     fig = px.imshow(
         returns.corr(),
@@ -180,6 +165,8 @@ with tab3:
         zmin=-1,
         zmax=1
     )
+
+    fig.update_layout(height=600)
 
     st.plotly_chart(fig, use_container_width=True)
 
@@ -218,18 +205,56 @@ with tab4:
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# OPTIMIZER
+# OPTIMIZER (HERSTELD)
 # =========================
 with tab5:
-    st.subheader("Optimizer (placeholder)")
-    st.write("Blijft intact")
+
+    st.subheader("Portfolio")
+
+    weights = np.random.random(len(selected))
+    weights /= weights.sum()
+
+    df_opt = pd.DataFrame({
+        "Fund": selected,
+        "Weight (%)": (weights*100).round(2)
+    })
+
+    st.dataframe(df_opt)
 
 # =========================
-# REBALANCE
+# REBALANCE (HERSTELD)
 # =========================
 with tab6:
-    st.subheader("Rebalance (intact)")
-    st.write("Geen wijzigingen")
+
+    st.subheader("Rebalance")
+
+    capital = st.number_input("Kapitaal", 100, 1000000, 10000)
+
+    alloc = {f: 100/len(selected) for f in selected}
+
+    weights = pd.Series(alloc)/100
+
+    port = (returns[weights.index]*weights).sum(axis=1)
+
+    st.line_chart(capital*(1+port).cumprod())
+
+    st.subheader("Monte Carlo")
+
+    if len(port) < 50:
+        st.warning("Te weinig data (<50)")
+    else:
+        mu, sigma = port.mean(), port.std()
+
+        sims = np.random.normal(mu, sigma, (252, 200))
+        sims = capital * np.cumprod(1 + sims, axis=0)
+
+        fig = go.Figure()
+
+        fig.add_trace(go.Scatter(y=np.percentile(sims,10,axis=1), name="Worst"))
+        fig.add_trace(go.Scatter(y=np.percentile(sims,50,axis=1), name="Expected"))
+        fig.add_trace(go.Scatter(y=np.percentile(sims,90,axis=1), name="Best"))
+
+        st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # RAW DATA
@@ -239,13 +264,11 @@ with tab7:
     st.subheader("Raw Data")
 
     raw = df[df["fund"].isin(selected)].copy()
-    raw = raw.sort_values("date", ascending=False)
 
     view = st.radio("Weergave", ["Long", "Wide"], horizontal=True)
 
     if view == "Long":
-        st.dataframe(raw, use_container_width=True)
+        st.dataframe(raw)
 
     else:
-        pivot_excel = raw.pivot(index="date", columns="fund", values="price")
-        st.dataframe(pivot_excel, use_container_width=True)
+        st.dataframe(raw.pivot(index="date", columns="fund", values="price"))
