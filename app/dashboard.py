@@ -61,6 +61,12 @@ pivot = pivot.dropna(how="all")
 returns = pivot.pct_change().dropna()
 
 # =========================
+# HELPERS
+# =========================
+def shorten(name, length=18):
+    return name if len(name) <= length else name[:length] + "..."
+
+# =========================
 # TABS
 # =========================
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
@@ -68,19 +74,15 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
 ])
 
 # =========================
-# HELPERS
-# =========================
-def shorten(name, length=18):
-    return name if len(name) <= length else name[:length] + "..."
-
-# =========================
 # OVERVIEW
 # =========================
 with tab1:
 
-    st.subheader("Overview")
+    st.subheader(
+        "Overview",
+        help="Samenvatting van prestaties, risico en beste/slechtste fondsen."
+    )
 
-    # 🔹 CONTEXT TOEVOEGING
     if not pivot.empty:
         start_date = pivot.index.min().strftime("%d-%m-%Y")
         end_date = pivot.index.max().strftime("%d-%m-%Y")
@@ -88,8 +90,7 @@ with tab1:
 
         st.caption(
             f"Periode: {start_date} → {end_date} ({days} dagen). "
-            "Alle metrics zijn gebaseerd op dagelijkse rendementen. "
-            "Volatiliteit = risico (schommelingen), Sharpe = rendement per risico-eenheid."
+            "Gebaseerd op dagelijkse rendementen."
         )
 
     if len(pivot) > 1:
@@ -116,7 +117,10 @@ with tab1:
 
     st.markdown("---")
 
-    st.subheader("Prijsontwikkeling")
+    st.subheader(
+        "Prijsontwikkeling",
+        help="Toont de absolute prijs per fonds over tijd."
+    )
 
     fig = go.Figure()
     for col in pivot.columns:
@@ -130,29 +134,34 @@ with tab1:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader("Genormaliseerde groei")
+    st.subheader(
+        "Genormaliseerde groei",
+        help="Alle fondsen starten op 100 zodat prestaties eerlijk vergelijkbaar zijn."
+    )
 
-    if len(pivot) > 0:
-        norm = pivot / pivot.iloc[0] * 100
+    norm = pivot / pivot.iloc[0] * 100
 
-        fig2 = go.Figure()
-        for col in norm.columns:
-            fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
+    fig2 = go.Figure()
+    for col in norm.columns:
+        fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
 
-        fig2.update_layout(
-            hovermode="x unified",
-            xaxis=dict(title="Datum", showspikes=True),
-            yaxis=dict(title="Index (start=100)", showspikes=True)
-        )
+    fig2.update_layout(
+        hovermode="x unified",
+        xaxis=dict(title="Datum", showspikes=True),
+        yaxis=dict(title="Index (start=100)", showspikes=True)
+    )
 
-        st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
 # PERFORMANCE
 # =========================
 with tab2:
 
-    st.subheader("Momentum (30 dagen)")
+    st.subheader(
+        "Momentum (30 dagen)",
+        help="Percentage verandering over de laatste 30 dagen."
+    )
 
     if len(pivot) < 30:
         st.warning("Te weinig data (<30 dagen)")
@@ -160,17 +169,19 @@ with tab2:
         mom = (pivot / pivot.shift(30) - 1) * 100
         last = mom.iloc[-1].dropna()
 
-        if not last.empty:
-            fig = go.Figure(go.Bar(x=last.index, y=last.values))
-            fig.update_layout(xaxis_title="Fonds", yaxis_title="Momentum (%)")
-            st.plotly_chart(fig, use_container_width=True)
+        fig = go.Figure(go.Bar(x=last.index, y=last.values))
+        fig.update_layout(xaxis_title="Fonds", yaxis_title="Momentum (%)")
+        st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # RISK
 # =========================
 with tab3:
 
-    st.subheader("Risk metrics")
+    st.subheader(
+        "Risk metrics",
+        help="Volatiliteit = risico. Sharpe = rendement per risico-eenheid."
+    )
 
     vol = returns.std() * np.sqrt(TRADING_DAYS)
     sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0, np.nan)
@@ -182,7 +193,10 @@ with tab3:
 
     st.dataframe(risk_df)
 
-    st.subheader("Correlatie")
+    st.subheader(
+        "Correlatie",
+        help="Laat zien hoe fondsen samen bewegen (-1 tot +1)."
+    )
 
     fig = px.imshow(
         returns.corr(),
@@ -193,7 +207,6 @@ with tab3:
     )
 
     fig.update_layout(height=600)
-
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
@@ -201,7 +214,10 @@ with tab3:
 # =========================
 with tab4:
 
-    st.subheader("Heatmap")
+    st.subheader(
+        "Heatmap",
+        help="Toont rendement per periode. Groen = positief, rood = negatief."
+    )
 
     latest = pivot_full.index.max()
 
@@ -234,54 +250,41 @@ with tab4:
 # OPTIMIZER
 # =========================
 with tab5:
-
-    st.subheader("Portfolio verdeling")
-
+    st.subheader("Optimizer", help="Simpele verdeling van gewichten.")
     weights = np.random.random(len(selected))
     weights /= weights.sum()
-
-    df_opt = pd.DataFrame({
-        "Fund": selected,
-        "Weight (%)": (weights*100).round(2)
-    })
-
-    st.dataframe(df_opt)
+    st.dataframe(pd.DataFrame({"Fund": selected, "Weight (%)": (weights*100).round(2)}))
 
 # =========================
 # REBALANCE
 # =========================
 with tab6:
 
-    st.subheader("Rebalance")
+    st.subheader("Rebalance", help="Simuleer portfolio groei.")
 
     capital = st.number_input("Kapitaal", 100, 1000000, 10000)
 
     weights = pd.Series(1/len(selected), index=selected)
-
     port = (returns[weights.index]*weights).sum(axis=1)
 
     st.line_chart(capital*(1+port).cumprod())
 
-    st.subheader("Monte Carlo")
+    st.subheader(
+        "Monte Carlo simulatie",
+        help="Simuleert mogelijke toekomstige uitkomsten."
+    )
 
     if len(port) < 50:
-        st.warning("Te weinig data voor simulatie (<50 dagen)")
+        st.warning("Te weinig data (<50 dagen)")
     else:
         mu, sigma = port.mean(), port.std()
-
         sims = np.random.normal(mu, sigma, (252, 200))
         sims = capital * np.cumprod(1 + sims, axis=0)
 
         fig = go.Figure()
-
         fig.add_trace(go.Scatter(y=np.percentile(sims,10,axis=1), name="Worst"))
         fig.add_trace(go.Scatter(y=np.percentile(sims,50,axis=1), name="Expected"))
         fig.add_trace(go.Scatter(y=np.percentile(sims,90,axis=1), name="Best"))
-
-        fig.update_layout(
-            xaxis_title="Dagen",
-            yaxis_title="Waarde (€)"
-        )
 
         st.plotly_chart(fig, use_container_width=True)
 
@@ -290,7 +293,7 @@ with tab6:
 # =========================
 with tab7:
 
-    st.subheader("Raw Data")
+    st.subheader("Raw Data", help="Bekijk en download de onderliggende data.")
 
     raw = df[df["fund"].isin(selected)].copy()
 
