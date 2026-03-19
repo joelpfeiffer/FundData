@@ -240,11 +240,10 @@ with tab4:
 # OPTIMIZER (ECHT)
 # =========================
 with tab5:
-    st.subheader("Optimizer (Max Sharpe + Efficient Frontier)")
+    st.subheader("Optimizer (Portfolio Profielen)")
 
     st.caption(
-        "Deze optimizer berekent duizenden mogelijke portfolio’s en kiest de beste balans "
-        "tussen rendement en risico (Sharpe ratio)."
+        "De optimizer berekent duizenden portfolio’s en selecteert op basis van risicoprofielen."
     )
 
     if returns.shape[1] < 2:
@@ -260,62 +259,66 @@ with tab5:
     results = []
     weights_list = []
 
-    num_assets = len(mean_returns)
-
-    # =========================
-    # SIMULATIE
-    # =========================
     for _ in range(4000):
-        weights = np.random.random(num_assets)
-        weights /= np.sum(weights)
+        w = np.random.random(len(mean_returns))
+        w /= w.sum()
 
-        ret = np.dot(weights, mean_returns)
-        vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
-        sharpe = ret / vol if vol != 0 else 0
+        r = np.dot(w, mean_returns)
+        v = np.sqrt(np.dot(w.T, np.dot(cov_matrix, w)))
+        s = r / v if v != 0 else 0
 
-        results.append([ret, vol, sharpe])
-        weights_list.append(weights)
+        results.append([r, v, s])
+        weights_list.append(w)
 
     results = np.array(results)
 
-    best_idx = np.argmax(results[:,2])
-    best_weights = weights_list[best_idx]
-
     # =========================
-    # HOVER TEXT (BELANGRIJK)
+    # PROFIELEN
     # =========================
-    hover_text = []
+    idx_min_risk = np.argmin(results[:,1])
+    idx_max_return = np.argmax(results[:,0])
+    idx_max_sharpe = np.argmax(results[:,2])
+    idx_balanced = np.argsort(results[:,2])[len(results)//2]
 
-    for w in weights_list:
-        txt = "<br>".join([
-            f"{fund}: {weight*100:.1f}%"
-            for fund, weight in zip(mean_returns.index, w)
-        ])
-        hover_text.append(txt)
+    profiles = {
+        "Low Risk": idx_min_risk,
+        "Balanced": idx_balanced,
+        "High Return": idx_max_return,
+        "Max Sharpe": idx_max_sharpe
+    }
+
+    selected_profile = st.selectbox(
+        "Kies risicoprofiel",
+        list(profiles.keys()),
+        index=3
+    )
+
+    selected_idx = profiles[selected_profile]
+    selected_weights = weights_list[selected_idx]
 
     # =========================
     # UITLEG
     # =========================
-    st.markdown("### Wat zie je hier?")
+    st.markdown("### Wat betekent dit?")
     st.info(
-        "Elke punt = een mogelijke portfolio\n\n"
-        "• X-as = risico (volatiliteit)\n"
-        "• Y-as = verwacht rendement\n"
-        "• Kleur = Sharpe ratio\n\n"
-        "Hover over een punt om de verdeling van fondsen te zien."
+        f"Profiel: **{selected_profile}**\n\n"
+        "• Low Risk = minimale schommelingen\n"
+        "• Balanced = middenweg\n"
+        "• High Return = maximale groei (meer risico)\n"
+        "• Max Sharpe = beste balans risico/rendement"
     )
 
     # =========================
-    # BESTE PORTFOLIO
+    # RESULTAAT TABEL (ENKEL!)
     # =========================
-    st.subheader("Beste portfolio (Max Sharpe)")
+    st.subheader("Portfolio verdeling")
 
-    best_df = pd.DataFrame({
+    df_profile = pd.DataFrame({
         "Fund": mean_returns.index,
-        "Weight %": best_weights * 100
+        "Weight %": selected_weights * 100
     }).sort_values("Weight %", ascending=False)
 
-    st.dataframe(best_df, use_container_width=True)
+    st.dataframe(df_profile, use_container_width=True)
 
     # =========================
     # FRONTIER
@@ -328,11 +331,6 @@ with tab5:
         x=results[:,1],
         y=results[:,0],
         mode="markers",
-        text=hover_text,
-        hovertemplate=
-            "Return: %{y:.2f}<br>" +
-            "Risk: %{x:.2f}<br><br>" +
-            "%{text}<extra></extra>",
         marker=dict(
             color=results[:,2],
             colorscale="Viridis",
@@ -343,13 +341,13 @@ with tab5:
         name="Portfolios"
     ))
 
-    # highlight beste punt
+    # highlight gekozen profiel
     fig.add_trace(go.Scatter(
-        x=[results[best_idx,1]],
-        y=[results[best_idx,0]],
+        x=[results[selected_idx,1]],
+        y=[results[selected_idx,0]],
         mode="markers",
         marker=dict(size=14, color="red"),
-        name="Best Portfolio"
+        name=selected_profile
     ))
 
     fig.update_layout(
@@ -361,29 +359,17 @@ with tab5:
     st.plotly_chart(fig, use_container_width=True)
 
     # =========================
-    # SELECTIE TOOL
+    # EXTRA UITLEG
     # =========================
-    st.subheader("Inspecteer portfolio")
+    st.markdown("### Hoe lees je dit?")
+    st.markdown(
+        """
+- Links = minder risico  
+- Rechts = meer risico  
+- Boven = hoger rendement  
 
-    idx = st.slider(
-        "Kies een portfolio uit de simulatie",
-        0,
-        len(weights_list)-1,
-        best_idx
-    )
-
-    selected_weights = weights_list[idx]
-
-    selected_df = pd.DataFrame({
-        "Fund": mean_returns.index,
-        "Weight %": selected_weights * 100
-    }).sort_values("Weight %", ascending=False)
-
-    st.dataframe(selected_df, use_container_width=True)
-
-    st.caption(
-        "Gebruik deze tool om te begrijpen hoe verschillende combinaties van fondsen "
-        "het risico en rendement beïnvloeden."
+💡 Het rode punt is jouw gekozen profiel.
+"""
     )
 # =========================
 # REBALANCE (MONTE CARLO)
