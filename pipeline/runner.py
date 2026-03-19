@@ -1,65 +1,105 @@
-import sys
+import pandas as pd
+import sqlite3
 import os
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(BASE_DIR)
-
-import sqlite3
-import pandas as pd
-from pipeline.scraper import fetch_data
-from pipeline.database import init_db
-
+# =========================
+# CONFIG
+# =========================
 DB_PATH = "data/pension.db"
 CSV_PATH = "data/prices.csv"
+BACKUP_PATH = "data/prices_backup_auto.csv"
 
-
-def run():
-    print("=== START PIPELINE ===")
-
-    os.makedirs("data", exist_ok=True)
-    init_db()
-
-    df = fetch_data()
-    today = df["Datum"].iloc[0].strftime("%Y-%m-%d")
-
+# =========================
+# LOAD DATA UIT DATABASE
+# =========================
+def load_from_db():
     conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
 
-    cur.execute("SELECT MAX(date) FROM prices")
-    result = cur.fetchone()[0]
+    query = """
+    SELECT date, fund, price
+    FROM prices
+    """
 
-    print("Laatste datum:", result)
-    print("Nieuwe datum:", today)
+    df = pd.read_sql(query, conn)
+    conn.close()
 
-    if result != today:
-        print("Nieuwe data toevoegen...")
+    return df
 
-        rows = [
-            (today, row["Fonds"], float(row["Koers"]))
-            for _, row in df.iterrows()
-        ]
+# =========================
+# MAIN
+# =========================
+def main():
+    print("🔄 Start export pipeline...")
 
-        cur.executemany(
-            "INSERT OR IGNORE INTO prices (date, fund, price) VALUES (?, ?, ?)",
-            rows
+    # nieuwe data uit database
+    new_df = load_from_db()
+
+    if new_df.empty:
+        print("⚠️ Geen data uit database")
+        return
+
+    # zorg voor juiste types
+    new_df["date"] = pd.to_datetime(new_df["date"], errors="coerce")
+    new_df = new_df.dropna(subset=["date", "fund", "price"])
+
+    print(f"📥 Nieuwe records: {len(new_df)}")
+
+    # =========================
+    # BESTAANDE CSV INLADEN
+    # =========================
+    if os.path.exists(CSV_PATH):
+        old_df = pd.read_csv(CSV_PATH)
+
+        old_df["date"] = pd.to_datetime(old_df["date"], errors="coerce")
+        old_df = old_df.dropna(subset=["date", "fund", "price"])
+
+        print(f"📦 Bestaande records: {len(old_df)}")
+
+        # =========================
+        # MERGE + DEDUPE
+        # =========================
+        combined = pd.concat([old_df, new_df])
+
+        combined = combined.drop_duplicates(
+            subset=["date", "fund"],
+            keep="last"
         )
 
-        conn.commit()
-        print(f"{len(rows)} records toegevoegd")
     else:
-        print("Data al up-to-date")
+        print("🆕 Geen bestaande CSV gevonden")
+        combined = new_df
 
-    export_df = pd.read_sql_query(
-        "SELECT date, fund, price FROM prices ORDER BY date, fund",
-        conn
-    )
+    # =========================
+    # SORTEREN
+    # =========================
+    combined = combined.sort_values("date")
 
-    export_df.to_csv(CSV_PATH, index=False)
-    print("CSV bijgewerkt:", CSV_PATH)
+    # =========================
+    # OPSLAAN
+    # =========================
+    combined.to_csv(CSV_PATH, index=False)
 
-    conn.close()
-    print("=== EINDE PIPELINE ===")
+    print(f"✅ CSV geüpdatet: {CSV_PATH}")
 
+    # =========================
+    # BACKUP (AUTOMATISCH)
+    # =========================
+    combined.to_csv(BACKUP_PATH, index=False)
 
+    print(f"💾 Backup opgeslagen: {BACKUP_PATH}")
+
+    # =========================
+    # EXTRA CHECKS
+    # =========================
+    print("📊 Samenvatting:")
+    print(f"   Totaal records: {len(combined)}")
+    print(f"   Datum range: {combined['date'].min()} → {combined['date'].max()}")
+    print(f"   Aantal fondsen: {combined['fund'].nunique()}")
+
+    print("🎉 Pipeline succesvol afgerond!")
+
+# =========================
+# RUN
+# =========================
 if __name__ == "__main__":
-    run()
+    main()
