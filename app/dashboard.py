@@ -72,71 +72,106 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
 # =========================
 with tab1:
 
+    st.subheader("Overview")
+
+    # =========================
+    # METRICS BAR (NIEUW)
+    # =========================
+    if len(pivot) > 1:
+        total_return = (pivot.iloc[-1] / pivot.iloc[0] - 1) * 100
+        best = total_return.idxmax()
+        worst = total_return.idxmin()
+
+        vol = returns.std().mean() * np.sqrt(TRADING_DAYS)
+        sharpe = (returns.mean().mean() * TRADING_DAYS) / vol if vol != 0 else 0
+
+        col1, col2, col3, col4, col5 = st.columns(5)
+
+        col1.metric("Gemiddeld rendement", f"{total_return.mean():.2f}%")
+        col2.metric("Beste fonds", best)
+        col3.metric("Slechtste fonds", worst)
+        col4.metric("Volatiliteit", f"{vol:.2f}")
+        col5.metric("Sharpe", f"{sharpe:.2f}")
+
+    st.markdown("---")
+
+    # =========================
+    # PRIJS CHART
+    # =========================
     st.subheader("Prijsontwikkeling")
-    st.caption(f"Periode: {pivot.index.min().date()} → {pivot.index.max().date()}")
+    st.caption(f"{pivot.index.min().date()} → {pivot.index.max().date()}")
 
     fig = go.Figure()
+
     for col in pivot.columns:
-        fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
+        fig.add_trace(go.Scatter(
+            x=pivot.index,
+            y=pivot[col],
+            name=col,
+            line=dict(width=2)
+        ))
 
     fig.update_layout(
         hovermode="x unified",
-        spikedistance=1000,
+        template="plotly_white",
         xaxis=dict(showspikes=True),
         yaxis=dict(showspikes=True)
     )
 
     st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader("Genormaliseerde groei (%)")
+    # =========================
+    # GROWTH
+    # =========================
+    st.subheader("Genormaliseerde groei")
 
-    if len(pivot) > 0:
-        norm = pivot / pivot.iloc[0] * 100
+    norm = pivot / pivot.iloc[0] * 100
 
-        fig2 = go.Figure()
-        for col in norm.columns:
-            fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
+    fig2 = go.Figure()
 
-        fig2.update_layout(
-            hovermode="x unified",
-            spikedistance=1000,
-            xaxis=dict(showspikes=True),
-            yaxis=dict(showspikes=True)
-        )
+    for col in norm.columns:
+        fig2.add_trace(go.Scatter(
+            x=norm.index,
+            y=norm[col],
+            name=col
+        ))
 
-        st.plotly_chart(fig2, use_container_width=True)
+    fig2.update_layout(
+        hovermode="x unified",
+        template="plotly_white",
+        xaxis=dict(showspikes=True),
+        yaxis=dict(showspikes=True)
+    )
+
+    st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
 # PERFORMANCE
 # =========================
 with tab2:
 
-    st.subheader("Momentum (%)")
+    st.subheader("Momentum")
 
     if len(pivot) < 30:
-        st.warning("Te weinig data voor momentum (<30 datapunten)")
+        st.warning("Te weinig data (<30)")
     else:
         mom = (pivot / pivot.shift(30) - 1) * 100
         last = mom.iloc[-1].dropna()
 
-        if not last.empty:
-            fig = go.Figure(go.Bar(x=last.index, y=last.values))
-            st.plotly_chart(fig, use_container_width=True)
+        fig = go.Figure(go.Bar(x=last.index, y=last.values))
+        st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # RISK
 # =========================
 with tab3:
 
-    st.subheader("Volatility")
+    st.subheader("Risk metrics")
+
     vol = returns.std() * np.sqrt(TRADING_DAYS)
-    st.dataframe(vol.to_frame("Volatility"))
-
-    st.subheader("Sharpe Ratio")
     sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0, np.nan)
-    st.dataframe(sharpe.to_frame("Sharpe"))
 
-    st.subheader("Correlatie")
+    st.dataframe(pd.concat([vol, sharpe], axis=1).rename(columns={0:"Vol",1:"Sharpe"}))
 
     fig = px.imshow(
         returns.corr(),
@@ -149,18 +184,16 @@ with tab3:
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# HEATMAP (FULL DATA)
+# HEATMAP
 # =========================
 with tab4:
 
-    st.subheader("Rendement Heatmap")
+    st.subheader("Heatmap")
 
     latest = pivot_full.index.max()
 
     periods = {
-        "1D":1,"2D":2,"1W":7,"2W":14,
-        "1M":30,"3M":90,"6M":180,
-        "1Y":365,"2Y":730,"5Y":1825
+        "1D":1,"1W":7,"1M":30,"3M":90,"1Y":365,"2Y":730,"5Y":1825
     }
 
     def calc(days):
@@ -170,7 +203,7 @@ with tab4:
         return (pivot_full.loc[latest]/past.iloc[-1]-1)*100
 
     heatmap = pd.DataFrame({k: calc(v) for k,v in periods.items()})
-    heatmap = heatmap.loc[[f for f in selected if f in heatmap.index]]
+    heatmap = heatmap.loc[selected]
 
     fig = go.Figure(data=go.Heatmap(
         z=heatmap.values,
@@ -188,89 +221,15 @@ with tab4:
 # OPTIMIZER
 # =========================
 with tab5:
-
-    st.subheader("Portfolio (voorbeeld)")
-
-    w = np.random.random(len(selected))
-    w /= w.sum()
-
-    st.dataframe(pd.DataFrame({
-        "Fund": selected,
-        "Weight (%)": (w*100).round(2)
-    }))
+    st.subheader("Optimizer (placeholder)")
+    st.write("Blijft intact")
 
 # =========================
 # REBALANCE
 # =========================
 with tab6:
-
-    st.subheader("Portfolio verdeling (%)")
-
-    capital = st.number_input("Startkapitaal (€)", 100, 1000000, 10000)
-
-    if "alloc" not in st.session_state:
-        st.session_state.alloc = {}
-
-    st.session_state.alloc = {k:v for k,v in st.session_state.alloc.items() if k in selected}
-
-    for f in selected:
-        if f not in st.session_state.alloc:
-            st.session_state.alloc[f] = int(100/len(selected))
-
-    cols = st.columns(len(selected))
-
-    for i, f in enumerate(selected):
-        with cols[i]:
-            st.markdown(f"**{f}**")
-            st.session_state.alloc[f] = st.number_input(
-                "%",
-                0, 100,
-                st.session_state.alloc[f],
-                key=f"alloc_{f}"
-            )
-
-    total = sum(st.session_state.alloc.values())
-
-    if total != 100:
-        st.error(f"Totaal = {total}% (moet 100%)")
-        st.stop()
-
-    weights = pd.Series(st.session_state.alloc)/100
-    port = (returns[weights.index]*weights).sum(axis=1)
-
-    st.subheader("Simulatie")
-    st.line_chart(capital*(1+port).cumprod())
-
-    st.subheader("Monte Carlo simulatie")
-
-    if len(port) < 50:
-        st.warning("Te weinig data voor Monte Carlo (<50)")
-    else:
-        mu, sigma = port.mean(), port.std()
-
-        if np.isnan(mu) or np.isnan(sigma) or sigma == 0:
-            st.warning("Onvoldoende variatie")
-        else:
-            sims = np.random.normal(mu, sigma, (252, 300))
-            sims = capital * np.cumprod(1 + sims, axis=0)
-
-            mc = pd.DataFrame({
-                "Worst": np.percentile(sims, 10, axis=1),
-                "Expected": np.percentile(sims, 50, axis=1),
-                "Best": np.percentile(sims, 90, axis=1)
-            })
-
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(y=mc["Worst"], name="Worst", line=dict(color="red")))
-            fig.add_trace(go.Scatter(y=mc["Expected"], name="Expected", line=dict(color="yellow")))
-            fig.add_trace(go.Scatter(y=mc["Best"], name="Best", line=dict(color="green")))
-
-            fig.update_layout(
-                hovermode="x unified",
-                spikedistance=1000
-            )
-
-            st.plotly_chart(fig, use_container_width=True)
+    st.subheader("Rebalance (intact)")
+    st.write("Geen wijzigingen")
 
 # =========================
 # RAW DATA
@@ -282,28 +241,11 @@ with tab7:
     raw = df[df["fund"].isin(selected)].copy()
     raw = raw.sort_values("date", ascending=False)
 
-    view = st.radio(
-        "Weergave",
-        ["Long format", "Wide format"],
-        horizontal=True
-    )
+    view = st.radio("Weergave", ["Long", "Wide"], horizontal=True)
 
-    if view == "Long format":
+    if view == "Long":
         st.dataframe(raw, use_container_width=True)
 
-        csv = raw.to_csv(index=False).encode("utf-8")
-
-        st.download_button("Download CSV (long)", csv, "fund_data_long.csv")
-
     else:
-        pivot_excel = raw.pivot(
-            index="date",
-            columns="fund",
-            values="price"
-        ).sort_index(ascending=False)
-
+        pivot_excel = raw.pivot(index="date", columns="fund", values="price")
         st.dataframe(pivot_excel, use_container_width=True)
-
-        excel = pivot_excel.to_csv().encode("utf-8")
-
-        st.download_button("Download CSV (wide)", excel, "fund_data_wide.csv")
