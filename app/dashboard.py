@@ -282,17 +282,28 @@ with tab7:
     raw = df[df["fund"].isin(selected)].copy()
     raw = raw.sort_values("date", ascending=False)
 
-    st.dataframe(raw, use_container_width=True)
+    view = st.radio(
+        "Weergave",
+        ["Long format", "Wide format"],
+        horizontal=True
+    )
 
-    st.markdown("---")
+    if view == "Long format":
+        st.dataframe(raw, use_container_width=True)
 
-    col1, col2 = st.columns(2)
-
-    with col1:
         csv = raw.to_csv(index=False).encode("utf-8")
-        st.download_button("Download CSV", csv, "fund_data_long.csv")
 
-    with col2:
-        pivot_excel = raw.pivot(index="date", columns="fund", values="price").sort_index()
+        st.download_button("Download CSV (long)", csv, "fund_data_long.csv")
+
+    else:
+        pivot_excel = raw.pivot(
+            index="date",
+            columns="fund",
+            values="price"
+        ).sort_index(ascending=False)
+
+        st.dataframe(pivot_excel, use_container_width=True)
+
         excel = pivot_excel.to_csv().encode("utf-8")
-        st.download_button("Download Excel-ready", excel, "fund_data_wide.csv")
+
+        st.download_button("Download CSV (wide)", excel, "fund_data_wide.csv")
