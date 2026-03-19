@@ -450,8 +450,51 @@ with tab6:
 with tab7:
     st.subheader("Raw Data")
 
-    raw = df[df["fund"].isin(selected)]
+    raw = df[df["fund"].isin(selected)].copy()
 
-    st.dataframe(raw)
+    if raw.empty:
+        st.warning("Geen data voor selectie")
+        st.stop()
 
-    st.download_button("Download CSV", raw.to_csv().encode(), "data.csv")
+    # =========================
+    # VIEW SELECTOR
+    # =========================
+    view = st.radio(
+        "Weergave",
+        ["Long", "Wide"],
+        horizontal=True
+    )
+
+    # =========================
+    # LONG FORMAT
+    # =========================
+    if view == "Long":
+        display = raw.sort_values("date")
+
+    # =========================
+    # WIDE FORMAT (HERSTELD)
+    # =========================
+    else:
+        display = raw.pivot_table(
+            index="date",
+            columns="fund",
+            values="price",
+            aggfunc="last"
+        ).sort_index()
+
+    # =========================
+    # TABEL
+    # =========================
+    st.dataframe(display, use_container_width=True)
+
+    # =========================
+    # DOWNLOAD
+    # =========================
+    csv = display.to_csv().encode()
+
+    st.download_button(
+        "Download CSV",
+        csv,
+        "fund_data.csv",
+        mime="text/csv"
+    )
