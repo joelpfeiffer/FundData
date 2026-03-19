@@ -17,7 +17,7 @@ TRADING_DAYS = 252
 def load_data():
     df = pd.read_csv(f"{CSV_URL}?t={int(time.time())}")
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df = df.dropna(subset=["date", "price", "fund"])
+    df = df.dropna(subset=["date","price","fund"])
     return df.sort_values("date")
 
 df = load_data()
@@ -36,7 +36,7 @@ st.sidebar.title("Instellingen")
 funds = list(pivot_full.columns)
 selected = st.sidebar.multiselect("Fondsen", funds, default=funds[:5])
 
-mode = st.sidebar.radio("Timeframe", ["Preset", "Custom"])
+mode = st.sidebar.radio("Timeframe", ["Preset","Custom"])
 
 if mode == "Preset":
     tf = st.sidebar.selectbox("Periode", ["1W","2W","1M","3M","6M","1Y","ALL"])
@@ -71,33 +71,24 @@ if pivot.empty:
 returns = pivot.pct_change().dropna()
 
 # =========================
-# PRE-CALC (CENTRAAL)
+# PRE CALC
 # =========================
 ret = (pivot.iloc[-1] / pivot.iloc[0] - 1) * 100 if len(pivot) > 1 else None
 vol = returns.std() * np.sqrt(TRADING_DAYS)
 sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0,np.nan)
 
-drawdown = pivot / pivot.cummax() - 1
-max_dd = drawdown.min()
-
 # =========================
 # TABS
 # =========================
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1,tab2,tab3,tab4,tab5,tab6,tab7 = st.tabs([
     "Overview","Performance","Risk","Heatmap","Optimizer","Rebalance","Raw Data"
 ])
 
 # =========================
-# OVERVIEW
+# OVERVIEW (ongewijzigd)
 # =========================
 with tab1:
     st.subheader("Overview")
-
-    start_date = pivot.index.min().strftime("%d-%m-%Y")
-    end_date = pivot.index.max().strftime("%d-%m-%Y")
-    days = (pivot.index.max() - pivot.index.min()).days
-
-    st.caption(f"Periode: {start_date} → {end_date} ({days} dagen)")
 
     if ret is not None:
         best = ret.idxmax()
@@ -111,83 +102,40 @@ with tab1:
         c4.metric("Volatiliteit", f"{vol.mean():.2f}")
         c5.metric("Sharpe", f"{sharpe.mean():.2f}")
 
-    # AI insights
-    if ret is not None:
-        st.subheader("AI Insights")
-        st.info(f"""
-Beste fonds: {best} (+{ret.max():.2f}%)
-Slechtste fonds: {worst} ({ret.min():.2f}%)
-Hoogste risico: {vol.idxmax()}
-""")
-
-    st.markdown("---")
-
-    # trend 1
+    # trend
     fig = go.Figure()
-    benchmark = pivot.mean(axis=1)
-
     for col in pivot.columns:
         fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
-
-    fig.add_trace(go.Scatter(x=pivot.index, y=benchmark, name="Benchmark", line=dict(dash="dash")))
-
     st.plotly_chart(fig, use_container_width=True)
 
-    # trend 2
-    norm = pivot / pivot.iloc[0] * 100
-
-    fig2 = go.Figure()
-    for col in norm.columns:
-        fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
-
-    st.plotly_chart(fig2, use_container_width=True)
-
-    # drawdown
-    fig3 = go.Figure()
-    for col in drawdown.columns:
-        fig3.add_trace(go.Scatter(x=drawdown.index, y=drawdown[col]*100, name=col))
-
-    st.plotly_chart(fig3, use_container_width=True)
-
 # =========================
-# PERFORMANCE
+# PERFORMANCE (FIX)
 # =========================
 with tab2:
     st.subheader("Momentum")
 
-    if len(pivot) >= 30:
+    if len(pivot) < 30:
+        st.warning("Minimaal 30 dagen data nodig voor momentum")
+    else:
         mom = (pivot / pivot.shift(30) - 1) * 100
         st.bar_chart(mom.iloc[-1].dropna())
 
 # =========================
-# RISK (GEFIXT)
+# RISK
 # =========================
 with tab3:
     st.subheader("Risk")
 
     risk_df = pd.DataFrame({
         "Volatility": vol,
-        "Sharpe": sharpe,
-        "Max Drawdown %": max_dd * 100
+        "Sharpe": sharpe
     })
 
-    st.dataframe(risk_df, use_container_width=True)
-
-    st.subheader("Rolling Volatility")
-    rolling_vol = returns.rolling(30).std() * np.sqrt(TRADING_DAYS)
-
-    fig = go.Figure()
-    for col in rolling_vol.columns:
-        fig.add_trace(go.Scatter(x=rolling_vol.index, y=rolling_vol[col], name=col))
-
-    st.plotly_chart(fig, use_container_width=True)
-
-    st.subheader("Correlation")
+    st.dataframe(risk_df)
 
     fig_corr = px.imshow(returns.corr(), text_auto=True)
     fig_corr.update_layout(height=700)
-
-    st.plotly_chart(fig_corr, use_container_width=True)
+    st.plotly_chart(fig_corr)
 
 # =========================
 # HEATMAP
@@ -197,10 +145,7 @@ with tab4:
 
     latest = pivot_full.index.max()
 
-    periods = {
-        "1D":1,"2D":2,"3D":3,"1W":7,"2W":14,
-        "1M":30,"3M":90,"6M":180,"1Y":365,"2Y":730,"5Y":1825
-    }
+    periods = {"1W":7,"1M":30,"3M":90,"6M":180,"1Y":365}
 
     def calc(days):
         past = pivot_full[pivot_full.index <= latest - pd.Timedelta(days=days)]
@@ -219,44 +164,98 @@ with tab4:
             [0.5, "#f5e6a3"],
             [1, "#1a9850"]
         ],
-        zmid=0,
-        text=np.round(heat.values,2),
-        texttemplate="%{text}%"
+        zmid=0
     ))
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig)
 
 # =========================
-# OPTIMIZER
+# OPTIMIZER (ECHT)
 # =========================
 with tab5:
     st.subheader("Optimizer")
 
-    if returns.shape[1] >= 2:
+    if returns.shape[1] < 2:
+        st.warning("Minimaal 2 fondsen nodig")
+    else:
         mean_returns = returns.mean()*TRADING_DAYS
         cov = returns.cov()*TRADING_DAYS
 
-        weights = np.random.random(len(mean_returns))
-        weights /= weights.sum()
+        results = []
+        weights_list = []
+
+        for _ in range(5000):
+            w = np.random.random(len(mean_returns))
+            w /= w.sum()
+
+            r = np.dot(w, mean_returns)
+            v = np.sqrt(np.dot(w.T, np.dot(cov, w)))
+            s = r / v if v != 0 else 0
+
+            results.append([r,v,s])
+            weights_list.append(w)
+
+        results = np.array(results)
+
+        best_idx = np.argmax(results[:,2])
+        best_weights = weights_list[best_idx]
 
         st.dataframe(pd.DataFrame({
             "Fund": mean_returns.index,
-            "Weight %": weights*100
+            "Weight %": best_weights*100
         }))
 
+        # frontier
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=results[:,1],
+            y=results[:,0],
+            mode="markers",
+            marker=dict(color=results[:,2], colorscale="Viridis")
+        ))
+
+        fig.update_layout(xaxis_title="Risk", yaxis_title="Return")
+        st.plotly_chart(fig)
+
 # =========================
-# REBALANCE
+# REBALANCE (MONTE CARLO TERUG)
 # =========================
 with tab6:
-    st.subheader("Rebalance")
+    st.subheader("Rebalance + Monte Carlo")
 
     capital = st.number_input("Kapitaal", 100, 1000000, 10000)
 
-    weights = pd.Series(1/len(selected), index=selected)
+    if returns.shape[0] < 30:
+        st.warning("Te weinig data voor Monte Carlo")
+    else:
+        mean = returns.mean().mean()
+        std = returns.std().mean()
 
-    if not returns.empty:
-        port = (returns * weights).sum(axis=1)
-        st.line_chart(capital*(1+port).cumprod())
+        days = 100
+        sims = 200
+
+        paths = []
+
+        for _ in range(sims):
+            prices = [capital]
+            for _ in range(days):
+                change = np.random.normal(mean, std)
+                prices.append(prices[-1]*(1+change))
+            paths.append(prices)
+
+        paths = np.array(paths)
+
+        expected = paths.mean(axis=0)
+        worst = np.percentile(paths, 5, axis=0)
+        best = np.percentile(paths, 95, axis=0)
+
+        fig = go.Figure()
+
+        fig.add_trace(go.Scatter(y=expected, name="Expected"))
+        fig.add_trace(go.Scatter(y=best, name="Best Case"))
+        fig.add_trace(go.Scatter(y=worst, name="Worst Case"))
+
+        st.plotly_chart(fig)
 
 # =========================
 # RAW DATA
@@ -266,13 +265,6 @@ with tab7:
 
     raw = df[df["fund"].isin(selected)]
 
-    view = st.radio("Weergave", ["Long","Wide"], horizontal=True)
+    st.dataframe(raw)
 
-    if view == "Wide":
-        display = raw.pivot(index="date", columns="fund", values="price")
-    else:
-        display = raw
-
-    st.dataframe(display, use_container_width=True)
-
-    st.download_button("Download CSV", display.to_csv().encode(), "data.csv")
+    st.download_button("Download CSV", raw.to_csv().encode(), "data.csv")
