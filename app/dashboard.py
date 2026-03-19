@@ -93,52 +93,85 @@ tab1,tab2,tab3,tab4,tab5,tab6,tab7 = st.tabs([
 with tab1:
     st.subheader("Overview")
 
+    # =========================
+    # PERIODE INFO
+    # =========================
     start_date = pivot.index.min().strftime("%d-%m-%Y")
     end_date = pivot.index.max().strftime("%d-%m-%Y")
     days = (pivot.index.max() - pivot.index.min()).days
 
-    st.caption(f"Periode: {start_date} → {end_date} ({days} dagen)")
+    st.caption(
+        f"Data van {start_date} tot {end_date} ({days} dagen). "
+        "Alle metrics zijn gebaseerd op deze periode."
+    )
 
+    # =========================
+    # METRICS
+    # =========================
     if ret is not None:
         best = ret.idxmax()
         worst = ret.idxmin()
 
         c1, c2, c3, c4, c5 = st.columns(5)
 
-with c1:
-    st.metric("Gem. rendement", f"{ret.mean():.2f}%")
+        with c1:
+            st.metric("Gem. rendement", f"{ret.mean():.2f}%")
 
-with c2:
-    st.metric("Beste fonds", best)
-    st.caption(best)
+        with c2:
+            st.metric("Beste fonds", best)
+            st.caption(best)
 
-with c3:
-    st.metric("Slechtste fonds", worst)
-    st.caption(worst)
+        with c3:
+            st.metric("Slechtste fonds", worst)
+            st.caption(worst)
 
-with c4:
-    st.metric("Volatiliteit", f"{vol.mean():.2f}")
+        with c4:
+            st.metric("Volatiliteit", f"{vol.mean():.2f}")
 
-with c5:
-    st.metric("Sharpe", f"{sharpe.mean():.2f}")
+        with c5:
+            st.metric("Sharpe", f"{sharpe.mean():.2f}")
 
-        st.subheader("AI Insights")
-        st.info(f"""
-Beste fonds: {best} (+{ret.max():.2f}%)
-Slechtste fonds: {worst} ({ret.min():.2f}%)
-Hoogste risico: {vol.idxmax()}
-""")
+    # =========================
+    # AI INSIGHTS
+    # =========================
+    if ret is not None:
+        st.subheader("Inzichten")
+
+        st.info(
+            f"""
+📈 Beste performer: {best} (+{ret.max():.2f}%)
+
+📉 Slechtste performer: {worst} ({ret.min():.2f}%)
+
+⚠️ Hoogste risico: {vol.idxmax()} (volatiliteit {vol.max():.2f})
+
+💡 Interpretatie:
+- Hoge volatiliteit = grotere schommelingen
+- Hoog rendement + lage volatiliteit = sterke combinatie
+"""
+        )
 
     st.markdown("---")
 
-    # Trend 1
+    # =========================
+    # TREND 1 - PRIJS
+    # =========================
     st.subheader("Prijsontwikkeling")
 
+    st.caption(
+        "Toont de absolute prijs van elk fonds. Gebruik dit om prijsniveaus te vergelijken."
+    )
+
     fig = go.Figure()
+
     benchmark = pivot.mean(axis=1)
 
     for col in pivot.columns:
-        fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
+        fig.add_trace(go.Scatter(
+            x=pivot.index,
+            y=pivot[col],
+            name=col
+        ))
 
     fig.add_trace(go.Scatter(
         x=pivot.index,
@@ -147,28 +180,64 @@ Hoogste risico: {vol.idxmax()}
         line=dict(dash="dash")
     ))
 
+    fig.update_layout(
+        xaxis_title="Datum",
+        yaxis_title="Prijs"
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 
-    # Trend 2
-    st.subheader("Genormaliseerde groei")
+    # =========================
+    # TREND 2 - GENORMALISEERD
+    # =========================
+    st.subheader("Genormaliseerde groei (index = 100)")
+
+    st.caption(
+        "Alle fondsen starten op 100 zodat je groei eerlijk kunt vergelijken."
+    )
 
     norm = pivot / pivot.iloc[0] * 100
 
     fig2 = go.Figure()
+
     for col in norm.columns:
-        fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
+        fig2.add_trace(go.Scatter(
+            x=norm.index,
+            y=norm[col],
+            name=col
+        ))
+
+    fig2.update_layout(
+        xaxis_title="Datum",
+        yaxis_title="Index (100 = start)"
+    )
 
     st.plotly_chart(fig2, use_container_width=True)
 
-    # Drawdown
+    # =========================
+    # DRAWDOWN
+    # =========================
     st.subheader("Drawdown")
 
+    st.caption(
+        "Toont het maximale verlies vanaf een piek. Hoe lager, hoe groter de daling."
+    )
+
     fig3 = go.Figure()
+
     for col in drawdown.columns:
-        fig3.add_trace(go.Scatter(x=drawdown.index, y=drawdown[col]*100, name=col))
+        fig3.add_trace(go.Scatter(
+            x=drawdown.index,
+            y=drawdown[col] * 100,
+            name=col
+        ))
+
+    fig3.update_layout(
+        xaxis_title="Datum",
+        yaxis_title="Drawdown (%)"
+    )
 
     st.plotly_chart(fig3, use_container_width=True)
-
 # =========================
 # PERFORMANCE
 # =========================
