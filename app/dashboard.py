@@ -44,7 +44,7 @@ mode = st.sidebar.radio("Timeframe", ["Preset", "Custom"])
 pivot = pivot_full[selected].copy()
 
 # =========================
-# TIMEFRAME LOGIC (FIXED)
+# TIMEFRAME
 # =========================
 if mode == "Preset":
     tf = st.sidebar.selectbox("Range", ["1W","2W","1M","3M","6M","1Y","ALL"])
@@ -57,17 +57,14 @@ else:
     end = st.sidebar.date_input("End", pivot.index.max())
     pivot = pivot[(pivot.index >= pd.to_datetime(start)) & (pivot.index <= pd.to_datetime(end))]
 
-# 🔥 BELANGRIJK: verwijder lege rijen
 pivot = pivot.dropna(how="all")
-
-# RETURNS OP BASIS VAN TIMEFRAME
 returns = pivot.pct_change().dropna()
 
 # =========================
 # TABS
 # =========================
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "Overview","Performance","Risk","Heatmap","Optimizer","Rebalance"
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    "Overview","Performance","Risk","Heatmap","Optimizer","Rebalance","Raw Data"
 ])
 
 # =========================
@@ -76,7 +73,6 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 with tab1:
 
     st.subheader("Prijsontwikkeling")
-
     st.caption(f"Periode: {pivot.index.min().date()} → {pivot.index.max().date()}")
 
     fig = go.Figure()
@@ -120,16 +116,11 @@ with tab2:
     if len(pivot) < 30:
         st.warning("Te weinig data voor momentum (<30 datapunten)")
     else:
-        shift = 30
-        mom = (pivot / pivot.shift(shift) - 1) * 100
+        mom = (pivot / pivot.shift(30) - 1) * 100
         last = mom.iloc[-1].dropna()
 
         if not last.empty:
-            fig = go.Figure(go.Bar(
-                x=last.index,
-                y=last.values
-            ))
-
+            fig = go.Figure(go.Bar(x=last.index, y=last.values))
             st.plotly_chart(fig, use_container_width=True)
 
 # =========================
@@ -280,3 +271,28 @@ with tab6:
             )
 
             st.plotly_chart(fig, use_container_width=True)
+
+# =========================
+# RAW DATA
+# =========================
+with tab7:
+
+    st.subheader("Raw Data")
+
+    raw = df[df["fund"].isin(selected)].copy()
+    raw = raw.sort_values("date", ascending=False)
+
+    st.dataframe(raw, use_container_width=True)
+
+    st.markdown("---")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        csv = raw.to_csv(index=False).encode("utf-8")
+        st.download_button("Download CSV", csv, "fund_data_long.csv")
+
+    with col2:
+        pivot_excel = raw.pivot(index="date", columns="fund", values="price").sort_index()
+        excel = pivot_excel.to_csv().encode("utf-8")
+        st.download_button("Download Excel-ready", excel, "fund_data_wide.csv")
