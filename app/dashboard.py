@@ -103,13 +103,24 @@ with tab1:
         best = ret.idxmax()
         worst = ret.idxmin()
 
-        c1,c2,c3,c4,c5 = st.columns(5)
+        c1, c2, c3, c4, c5 = st.columns(5)
 
-        c1.metric("Gem. rendement", f"{ret.mean():.2f}%")
-        c2.metric("Beste fonds", best)
-        c3.metric("Slechtste fonds", worst)
-        c4.metric("Volatiliteit", f"{vol.mean():.2f}")
-        c5.metric("Sharpe", f"{sharpe.mean():.2f}")
+with c1:
+    st.metric("Gem. rendement", f"{ret.mean():.2f}%")
+
+with c2:
+    st.metric("Beste fonds", best)
+    st.caption(best)
+
+with c3:
+    st.metric("Slechtste fonds", worst)
+    st.caption(worst)
+
+with c4:
+    st.metric("Volatiliteit", f"{vol.mean():.2f}")
+
+with c5:
+    st.metric("Sharpe", f"{sharpe.mean():.2f}")
 
         st.subheader("AI Insights")
         st.info(f"""
