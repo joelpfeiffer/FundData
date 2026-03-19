@@ -243,7 +243,8 @@ with tab5:
     st.subheader("Optimizer (Portfolio Profielen)")
 
     st.caption(
-        "De optimizer berekent duizenden portfolio’s en selecteert op basis van risicoprofielen."
+        "Deze optimizer berekent duizenden mogelijke portfolio’s en selecteert de beste "
+        "combinaties op basis van risico en rendement (Sharpe ratio)."
     )
 
     if returns.shape[1] < 2:
@@ -259,16 +260,21 @@ with tab5:
     results = []
     weights_list = []
 
+    num_assets = len(mean_returns)
+
+    # =========================
+    # SIMULATIE
+    # =========================
     for _ in range(4000):
-        w = np.random.random(len(mean_returns))
-        w /= w.sum()
+        weights = np.random.random(num_assets)
+        weights /= np.sum(weights)
 
-        r = np.dot(w, mean_returns)
-        v = np.sqrt(np.dot(w.T, np.dot(cov_matrix, w)))
-        s = r / v if v != 0 else 0
+        ret = np.dot(weights, mean_returns)
+        vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+        sharpe = ret / vol if vol != 0 else 0
 
-        results.append([r, v, s])
-        weights_list.append(w)
+        results.append([ret, vol, sharpe])
+        weights_list.append(weights)
 
     results = np.array(results)
 
@@ -305,7 +311,8 @@ with tab5:
         "• Low Risk = minimale schommelingen\n"
         "• Balanced = middenweg\n"
         "• High Return = maximale groei (meer risico)\n"
-        "• Max Sharpe = beste balans risico/rendement"
+        "• Max Sharpe = beste balans tussen risico en rendement\n\n"
+        "Hover over punten in de grafiek om de exacte fondsverdeling te zien."
     )
 
     # =========================
@@ -320,6 +327,23 @@ with tab5:
 
     st.dataframe(df_profile, use_container_width=True)
 
+    st.caption(
+        "Deze verdeling laat zien hoeveel procent van je investering in elk fonds zit "
+        "voor het gekozen risicoprofiel."
+    )
+
+    # =========================
+    # HOVER DATA
+    # =========================
+    hover_text = []
+
+    for w in weights_list:
+        txt = "<br>".join([
+            f"{fund}: {weight*100:.1f}%"
+            for fund, weight in zip(mean_returns.index, w)
+        ])
+        hover_text.append(txt)
+
     # =========================
     # FRONTIER
     # =========================
@@ -331,6 +355,12 @@ with tab5:
         x=results[:,1],
         y=results[:,0],
         mode="markers",
+        text=hover_text,
+        hovertemplate=
+            "<b>Portfolio</b><br>" +
+            "Return: %{y:.2f}<br>" +
+            "Risk: %{x:.2f}<br><br>" +
+            "%{text}<extra></extra>",
         marker=dict(
             color=results[:,2],
             colorscale="Viridis",
@@ -341,7 +371,9 @@ with tab5:
         name="Portfolios"
     ))
 
-    # highlight gekozen profiel
+    # =========================
+    # HIGHLIGHT SELECTIE
+    # =========================
     fig.add_trace(go.Scatter(
         x=[results[selected_idx,1]],
         y=[results[selected_idx,0]],
@@ -364,11 +396,13 @@ with tab5:
     st.markdown("### Hoe lees je dit?")
     st.markdown(
         """
-- Links = minder risico  
-- Rechts = meer risico  
+- Links = laag risico  
+- Rechts = hoog risico  
 - Boven = hoger rendement  
 
-💡 Het rode punt is jouw gekozen profiel.
+💡 Het rode punt is jouw gekozen portfolio.
+
+👉 Gebruik de hover om precies te zien hoe de fondsen verdeeld zijn.
 """
     )
 # =========================
