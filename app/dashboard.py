@@ -71,6 +71,16 @@ if pivot.empty:
 returns = pivot.pct_change().dropna()
 
 # =========================
+# PRE-CALC (CENTRAAL)
+# =========================
+ret = (pivot.iloc[-1] / pivot.iloc[0] - 1) * 100 if len(pivot) > 1 else None
+vol = returns.std() * np.sqrt(TRADING_DAYS)
+sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0,np.nan)
+
+drawdown = pivot / pivot.cummax() - 1
+max_dd = drawdown.min()
+
+# =========================
 # TABS
 # =========================
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
@@ -87,102 +97,56 @@ with tab1:
     end_date = pivot.index.max().strftime("%d-%m-%Y")
     days = (pivot.index.max() - pivot.index.min()).days
 
-    st.caption(
-        f"Periode: {start_date} → {end_date} ({days} dagen). "
-        "Rendement = groei | Volatiliteit = risico | Sharpe = rendement per risico."
-    )
+    st.caption(f"Periode: {start_date} → {end_date} ({days} dagen)")
 
-    if len(pivot) > 1:
-        ret = (pivot.iloc[-1] / pivot.iloc[0] - 1) * 100
-
+    if ret is not None:
         best = ret.idxmax()
         worst = ret.idxmin()
-
-        vol = returns.std() * np.sqrt(TRADING_DAYS)
-        sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0,np.nan)
-
-        def short(x):
-            return x if len(x) < 18 else x[:18] + "..."
 
         c1,c2,c3,c4,c5 = st.columns(5)
 
         c1.metric("Gem. rendement", f"{ret.mean():.2f}%")
-
-        c2.metric("Beste fonds", short(best))
-        c2.caption(best)
-
-        c3.metric("Slechtste fonds", short(worst))
-        c3.caption(worst)
-
+        c2.metric("Beste fonds", best)
+        c3.metric("Slechtste fonds", worst)
         c4.metric("Volatiliteit", f"{vol.mean():.2f}")
         c5.metric("Sharpe", f"{sharpe.mean():.2f}")
 
+    # AI insights
+    if ret is not None:
+        st.subheader("AI Insights")
+        st.info(f"""
+Beste fonds: {best} (+{ret.max():.2f}%)
+Slechtste fonds: {worst} ({ret.min():.2f}%)
+Hoogste risico: {vol.idxmax()}
+""")
+
     st.markdown("---")
 
-    # TREND 1
-    st.subheader("Prijsontwikkeling")
-
+    # trend 1
     fig = go.Figure()
     benchmark = pivot.mean(axis=1)
 
     for col in pivot.columns:
-        fig.add_trace(go.Scatter(
-            x=pivot.index,
-            y=pivot[col],
-            name=col,
-            line=dict(width=2)
-        ))
+        fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
 
-    fig.add_trace(go.Scatter(
-        x=pivot.index,
-        y=benchmark,
-        name="Benchmark",
-        line=dict(dash="dash", width=3)
-    ))
+    fig.add_trace(go.Scatter(x=pivot.index, y=benchmark, name="Benchmark", line=dict(dash="dash")))
 
-    fig.update_layout(hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
 
-    # TREND 2
-    st.subheader("Genormaliseerde groei")
-
+    # trend 2
     norm = pivot / pivot.iloc[0] * 100
-    bench_norm = norm.mean(axis=1)
 
     fig2 = go.Figure()
-
     for col in norm.columns:
-        fig2.add_trace(go.Scatter(
-            x=norm.index,
-            y=norm[col],
-            name=col
-        ))
+        fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
 
-    fig2.add_trace(go.Scatter(
-        x=norm.index,
-        y=bench_norm,
-        name="Benchmark",
-        line=dict(dash="dash")
-    ))
-
-    fig2.update_layout(hovermode="x unified")
     st.plotly_chart(fig2, use_container_width=True)
 
-    # DRAWDOWN
-    st.subheader("Drawdown")
-
-    drawdown = pivot / pivot.cummax() - 1
-
+    # drawdown
     fig3 = go.Figure()
-
     for col in drawdown.columns:
-        fig3.add_trace(go.Scatter(
-            x=drawdown.index,
-            y=drawdown[col]*100,
-            name=col
-        ))
+        fig3.add_trace(go.Scatter(x=drawdown.index, y=drawdown[col]*100, name=col))
 
-    fig3.update_layout(hovermode="x unified")
     st.plotly_chart(fig3, use_container_width=True)
 
 # =========================
@@ -194,21 +158,12 @@ with tab2:
     if len(pivot) >= 30:
         mom = (pivot / pivot.shift(30) - 1) * 100
         st.bar_chart(mom.iloc[-1].dropna())
-    else:
-        st.warning("Te weinig data")
 
 # =========================
-# RISK
+# RISK (GEFIXT)
 # =========================
 with tab3:
     st.subheader("Risk")
-
-    vol = returns.std() * np.sqrt(TRADING_DAYS)
-    sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0,np.nan)
-
-    # Max drawdown
-    drawdown = pivot / pivot.cummax() - 1
-    max_dd = drawdown.min()
 
     risk_df = pd.DataFrame({
         "Volatility": vol,
@@ -218,41 +173,24 @@ with tab3:
 
     st.dataframe(risk_df, use_container_width=True)
 
-    # Rolling volatility
-    st.subheader("Rolling Volatility (30d)")
-
+    st.subheader("Rolling Volatility")
     rolling_vol = returns.rolling(30).std() * np.sqrt(TRADING_DAYS)
 
     fig = go.Figure()
     for col in rolling_vol.columns:
-        fig.add_trace(go.Scatter(
-            x=rolling_vol.index,
-            y=rolling_vol[col],
-            name=col
-        ))
+        fig.add_trace(go.Scatter(x=rolling_vol.index, y=rolling_vol[col], name=col))
 
-    fig.update_layout(height=400)
     st.plotly_chart(fig, use_container_width=True)
 
-    # Correlation (groter)
-    st.subheader("Correlation Matrix")
+    st.subheader("Correlation")
 
-    fig_corr = px.imshow(
-        returns.corr(),
-        text_auto=True,
-        aspect="auto"
-    )
-
+    fig_corr = px.imshow(returns.corr(), text_auto=True)
     fig_corr.update_layout(height=700)
+
     st.plotly_chart(fig_corr, use_container_width=True)
 
-    # Ranking
-    st.subheader("Risk Ranking")
-
-    ranking = risk_df.sort_values("Sharpe", ascending=False)
-    st.dataframe(ranking, use_container_width=True)
 # =========================
-# HEATMAP (ZACHT GEEL)
+# HEATMAP
 # =========================
 with tab4:
     st.subheader("Heatmap")
@@ -260,10 +198,8 @@ with tab4:
     latest = pivot_full.index.max()
 
     periods = {
-        "1D":1,"2D":2,"3D":3,"4D":4,
-        "1W":7,"2W":14,"3W":21,
-        "1M":30,"2M":60,"3M":90,"6M":180,
-        "1Y":365,"2Y":730,"5Y":1825
+        "1D":1,"2D":2,"3D":3,"1W":7,"2W":14,
+        "1M":30,"3M":90,"6M":180,"1Y":365,"2Y":730,"5Y":1825
     }
 
     def calc(days):
@@ -272,8 +208,7 @@ with tab4:
             return pd.Series(index=pivot_full.columns)
         return (pivot_full.loc[latest] / past.iloc[-1] - 1) * 100
 
-    heat = pd.DataFrame({k:calc(v) for k,v in periods.items()})
-    heat = heat.loc[selected]
+    heat = pd.DataFrame({k:calc(v) for k,v in periods.items()}).loc[selected]
 
     fig = go.Figure(data=go.Heatmap(
         z=heat.values,
@@ -297,13 +232,17 @@ with tab4:
 with tab5:
     st.subheader("Optimizer")
 
-    w = np.random.random(len(selected))
-    w /= w.sum()
+    if returns.shape[1] >= 2:
+        mean_returns = returns.mean()*TRADING_DAYS
+        cov = returns.cov()*TRADING_DAYS
 
-    st.dataframe(pd.DataFrame({
-        "Fund": selected,
-        "Weight %": w*100
-    }))
+        weights = np.random.random(len(mean_returns))
+        weights /= weights.sum()
+
+        st.dataframe(pd.DataFrame({
+            "Fund": mean_returns.index,
+            "Weight %": weights*100
+        }))
 
 # =========================
 # REBALANCE
@@ -316,8 +255,8 @@ with tab6:
     weights = pd.Series(1/len(selected), index=selected)
 
     if not returns.empty:
-        port = (returns[weights.index] * weights).sum(axis=1)
-        st.line_chart(capital * (1+port).cumprod())
+        port = (returns * weights).sum(axis=1)
+        st.line_chart(capital*(1+port).cumprod())
 
 # =========================
 # RAW DATA
@@ -336,8 +275,4 @@ with tab7:
 
     st.dataframe(display, use_container_width=True)
 
-    st.download_button(
-        "Download CSV",
-        display.to_csv().encode("utf-8"),
-        "fund_data.csv"
-    )
+    st.download_button("Download CSV", display.to_csv().encode(), "data.csv")
