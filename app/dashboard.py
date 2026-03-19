@@ -48,7 +48,7 @@ else:
 # onboarding knop onderaan
 st.sidebar.markdown("---")
 if st.sidebar.button("Start onboarding"):
-    st.session_state["onboarding"] = True
+    st.info("Onboarding start (placeholder)")
 
 # =========================
 # FILTER DATA
@@ -75,50 +75,83 @@ returns = pivot.pct_change().dropna()
 # =========================
 # TABS
 # =========================
-tabs = st.tabs(["Overview","Performance","Risk","Heatmap","Optimizer","Rebalance","Raw Data"])
-tab1,tab2,tab3,tab4,tab5,tab6,tab7 = tabs
+tab1,tab2,tab3,tab4,tab5,tab6,tab7 = st.tabs([
+    "Overview","Performance","Risk","Heatmap","Optimizer","Rebalance","Raw Data"
+])
 
 # =========================
-# OVERVIEW (FIXED TREND)
+# OVERVIEW (VOLLEDIG HERSTELD)
 # =========================
 with tab1:
     st.subheader("Overview")
 
+    start_date = pivot.index.min().strftime("%d-%m-%Y")
+    end_date = pivot.index.max().strftime("%d-%m-%Y")
+    days = (pivot.index.max() - pivot.index.min()).days
+
+    st.caption(
+        f"Periode: {start_date} → {end_date} ({days} dagen). "
+        "Metrics gebaseerd op dagelijkse rendementen."
+    )
+
     if len(pivot) > 1:
         ret = (pivot.iloc[-1] / pivot.iloc[0] - 1) * 100
 
-        col1,col2,col3,col4,col5 = st.columns(5)
-
-        col1.metric("Gem. rendement", f"{ret.mean():.2f}%")
-        col2.metric("Beste fonds", ret.idxmax())
-        col3.metric("Slechtste fonds", ret.idxmin())
+        best = ret.idxmax()
+        worst = ret.idxmin()
 
         vol = returns.std().mean() * np.sqrt(TRADING_DAYS)
         sharpe = (returns.mean().mean() * TRADING_DAYS) / vol if vol != 0 else 0
 
-        col4.metric("Volatiliteit", f"{vol:.2f}")
-        col5.metric("Sharpe", f"{sharpe:.2f}")
+        def short(x):
+            return x if len(x) < 18 else x[:18] + "..."
 
-    st.markdown("### Prijsontwikkeling")
+        c1,c2,c3,c4,c5 = st.columns(5)
+
+        c1.metric("Gem. rendement", f"{ret.mean():.2f}%")
+
+        c2.metric("Beste fonds", short(best))
+        c2.caption(best)
+
+        c3.metric("Slechtste fonds", short(worst))
+        c3.caption(worst)
+
+        c4.metric("Volatiliteit", f"{vol:.2f}")
+        c5.metric("Sharpe", f"{sharpe:.2f}")
+
+    st.markdown("---")
+
+    # Trend 1
+    st.subheader("Prijsontwikkeling")
 
     fig = go.Figure()
-
     for col in pivot.columns:
         fig.add_trace(go.Scatter(
             x=pivot.index,
             y=pivot[col],
             name=col,
-            mode="lines",
             line=dict(width=2)
         ))
 
-    fig.update_layout(
-        hovermode="x unified",
-        xaxis_title="Datum",
-        yaxis_title="Prijs"
-    )
-
+    fig.update_layout(hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
+
+    # Trend 2
+    st.subheader("Genormaliseerde groei")
+
+    norm = pivot / pivot.iloc[0] * 100
+
+    fig2 = go.Figure()
+    for col in norm.columns:
+        fig2.add_trace(go.Scatter(
+            x=norm.index,
+            y=norm[col],
+            name=col,
+            line=dict(width=2)
+        ))
+
+    fig2.update_layout(hovermode="x unified")
+    st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
 # PERFORMANCE
@@ -128,12 +161,7 @@ with tab2:
 
     if len(pivot) >= 30:
         mom = (pivot / pivot.shift(30) - 1) * 100
-        last = mom.iloc[-1].dropna()
-
-        if not last.empty:
-            st.bar_chart(last)
-        else:
-            st.warning("Geen momentum data")
+        st.bar_chart(mom.iloc[-1].dropna())
     else:
         st.warning("Te weinig data")
 
@@ -144,20 +172,17 @@ with tab3:
     st.subheader("Risk")
 
     vol = returns.std() * np.sqrt(TRADING_DAYS)
-    sharpe = (returns.mean() * TRADING_DAYS) / vol.replace(0,np.nan)
+    sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0,np.nan)
 
     st.dataframe(pd.DataFrame({
         "Volatility": vol,
         "Sharpe": sharpe
     }))
 
-    corr = returns.corr()
-
-    if not corr.empty:
-        st.plotly_chart(px.imshow(corr, text_auto=True), use_container_width=True)
+    st.plotly_chart(px.imshow(returns.corr(), text_auto=True))
 
 # =========================
-# HEATMAP (BETERE KLEUREN)
+# HEATMAP (KLEUREN GEFIXT)
 # =========================
 with tab4:
     st.subheader("Heatmap")
@@ -180,23 +205,22 @@ with tab4:
     heat = pd.DataFrame({k:calc(v) for k,v in periods.items()})
     heat = heat.loc[selected]
 
-    if not heat.empty:
-        fig = go.Figure(data=go.Heatmap(
-            z=heat.values,
-            x=heat.columns,
-            y=heat.index,
-            colorscale=[
-                [0, "#d73027"],
-                [0.5, "#fdae61"],
-                [1, "#1a9850"]
-            ],
-            zmid=0,
-            text=np.round(heat.values,2),
-            texttemplate="%{text}%",
-            hovertemplate="%{y} - %{x}: %{z:.2f}%"
-        ))
+    fig = go.Figure(data=go.Heatmap(
+        z=heat.values,
+        x=heat.columns,
+        y=heat.index,
+        colorscale=[
+            [0, "#d73027"],   # rood
+            [0.5, "#f0f0f0"], # licht grijs (ipv oranje/geel)
+            [1, "#1a9850"]    # groen
+        ],
+        zmid=0,
+        text=np.round(heat.values,2),
+        texttemplate="%{text}%",
+        hovertemplate="%{y} - %{x}: %{z:.2f}%"
+    ))
 
-        st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # OPTIMIZER
@@ -227,7 +251,7 @@ with tab6:
         st.line_chart(capital * (1+port).cumprod())
 
 # =========================
-# RAW DATA (CSV ONLY)
+# RAW DATA
 # =========================
 with tab7:
     st.subheader("Raw Data")
