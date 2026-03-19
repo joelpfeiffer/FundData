@@ -4,6 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 import time
+from io import BytesIO
 
 CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
 TRADING_DAYS = 252
@@ -23,12 +24,12 @@ def show_onboarding():
     steps = [
         ("Welkom", "Welkom! Dit dashboard helpt je fondsen analyseren."),
         ("Sidebar", "Selecteer fondsen en timeframe links."),
-        ("Overview", "Bekijk hier prestaties en trends."),
-        ("Performance", "Momentum laat recente beweging zien."),
+        ("Overview", "Bekijk prestaties en trends."),
+        ("Performance", "Momentum = recente beweging."),
         ("Risk", "Volatiliteit = risico, Sharpe = efficiëntie."),
         ("Heatmap", "Vergelijk rendement over tijd."),
-        ("Rebalance", "Simuleer portfolio groei."),
-        ("Klaar", "Succes met analyseren!")
+        ("Rebalance", "Simuleer portfolio."),
+        ("Klaar", "Succes!")
     ]
 
     step = st.session_state.onboarding_step
@@ -129,12 +130,10 @@ with tab1:
 
     start_date = pivot.index.min().strftime("%d-%m-%Y")
     end_date = pivot.index.max().strftime("%d-%m-%Y")
-
     st.caption(f"Periode: {start_date} → {end_date}")
 
     if len(pivot) > 1:
         total_return = (pivot.iloc[-1] / pivot.iloc[0] - 1) * 100
-
         best = total_return.idxmax()
         worst = total_return.idxmin()
 
@@ -144,35 +143,23 @@ with tab1:
         col1, col2, col3, col4, col5 = st.columns(5)
 
         col1.metric("Gem. rendement", f"{total_return.mean():.2f}%")
-
-        col2.metric("Beste fonds", shorten(best))
-        col2.caption(best)
-
-        col3.metric("Slechtste fonds", shorten(worst))
-        col3.caption(worst)
-
+        col2.metric("Beste fonds", shorten(best)); col2.caption(best)
+        col3.metric("Slechtste fonds", shorten(worst)); col3.caption(worst)
         col4.metric("Volatiliteit", f"{vol:.2f}")
         col5.metric("Sharpe", f"{sharpe:.2f}")
 
-    st.markdown("---")
-
     st.subheader("Prijsontwikkeling", help="Absolute prijs")
-
     fig = go.Figure()
     for col in pivot.columns:
         fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
-
     fig.update_layout(hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
 
     st.subheader("Genormaliseerde groei", help="Start = 100")
-
     norm = pivot / pivot.iloc[0] * 100
-
     fig2 = go.Figure()
     for col in norm.columns:
         fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
-
     fig2.update_layout(hovermode="x unified")
     st.plotly_chart(fig2, use_container_width=True)
 
@@ -205,7 +192,6 @@ with tab3:
     }))
 
     st.subheader("Correlatie")
-
     st.plotly_chart(px.imshow(returns.corr(), text_auto=True))
 
 # =========================
@@ -216,7 +202,6 @@ with tab4:
     st.subheader("Heatmap")
 
     latest = pivot_full.index.max()
-
     periods = {"1D":1,"1W":7,"1M":30,"3M":90,"1Y":365,"2Y":730,"5Y":1825}
 
     def calc(days):
@@ -276,12 +261,38 @@ with tab6:
         st.warning("Te weinig data")
 
 # =========================
-# RAW DATA
+# RAW DATA (UPDATED)
 # =========================
 with tab7:
 
     st.subheader("Raw Data")
 
-    raw = df[df["fund"].isin(selected)]
+    raw = df[df["fund"].isin(selected)].copy()
 
-    st.dataframe(raw)
+    view = st.radio("Weergave", ["Long", "Wide"], horizontal=True)
+
+    if view == "Long":
+        display_df = raw.sort_values(["date","fund"])
+    else:
+        display_df = raw.pivot(index="date", columns="fund", values="price")
+
+    st.dataframe(display_df, use_container_width=True)
+
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+
+    # CSV
+    csv = display_df.to_csv().encode("utf-8")
+    col1.download_button("Download CSV", csv, "fund_data.csv", "text/csv")
+
+    # Excel
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        display_df.to_excel(writer, sheet_name="Data")
+
+    col2.download_button(
+        "Download Excel",
+        output.getvalue(),
+        "fund_data.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
