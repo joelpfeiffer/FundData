@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-from io import BytesIO
 import time
 
 st.set_page_config(layout="wide")
@@ -17,10 +16,15 @@ TRADING_DAYS = 252
 @st.cache_data(ttl=60)
 def load_data():
     df = pd.read_csv(f"{CSV_URL}?t={int(time.time())}")
-    df["date"] = pd.to_datetime(df["date"])
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df = df.dropna(subset=["date","price","fund"])
     return df.sort_values("date")
 
 df = load_data()
+
+if df.empty:
+    st.error("Geen data beschikbaar")
+    st.stop()
 
 pivot_full = df.pivot(index="date", columns="fund", values="price")
 
@@ -41,20 +45,30 @@ else:
     start = st.sidebar.date_input("Start", pivot_full.index.min())
     end = st.sidebar.date_input("End", pivot_full.index.max())
 
-# 👉 onboarding knop ONDERAAN
+# onboarding knop onderaan
 st.sidebar.markdown("---")
 if st.sidebar.button("Start onboarding"):
-    st.session_state.onboarding = True
+    st.session_state["onboarding"] = True
 
 # =========================
 # FILTER DATA
 # =========================
+if not selected:
+    st.warning("Selecteer minimaal 1 fonds")
+    st.stop()
+
 pivot = pivot_full[selected].copy()
 
 if mode == "Preset" and tf != "ALL":
     pivot = pivot[pivot.index >= pivot.index.max() - pd.Timedelta(days=days_map[tf])]
 elif mode == "Custom":
     pivot = pivot[(pivot.index >= pd.to_datetime(start)) & (pivot.index <= pd.to_datetime(end))]
+
+pivot = pivot.dropna(how="all")
+
+if pivot.empty:
+    st.warning("Geen data in deze periode")
+    st.stop()
 
 returns = pivot.pct_change().dropna()
 
@@ -65,7 +79,7 @@ tabs = st.tabs(["Overview","Performance","Risk","Heatmap","Optimizer","Rebalance
 tab1,tab2,tab3,tab4,tab5,tab6,tab7 = tabs
 
 # =========================
-# OVERVIEW (HERSTELD)
+# OVERVIEW
 # =========================
 with tab1:
     st.subheader("Overview")
@@ -85,7 +99,6 @@ with tab1:
         col4.metric("Volatiliteit", f"{vol:.2f}")
         col5.metric("Sharpe", f"{sharpe:.2f}")
 
-    # 👉 TREND TERUG
     st.markdown("### Prijsontwikkeling")
 
     fig = go.Figure()
@@ -103,7 +116,12 @@ with tab2:
 
     if len(pivot) >= 30:
         mom = (pivot / pivot.shift(30) - 1) * 100
-        st.bar_chart(mom.iloc[-1].dropna())
+        last = mom.iloc[-1].dropna()
+
+        if not last.empty:
+            st.bar_chart(last)
+        else:
+            st.warning("Geen momentum data")
     else:
         st.warning("Te weinig data")
 
@@ -121,10 +139,13 @@ with tab3:
         "Sharpe": sharpe
     }))
 
-    st.plotly_chart(px.imshow(returns.corr(), text_auto=True), use_container_width=True)
+    corr = returns.corr()
+
+    if not corr.empty:
+        st.plotly_chart(px.imshow(corr, text_auto=True), use_container_width=True)
 
 # =========================
-# HEATMAP (GEFIXT)
+# HEATMAP (STABIEL)
 # =========================
 with tab4:
     st.subheader("Heatmap")
@@ -132,7 +153,10 @@ with tab4:
     latest = pivot_full.index.max()
 
     periods = {
-        "1D":1,"2D":2,"3D":3,"1W":7,"2W":14,"1M":30,"3M":90,"6M":180,"1Y":365,"2Y":730,"5Y":1825
+        "1D":1,"2D":2,"3D":3,"4D":4,
+        "1W":7,"2W":14,"3W":21,
+        "1M":30,"2M":60,"3M":90,"6M":180,
+        "1Y":365,"2Y":730,"5Y":1825
     }
 
     def calc(days):
@@ -142,33 +166,40 @@ with tab4:
         return (pivot_full.loc[latest] / past.iloc[-1] - 1) * 100
 
     heat = pd.DataFrame({k:calc(v) for k,v in periods.items()})
+
     heat = heat.loc[selected]
 
-    fig = go.Figure(data=go.Heatmap(
-        z=heat.values,
-        x=heat.columns,
-        y=heat.index,
-        colorscale=[
-            [0, "red"],
-            [0.5, "yellow"],
-            [1, "green"]
-        ],
-        zmid=0,
-        text=np.round(heat.values,2),
-        texttemplate="%{text}%",
-        hovertemplate="%{y} - %{x}: %{z:.2f}%"
-    ))
+    if not heat.empty:
+        fig = go.Figure(data=go.Heatmap(
+            z=heat.values,
+            x=heat.columns,
+            y=heat.index,
+            colorscale=[
+                [0, "red"],
+                [0.5, "yellow"],
+                [1, "green"]
+            ],
+            zmid=0,
+            text=np.round(heat.values,2),
+            texttemplate="%{text}%",
+            hovertemplate="%{y} - %{x}: %{z:.2f}%"
+        ))
 
-    st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # OPTIMIZER
 # =========================
 with tab5:
     st.subheader("Optimizer")
+
     w = np.random.random(len(selected))
     w /= w.sum()
-    st.dataframe(pd.DataFrame({"Fund": selected, "Weight %": w*100}))
+
+    st.dataframe(pd.DataFrame({
+        "Fund": selected,
+        "Weight %": w*100
+    }))
 
 # =========================
 # REBALANCE
@@ -179,12 +210,13 @@ with tab6:
     capital = st.number_input("Kapitaal", 100, 1000000, 10000)
 
     weights = pd.Series(1/len(selected), index=selected)
-    port = (returns[weights.index] * weights).sum(axis=1)
 
-    st.line_chart(capital * (1+port).cumprod())
+    if not returns.empty:
+        port = (returns[weights.index] * weights).sum(axis=1)
+        st.line_chart(capital * (1+port).cumprod())
 
 # =========================
-# RAW DATA (EXCEL FIX)
+# RAW DATA (ZONDER EXCEL)
 # =========================
 with tab7:
     st.subheader("Raw Data")
@@ -198,24 +230,10 @@ with tab7:
     else:
         display = raw
 
-    st.dataframe(display)
+    st.dataframe(display, use_container_width=True)
 
-    col1,col2 = st.columns(2)
-
-    # CSV
-    col1.download_button(
+    st.download_button(
         "Download CSV",
         display.to_csv().encode("utf-8"),
         "data.csv"
-    )
-
-    # ✅ EXCEL FIX (zonder engine)
-    output = BytesIO()
-    with pd.ExcelWriter(output) as writer:
-        display.to_excel(writer)
-
-    col2.download_button(
-        "Download Excel",
-        output.getvalue(),
-        "data.xlsx"
     )
