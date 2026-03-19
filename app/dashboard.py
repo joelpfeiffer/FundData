@@ -206,10 +206,36 @@ with tab3:
     vol = returns.std() * np.sqrt(TRADING_DAYS)
     sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0,np.nan)
 
-    st.dataframe(pd.DataFrame({
+    # Max drawdown
+    drawdown = pivot / pivot.cummax() - 1
+    max_dd = drawdown.min()
+
+    risk_df = pd.DataFrame({
         "Volatility": vol,
-        "Sharpe": sharpe
-    }))
+        "Sharpe": sharpe,
+        "Max Drawdown %": max_dd * 100
+    })
+
+    st.dataframe(risk_df, use_container_width=True)
+
+    # Rolling volatility
+    st.subheader("Rolling Volatility (30d)")
+
+    rolling_vol = returns.rolling(30).std() * np.sqrt(TRADING_DAYS)
+
+    fig = go.Figure()
+    for col in rolling_vol.columns:
+        fig.add_trace(go.Scatter(
+            x=rolling_vol.index,
+            y=rolling_vol[col],
+            name=col
+        ))
+
+    fig.update_layout(height=400)
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Correlation (groter)
+    st.subheader("Correlation Matrix")
 
     fig_corr = px.imshow(
         returns.corr(),
@@ -217,10 +243,14 @@ with tab3:
         aspect="auto"
     )
 
-    fig_corr.update_layout(height=600)
-
+    fig_corr.update_layout(height=700)
     st.plotly_chart(fig_corr, use_container_width=True)
 
+    # Ranking
+    st.subheader("Risk Ranking")
+
+    ranking = risk_df.sort_values("Sharpe", ascending=False)
+    st.dataframe(ranking, use_container_width=True)
 # =========================
 # HEATMAP (ZACHT GEEL)
 # =========================
