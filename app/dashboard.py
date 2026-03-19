@@ -240,109 +240,151 @@ with tab4:
 # OPTIMIZER (ECHT)
 # =========================
 with tab5:
-    st.subheader("Optimizer (Max Sharpe)")
+    st.subheader("Optimizer (Max Sharpe + Efficient Frontier)")
 
     st.caption(
-        "De optimizer zoekt de beste verdeling van fondsen op basis van historische data.\n"
-        "Doel: maximaal rendement met zo laag mogelijk risico (Sharpe ratio)."
+        "Deze optimizer berekent duizenden mogelijke portfolio’s en kiest de beste balans "
+        "tussen rendement en risico (Sharpe ratio)."
     )
 
     if returns.shape[1] < 2:
         st.warning("Minimaal 2 fondsen nodig")
-    else:
-        mean_returns = returns.mean()*TRADING_DAYS
-        cov = returns.cov()*TRADING_DAYS
+        st.stop()
 
-        results = []
-        weights_list = []
+    # =========================
+    # DATA
+    # =========================
+    mean_returns = returns.mean() * TRADING_DAYS
+    cov_matrix = returns.cov() * TRADING_DAYS
 
-        for _ in range(5000):
-            w = np.random.random(len(mean_returns))
-            w /= w.sum()
+    results = []
+    weights_list = []
 
-            r = np.dot(w, mean_returns)
-            v = np.sqrt(np.dot(w.T, np.dot(cov, w)))
-            s = r / v if v != 0 else 0
+    num_assets = len(mean_returns)
 
-            results.append([r,v,s])
-            weights_list.append(w)
+    # =========================
+    # SIMULATIE
+    # =========================
+    for _ in range(4000):
+        weights = np.random.random(num_assets)
+        weights /= np.sum(weights)
 
-        results = np.array(results)
+        ret = np.dot(weights, mean_returns)
+        vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+        sharpe = ret / vol if vol != 0 else 0
 
-        best_idx = np.argmax(results[:,2])
-        best_weights = weights_list[best_idx]
+        results.append([ret, vol, sharpe])
+        weights_list.append(weights)
 
-        # =========================
-        # UITLEG
-        # =========================
-        st.markdown("### Wat zie je hier?")
-        st.info(
-            "Elke punt in de grafiek is een mogelijke portfolio.\n\n"
-            "• X-as = risico (volatiliteit)\n"
-            "• Y-as = verwacht rendement\n"
-            "• Kleur = Sharpe ratio (groen = beter)\n\n"
-            "De optimizer kiest de portfolio met de hoogste Sharpe ratio."
-        )
+    results = np.array(results)
 
-        # =========================
-        # BESTE VERDELING
-        # =========================
-        st.subheader("Optimale verdeling")
+    best_idx = np.argmax(results[:,2])
+    best_weights = weights_list[best_idx]
 
-        opt_df = pd.DataFrame({
-            "Fund": mean_returns.index,
-            "Weight %": best_weights * 100
-        }).sort_values("Weight %", ascending=False)
+    # =========================
+    # HOVER TEXT (BELANGRIJK)
+    # =========================
+    hover_text = []
 
-        st.dataframe(opt_df, use_container_width=True)
+    for w in weights_list:
+        txt = "<br>".join([
+            f"{fund}: {weight*100:.1f}%"
+            for fund, weight in zip(mean_returns.index, w)
+        ])
+        hover_text.append(txt)
 
-        st.caption(
-            "Deze verdeling maximaliseert rendement per risico-eenheid.\n"
-            "Hogere percentages betekenen grotere allocatie in dat fonds."
-        )
+    # =========================
+    # UITLEG
+    # =========================
+    st.markdown("### Wat zie je hier?")
+    st.info(
+        "Elke punt = een mogelijke portfolio\n\n"
+        "• X-as = risico (volatiliteit)\n"
+        "• Y-as = verwacht rendement\n"
+        "• Kleur = Sharpe ratio\n\n"
+        "Hover over een punt om de verdeling van fondsen te zien."
+    )
 
-        # =========================
-        # FRONTIER
-        # =========================
-        st.subheader("Efficient Frontier")
+    # =========================
+    # BESTE PORTFOLIO
+    # =========================
+    st.subheader("Beste portfolio (Max Sharpe)")
 
-        fig = go.Figure()
+    best_df = pd.DataFrame({
+        "Fund": mean_returns.index,
+        "Weight %": best_weights * 100
+    }).sort_values("Weight %", ascending=False)
 
-        fig.add_trace(go.Scatter(
-            x=results[:,1],
-            y=results[:,0],
-            mode="markers",
-            marker=dict(
-                color=results[:,2],
-                colorscale="Viridis",
-                showscale=True,
-                colorbar=dict(title="Sharpe")
-            ),
-            name="Portfolios"
-        ))
+    st.dataframe(best_df, use_container_width=True)
 
-        fig.update_layout(
-            xaxis_title="Risico (volatiliteit)",
-            yaxis_title="Rendement",
-            height=500
-        )
+    # =========================
+    # FRONTIER
+    # =========================
+    st.subheader("Efficient Frontier")
 
-        st.plotly_chart(fig, use_container_width=True)
+    fig = go.Figure()
 
-        # =========================
-        # EXTRA UITLEG
-        # =========================
-        st.markdown("### Hoe lees je dit?")
-        st.markdown(
-            """
-- Linksonder = laag risico, laag rendement  
-- Rechtsboven = hoog risico, hoog rendement  
-- Beste punt = hoogste Sharpe ratio (beste balans)
+    fig.add_trace(go.Scatter(
+        x=results[:,1],
+        y=results[:,0],
+        mode="markers",
+        text=hover_text,
+        hovertemplate=
+            "Return: %{y:.2f}<br>" +
+            "Risk: %{x:.2f}<br><br>" +
+            "%{text}<extra></extra>",
+        marker=dict(
+            color=results[:,2],
+            colorscale="Viridis",
+            showscale=True,
+            colorbar=dict(title="Sharpe"),
+            size=6
+        ),
+        name="Portfolios"
+    ))
 
-💡 Tip:
-Een goede portfolio ligt meestal niet extreem rechts (te risicovol), maar ook niet helemaal links (te weinig rendement).
-"""
-        )
+    # highlight beste punt
+    fig.add_trace(go.Scatter(
+        x=[results[best_idx,1]],
+        y=[results[best_idx,0]],
+        mode="markers",
+        marker=dict(size=14, color="red"),
+        name="Best Portfolio"
+    ))
+
+    fig.update_layout(
+        xaxis_title="Risico (volatiliteit)",
+        yaxis_title="Rendement",
+        height=500
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # =========================
+    # SELECTIE TOOL
+    # =========================
+    st.subheader("Inspecteer portfolio")
+
+    idx = st.slider(
+        "Kies een portfolio uit de simulatie",
+        0,
+        len(weights_list)-1,
+        best_idx
+    )
+
+    selected_weights = weights_list[idx]
+
+    selected_df = pd.DataFrame({
+        "Fund": mean_returns.index,
+        "Weight %": selected_weights * 100
+    }).sort_values("Weight %", ascending=False)
+
+    st.dataframe(selected_df, use_container_width=True)
+
+    st.caption(
+        "Gebruik deze tool om te begrijpen hoe verschillende combinaties van fondsen "
+        "het risico en rendement beïnvloeden."
+    )
 # =========================
 # REBALANCE (MONTE CARLO)
 # =========================
