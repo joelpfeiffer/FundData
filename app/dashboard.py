@@ -46,7 +46,7 @@ else:
     end = st.sidebar.date_input("End", pivot_full.index.max())
 
 st.sidebar.markdown("---")
-st.sidebar.button("Start onboarding")  # placeholder
+st.sidebar.button("Start onboarding")
 
 # =========================
 # FILTER DATA
@@ -71,14 +71,14 @@ if pivot.empty:
 returns = pivot.pct_change().dropna()
 
 # =========================
-# TABS (BELANGRIJK!)
+# TABS
 # =========================
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "Overview","Performance","Risk","Heatmap","Optimizer","Rebalance","Raw Data"
 ])
 
 # =========================
-# OVERVIEW (NEXT LEVEL)
+# OVERVIEW
 # =========================
 with tab1:
     st.subheader("Overview")
@@ -89,7 +89,7 @@ with tab1:
 
     st.caption(
         f"Periode: {start_date} → {end_date} ({days} dagen). "
-        "Rendement = groei over periode | Volatiliteit = risico | Sharpe = rendement per risico."
+        "Rendement = groei | Volatiliteit = risico | Sharpe = rendement per risico."
     )
 
     if len(pivot) > 1:
@@ -119,20 +119,18 @@ with tab1:
 
     st.markdown("---")
 
-    # ===== Trend 1
+    # TREND 1
     st.subheader("Prijsontwikkeling")
 
     fig = go.Figure()
     benchmark = pivot.mean(axis=1)
 
     for col in pivot.columns:
-        width = 4 if len(pivot) > 1 and col == best else 2
-
         fig.add_trace(go.Scatter(
             x=pivot.index,
             y=pivot[col],
             name=col,
-            line=dict(width=width)
+            line=dict(width=2)
         ))
 
     fig.add_trace(go.Scatter(
@@ -145,7 +143,7 @@ with tab1:
     fig.update_layout(hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
 
-    # ===== Trend 2
+    # TREND 2
     st.subheader("Genormaliseerde groei")
 
     norm = pivot / pivot.iloc[0] * 100
@@ -154,26 +152,23 @@ with tab1:
     fig2 = go.Figure()
 
     for col in norm.columns:
-        width = 4 if len(pivot) > 1 and col == best else 2
-
         fig2.add_trace(go.Scatter(
             x=norm.index,
             y=norm[col],
-            name=col,
-            line=dict(width=width)
+            name=col
         ))
 
     fig2.add_trace(go.Scatter(
         x=norm.index,
         y=bench_norm,
         name="Benchmark",
-        line=dict(dash="dash", width=3)
+        line=dict(dash="dash")
     ))
 
     fig2.update_layout(hovermode="x unified")
     st.plotly_chart(fig2, use_container_width=True)
 
-    # ===== Drawdown
+    # DRAWDOWN
     st.subheader("Drawdown")
 
     drawdown = pivot / pivot.cummax() - 1
@@ -216,11 +211,18 @@ with tab3:
         "Sharpe": sharpe
     }))
 
-    if not returns.empty:
-        st.plotly_chart(px.imshow(returns.corr(), text_auto=True), use_container_width=True)
+    fig_corr = px.imshow(
+        returns.corr(),
+        text_auto=True,
+        aspect="auto"
+    )
+
+    fig_corr.update_layout(height=600)
+
+    st.plotly_chart(fig_corr, use_container_width=True)
 
 # =========================
-# HEATMAP (RUSTIGE KLEUREN)
+# HEATMAP (ZACHT GEEL)
 # =========================
 with tab4:
     st.subheader("Heatmap")
@@ -249,12 +251,12 @@ with tab4:
         y=heat.index,
         colorscale=[
             [0, "#d73027"],
-            [0.5, "#e0e0e0"],  # minder oranje
+            [0.5, "#f5e6a3"],
             [1, "#1a9850"]
         ],
         zmid=0,
         text=np.round(heat.values,2),
-        texttemplate="%{text}%",
+        texttemplate="%{text}%"
     ))
 
     st.plotly_chart(fig, use_container_width=True)
