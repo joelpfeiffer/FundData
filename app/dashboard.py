@@ -68,7 +68,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
 ])
 
 # =========================
-# HELPER
+# HELPERS
 # =========================
 def shorten(name, length=18):
     return name if len(name) <= length else name[:length] + "..."
@@ -79,6 +79,18 @@ def shorten(name, length=18):
 with tab1:
 
     st.subheader("Overview")
+
+    # 🔹 CONTEXT TOEVOEGING
+    if not pivot.empty:
+        start_date = pivot.index.min().strftime("%d-%m-%Y")
+        end_date = pivot.index.max().strftime("%d-%m-%Y")
+        days = (pivot.index.max() - pivot.index.min()).days
+
+        st.caption(
+            f"Periode: {start_date} → {end_date} ({days} dagen). "
+            "Alle metrics zijn gebaseerd op dagelijkse rendementen. "
+            "Volatiliteit = risico (schommelingen), Sharpe = rendement per risico-eenheid."
+        )
 
     if len(pivot) > 1:
         total_return = (pivot.iloc[-1] / pivot.iloc[0] - 1) * 100
@@ -94,10 +106,10 @@ with tab1:
         col1.metric("Gem. rendement", f"{total_return.mean():.2f}%")
 
         col2.metric("Beste fonds", shorten(best))
-        col2.caption(f"Volledig: {best}")
+        col2.caption(best)
 
         col3.metric("Slechtste fonds", shorten(worst))
-        col3.caption(f"Volledig: {worst}")
+        col3.caption(worst)
 
         col4.metric("Volatiliteit", f"{vol:.2f}")
         col5.metric("Sharpe", f"{sharpe:.2f}")
@@ -112,34 +124,35 @@ with tab1:
 
     fig.update_layout(
         hovermode="x unified",
-        xaxis=dict(showspikes=True),
-        yaxis=dict(showspikes=True)
+        xaxis=dict(title="Datum", showspikes=True),
+        yaxis=dict(title="Prijs", showspikes=True)
     )
 
     st.plotly_chart(fig, use_container_width=True)
 
     st.subheader("Genormaliseerde groei")
 
-    norm = pivot / pivot.iloc[0] * 100
+    if len(pivot) > 0:
+        norm = pivot / pivot.iloc[0] * 100
 
-    fig2 = go.Figure()
-    for col in norm.columns:
-        fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
+        fig2 = go.Figure()
+        for col in norm.columns:
+            fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
 
-    fig2.update_layout(
-        hovermode="x unified",
-        xaxis=dict(showspikes=True),
-        yaxis=dict(showspikes=True)
-    )
+        fig2.update_layout(
+            hovermode="x unified",
+            xaxis=dict(title="Datum", showspikes=True),
+            yaxis=dict(title="Index (start=100)", showspikes=True)
+        )
 
-    st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
 # PERFORMANCE
 # =========================
 with tab2:
 
-    st.subheader("Momentum")
+    st.subheader("Momentum (30 dagen)")
 
     if len(pivot) < 30:
         st.warning("Te weinig data (<30 dagen)")
@@ -149,6 +162,7 @@ with tab2:
 
         if not last.empty:
             fig = go.Figure(go.Bar(x=last.index, y=last.values))
+            fig.update_layout(xaxis_title="Fonds", yaxis_title="Momentum (%)")
             st.plotly_chart(fig, use_container_width=True)
 
 # =========================
@@ -251,7 +265,7 @@ with tab6:
     st.subheader("Monte Carlo")
 
     if len(port) < 50:
-        st.warning("Te weinig data voor simulatie (<50)")
+        st.warning("Te weinig data voor simulatie (<50 dagen)")
     else:
         mu, sigma = port.mean(), port.std()
 
@@ -263,6 +277,11 @@ with tab6:
         fig.add_trace(go.Scatter(y=np.percentile(sims,10,axis=1), name="Worst"))
         fig.add_trace(go.Scatter(y=np.percentile(sims,50,axis=1), name="Expected"))
         fig.add_trace(go.Scatter(y=np.percentile(sims,90,axis=1), name="Best"))
+
+        fig.update_layout(
+            xaxis_title="Dagen",
+            yaxis_title="Waarde (€)"
+        )
 
         st.plotly_chart(fig, use_container_width=True)
 
