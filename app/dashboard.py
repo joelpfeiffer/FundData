@@ -79,7 +79,7 @@ tabs = st.tabs(["Overview","Performance","Risk","Heatmap","Optimizer","Rebalance
 tab1,tab2,tab3,tab4,tab5,tab6,tab7 = tabs
 
 # =========================
-# OVERVIEW
+# OVERVIEW (FIXED TREND)
 # =========================
 with tab1:
     st.subheader("Overview")
@@ -102,10 +102,22 @@ with tab1:
     st.markdown("### Prijsontwikkeling")
 
     fig = go.Figure()
-    for col in pivot.columns:
-        fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
 
-    fig.update_layout(hovermode="x unified")
+    for col in pivot.columns:
+        fig.add_trace(go.Scatter(
+            x=pivot.index,
+            y=pivot[col],
+            name=col,
+            mode="lines",
+            line=dict(width=2)
+        ))
+
+    fig.update_layout(
+        hovermode="x unified",
+        xaxis_title="Datum",
+        yaxis_title="Prijs"
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
@@ -145,7 +157,7 @@ with tab3:
         st.plotly_chart(px.imshow(corr, text_auto=True), use_container_width=True)
 
 # =========================
-# HEATMAP (STABIEL)
+# HEATMAP (BETERE KLEUREN)
 # =========================
 with tab4:
     st.subheader("Heatmap")
@@ -166,7 +178,6 @@ with tab4:
         return (pivot_full.loc[latest] / past.iloc[-1] - 1) * 100
 
     heat = pd.DataFrame({k:calc(v) for k,v in periods.items()})
-
     heat = heat.loc[selected]
 
     if not heat.empty:
@@ -175,9 +186,9 @@ with tab4:
             x=heat.columns,
             y=heat.index,
             colorscale=[
-                [0, "red"],
-                [0.5, "yellow"],
-                [1, "green"]
+                [0, "#d73027"],
+                [0.5, "#fdae61"],
+                [1, "#1a9850"]
             ],
             zmid=0,
             text=np.round(heat.values,2),
@@ -216,7 +227,7 @@ with tab6:
         st.line_chart(capital * (1+port).cumprod())
 
 # =========================
-# RAW DATA (ZONDER EXCEL)
+# RAW DATA (CSV ONLY)
 # =========================
 with tab7:
     st.subheader("Raw Data")
@@ -235,5 +246,5 @@ with tab7:
     st.download_button(
         "Download CSV",
         display.to_csv().encode("utf-8"),
-        "data.csv"
+        "fund_data.csv"
     )
