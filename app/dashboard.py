@@ -43,17 +43,24 @@ mode = st.sidebar.radio("Timeframe", ["Preset", "Custom"])
 
 pivot = pivot_full[selected].copy()
 
+# =========================
+# TIMEFRAME LOGIC (FIXED)
+# =========================
 if mode == "Preset":
     tf = st.sidebar.selectbox("Range", ["1W","2W","1M","3M","6M","1Y","ALL"])
     days_map = {"1W":7,"2W":14,"1M":30,"3M":90,"6M":180,"1Y":365}
 
-    if tf != "ALL" and len(pivot) > 0:
+    if tf != "ALL":
         pivot = pivot[pivot.index >= pivot.index.max() - pd.Timedelta(days=days_map[tf])]
 else:
     start = st.sidebar.date_input("Start", pivot.index.min())
     end = st.sidebar.date_input("End", pivot.index.max())
     pivot = pivot[(pivot.index >= pd.to_datetime(start)) & (pivot.index <= pd.to_datetime(end))]
 
+# 🔥 BELANGRIJK: verwijder lege rijen
+pivot = pivot.dropna(how="all")
+
+# RETURNS OP BASIS VAN TIMEFRAME
 returns = pivot.pct_change().dropna()
 
 # =========================
@@ -69,7 +76,8 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 with tab1:
 
     st.subheader("Prijsontwikkeling")
-    st.caption("Werkelijke prijs van fondsen")
+
+    st.caption(f"Periode: {pivot.index.min().date()} → {pivot.index.max().date()}")
 
     fig = go.Figure()
     for col in pivot.columns:
@@ -85,7 +93,6 @@ with tab1:
     st.plotly_chart(fig, use_container_width=True)
 
     st.subheader("Genormaliseerde groei (%)")
-    st.caption("Vergelijk prestaties vanaf 100")
 
     if len(pivot) > 0:
         norm = pivot / pivot.iloc[0] * 100
@@ -109,10 +116,9 @@ with tab1:
 with tab2:
 
     st.subheader("Momentum (%)")
-    st.caption("Trend over ~30 dagen")
 
     if len(pivot) < 30:
-        st.warning("Te weinig data voor momentum (<30)")
+        st.warning("Te weinig data voor momentum (<30 datapunten)")
     else:
         shift = 30
         mom = (pivot / pivot.shift(shift) - 1) * 100
@@ -123,11 +129,6 @@ with tab2:
                 x=last.index,
                 y=last.values
             ))
-
-            fig.update_layout(
-                xaxis_title="Fund",
-                yaxis_title="Return (%)"
-            )
 
             st.plotly_chart(fig, use_container_width=True)
 
@@ -157,7 +158,7 @@ with tab3:
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# HEATMAP
+# HEATMAP (FULL DATA)
 # =========================
 with tab4:
 
