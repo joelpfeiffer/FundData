@@ -242,6 +242,11 @@ with tab4:
 with tab5:
     st.subheader("Optimizer (Max Sharpe)")
 
+    st.caption(
+        "De optimizer zoekt de beste verdeling van fondsen op basis van historische data.\n"
+        "Doel: maximaal rendement met zo laag mogelijk risico (Sharpe ratio)."
+    )
+
     if returns.shape[1] < 2:
         st.warning("Minimaal 2 fondsen nodig")
     else:
@@ -267,21 +272,77 @@ with tab5:
         best_idx = np.argmax(results[:,2])
         best_weights = weights_list[best_idx]
 
-        st.dataframe(pd.DataFrame({
+        # =========================
+        # UITLEG
+        # =========================
+        st.markdown("### Wat zie je hier?")
+        st.info(
+            "Elke punt in de grafiek is een mogelijke portfolio.\n\n"
+            "• X-as = risico (volatiliteit)\n"
+            "• Y-as = verwacht rendement\n"
+            "• Kleur = Sharpe ratio (groen = beter)\n\n"
+            "De optimizer kiest de portfolio met de hoogste Sharpe ratio."
+        )
+
+        # =========================
+        # BESTE VERDELING
+        # =========================
+        st.subheader("Optimale verdeling")
+
+        opt_df = pd.DataFrame({
             "Fund": mean_returns.index,
-            "Weight %": best_weights*100
-        }))
+            "Weight %": best_weights * 100
+        }).sort_values("Weight %", ascending=False)
+
+        st.dataframe(opt_df, use_container_width=True)
+
+        st.caption(
+            "Deze verdeling maximaliseert rendement per risico-eenheid.\n"
+            "Hogere percentages betekenen grotere allocatie in dat fonds."
+        )
+
+        # =========================
+        # FRONTIER
+        # =========================
+        st.subheader("Efficient Frontier")
 
         fig = go.Figure()
+
         fig.add_trace(go.Scatter(
             x=results[:,1],
             y=results[:,0],
             mode="markers",
-            marker=dict(color=results[:,2], colorscale="Viridis")
+            marker=dict(
+                color=results[:,2],
+                colorscale="Viridis",
+                showscale=True,
+                colorbar=dict(title="Sharpe")
+            ),
+            name="Portfolios"
         ))
 
-        st.plotly_chart(fig)
+        fig.update_layout(
+            xaxis_title="Risico (volatiliteit)",
+            yaxis_title="Rendement",
+            height=500
+        )
 
+        st.plotly_chart(fig, use_container_width=True)
+
+        # =========================
+        # EXTRA UITLEG
+        # =========================
+        st.markdown("### Hoe lees je dit?")
+        st.markdown(
+            """
+- Linksonder = laag risico, laag rendement  
+- Rechtsboven = hoog risico, hoog rendement  
+- Beste punt = hoogste Sharpe ratio (beste balans)
+
+💡 Tip:
+Een goede portfolio ligt meestal niet extreem rechts (te risicovol), maar ook niet helemaal links (te weinig rendement).
+"""
+        )
 # =========================
 # REBALANCE (MONTE CARLO)
 # =========================
