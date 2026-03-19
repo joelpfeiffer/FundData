@@ -68,6 +68,12 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
 ])
 
 # =========================
+# HELPER
+# =========================
+def shorten(name, length=18):
+    return name if len(name) <= length else name[:length] + "..."
+
+# =========================
 # OVERVIEW
 # =========================
 with tab1:
@@ -86,8 +92,13 @@ with tab1:
         col1, col2, col3, col4, col5 = st.columns(5)
 
         col1.metric("Gem. rendement", f"{total_return.mean():.2f}%")
-        col2.metric("Beste fonds", best[:12] + "..." if len(best) > 12 else best)
-        col3.metric("Slechtste fonds", worst[:12] + "..." if len(worst) > 12 else worst)
+
+        col2.metric("Beste fonds", shorten(best))
+        col2.caption(f"Volledig: {best}")
+
+        col3.metric("Slechtste fonds", shorten(worst))
+        col3.caption(f"Volledig: {worst}")
+
         col4.metric("Volatiliteit", f"{vol:.2f}")
         col5.metric("Sharpe", f"{sharpe:.2f}")
 
@@ -131,13 +142,14 @@ with tab2:
     st.subheader("Momentum")
 
     if len(pivot) < 30:
-        st.warning("Te weinig data (<30)")
+        st.warning("Te weinig data (<30 dagen)")
     else:
         mom = (pivot / pivot.shift(30) - 1) * 100
         last = mom.iloc[-1].dropna()
 
-        fig = go.Figure(go.Bar(x=last.index, y=last.values))
-        st.plotly_chart(fig, use_container_width=True)
+        if not last.empty:
+            fig = go.Figure(go.Bar(x=last.index, y=last.values))
+            st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # RISK
@@ -205,11 +217,11 @@ with tab4:
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# OPTIMIZER (HERSTELD)
+# OPTIMIZER
 # =========================
 with tab5:
 
-    st.subheader("Portfolio")
+    st.subheader("Portfolio verdeling")
 
     weights = np.random.random(len(selected))
     weights /= weights.sum()
@@ -222,7 +234,7 @@ with tab5:
     st.dataframe(df_opt)
 
 # =========================
-# REBALANCE (HERSTELD)
+# REBALANCE
 # =========================
 with tab6:
 
@@ -230,9 +242,7 @@ with tab6:
 
     capital = st.number_input("Kapitaal", 100, 1000000, 10000)
 
-    alloc = {f: 100/len(selected) for f in selected}
-
-    weights = pd.Series(alloc)/100
+    weights = pd.Series(1/len(selected), index=selected)
 
     port = (returns[weights.index]*weights).sum(axis=1)
 
@@ -241,7 +251,7 @@ with tab6:
     st.subheader("Monte Carlo")
 
     if len(port) < 50:
-        st.warning("Te weinig data (<50)")
+        st.warning("Te weinig data voor simulatie (<50)")
     else:
         mu, sigma = port.mean(), port.std()
 
@@ -269,6 +279,5 @@ with tab7:
 
     if view == "Long":
         st.dataframe(raw)
-
     else:
         st.dataframe(raw.pivot(index="date", columns="fund", values="price"))
