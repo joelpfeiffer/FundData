@@ -71,11 +71,14 @@ if pivot.empty:
 returns = pivot.pct_change().dropna()
 
 # =========================
-# PRE CALC
+# CALCULATIONS
 # =========================
 ret = (pivot.iloc[-1] / pivot.iloc[0] - 1) * 100 if len(pivot) > 1 else None
 vol = returns.std() * np.sqrt(TRADING_DAYS)
 sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0,np.nan)
+
+drawdown = pivot / pivot.cummax() - 1
+max_dd = drawdown.min()
 
 # =========================
 # TABS
@@ -85,10 +88,16 @@ tab1,tab2,tab3,tab4,tab5,tab6,tab7 = st.tabs([
 ])
 
 # =========================
-# OVERVIEW (ongewijzigd)
+# OVERVIEW (HERSTELD)
 # =========================
 with tab1:
     st.subheader("Overview")
+
+    start_date = pivot.index.min().strftime("%d-%m-%Y")
+    end_date = pivot.index.max().strftime("%d-%m-%Y")
+    days = (pivot.index.max() - pivot.index.min()).days
+
+    st.caption(f"Periode: {start_date} → {end_date} ({days} dagen)")
 
     if ret is not None:
         best = ret.idxmax()
@@ -102,50 +111,106 @@ with tab1:
         c4.metric("Volatiliteit", f"{vol.mean():.2f}")
         c5.metric("Sharpe", f"{sharpe.mean():.2f}")
 
-    # trend
+        st.subheader("AI Insights")
+        st.info(f"""
+Beste fonds: {best} (+{ret.max():.2f}%)
+Slechtste fonds: {worst} ({ret.min():.2f}%)
+Hoogste risico: {vol.idxmax()}
+""")
+
+    st.markdown("---")
+
+    # Trend 1
+    st.subheader("Prijsontwikkeling")
+
     fig = go.Figure()
+    benchmark = pivot.mean(axis=1)
+
     for col in pivot.columns:
         fig.add_trace(go.Scatter(x=pivot.index, y=pivot[col], name=col))
+
+    fig.add_trace(go.Scatter(
+        x=pivot.index,
+        y=benchmark,
+        name="Benchmark",
+        line=dict(dash="dash")
+    ))
+
     st.plotly_chart(fig, use_container_width=True)
 
+    # Trend 2
+    st.subheader("Genormaliseerde groei")
+
+    norm = pivot / pivot.iloc[0] * 100
+
+    fig2 = go.Figure()
+    for col in norm.columns:
+        fig2.add_trace(go.Scatter(x=norm.index, y=norm[col], name=col))
+
+    st.plotly_chart(fig2, use_container_width=True)
+
+    # Drawdown
+    st.subheader("Drawdown")
+
+    fig3 = go.Figure()
+    for col in drawdown.columns:
+        fig3.add_trace(go.Scatter(x=drawdown.index, y=drawdown[col]*100, name=col))
+
+    st.plotly_chart(fig3, use_container_width=True)
+
 # =========================
-# PERFORMANCE (FIX)
+# PERFORMANCE
 # =========================
 with tab2:
     st.subheader("Momentum")
 
     if len(pivot) < 30:
-        st.warning("Minimaal 30 dagen data nodig voor momentum")
+        st.warning("Minimaal 30 dagen data nodig")
     else:
         mom = (pivot / pivot.shift(30) - 1) * 100
         st.bar_chart(mom.iloc[-1].dropna())
 
 # =========================
-# RISK
+# RISK (UITGEBREID)
 # =========================
 with tab3:
     st.subheader("Risk")
 
     risk_df = pd.DataFrame({
         "Volatility": vol,
-        "Sharpe": sharpe
+        "Sharpe": sharpe,
+        "Max Drawdown %": max_dd * 100
     })
 
-    st.dataframe(risk_df)
+    st.dataframe(risk_df, use_container_width=True)
 
+    st.subheader("Rolling Volatility")
+    rolling_vol = returns.rolling(30).std() * np.sqrt(TRADING_DAYS)
+
+    fig = go.Figure()
+    for col in rolling_vol.columns:
+        fig.add_trace(go.Scatter(x=rolling_vol.index, y=rolling_vol[col], name=col))
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("Correlation")
     fig_corr = px.imshow(returns.corr(), text_auto=True)
     fig_corr.update_layout(height=700)
-    st.plotly_chart(fig_corr)
+    st.plotly_chart(fig_corr, use_container_width=True)
 
 # =========================
-# HEATMAP
+# HEATMAP (VOLLEDIG HERSTELD)
 # =========================
 with tab4:
     st.subheader("Heatmap")
 
     latest = pivot_full.index.max()
 
-    periods = {"1W":7,"1M":30,"3M":90,"6M":180,"1Y":365}
+    periods = {
+        "1D":1,"2D":2,"3D":3,"4D":4,
+        "1W":7,"2W":14,"3W":21,
+        "1M":30,"2M":60,"3M":90,"6M":180,
+        "1Y":365,"2Y":730,"5Y":1825
+    }
 
     def calc(days):
         past = pivot_full[pivot_full.index <= latest - pd.Timedelta(days=days)]
@@ -164,16 +229,18 @@ with tab4:
             [0.5, "#f5e6a3"],
             [1, "#1a9850"]
         ],
-        zmid=0
+        zmid=0,
+        text=np.round(heat.values,2),
+        texttemplate="%{text}%"
     ))
 
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # OPTIMIZER (ECHT)
 # =========================
 with tab5:
-    st.subheader("Optimizer")
+    st.subheader("Optimizer (Max Sharpe)")
 
     if returns.shape[1] < 2:
         st.warning("Minimaal 2 fondsen nodig")
@@ -205,7 +272,6 @@ with tab5:
             "Weight %": best_weights*100
         }))
 
-        # frontier
         fig = go.Figure()
         fig.add_trace(go.Scatter(
             x=results[:,1],
@@ -214,25 +280,24 @@ with tab5:
             marker=dict(color=results[:,2], colorscale="Viridis")
         ))
 
-        fig.update_layout(xaxis_title="Risk", yaxis_title="Return")
         st.plotly_chart(fig)
 
 # =========================
-# REBALANCE (MONTE CARLO TERUG)
+# REBALANCE (MONTE CARLO)
 # =========================
 with tab6:
-    st.subheader("Rebalance + Monte Carlo")
+    st.subheader("Monte Carlo")
 
     capital = st.number_input("Kapitaal", 100, 1000000, 10000)
 
     if returns.shape[0] < 30:
-        st.warning("Te weinig data voor Monte Carlo")
+        st.warning("Te weinig data voor simulatie")
     else:
         mean = returns.mean().mean()
         std = returns.std().mean()
 
-        days = 100
         sims = 200
+        days = 100
 
         paths = []
 
@@ -246,11 +311,10 @@ with tab6:
         paths = np.array(paths)
 
         expected = paths.mean(axis=0)
-        worst = np.percentile(paths, 5, axis=0)
-        best = np.percentile(paths, 95, axis=0)
+        worst = np.percentile(paths,5,axis=0)
+        best = np.percentile(paths,95,axis=0)
 
         fig = go.Figure()
-
         fig.add_trace(go.Scatter(y=expected, name="Expected"))
         fig.add_trace(go.Scatter(y=best, name="Best Case"))
         fig.add_trace(go.Scatter(y=worst, name="Worst Case"))
