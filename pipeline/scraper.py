@@ -1,67 +1,100 @@
-# =========================
-# FIX IMPORT PATH (belangrijk voor GitHub Actions)
-# =========================
-import sys
-import os
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(BASE_DIR)
-
-# =========================
-# LIBRARIES
-# =========================
-import requests
 import pandas as pd
-from io import StringIO
+import numpy as np
+import os
+from datetime import datetime
 
-URL = "https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/"
+DATA_PATH = "data/prices.csv"
+BACKUP_PATH = "data/prices_backup_auto.csv"
 
 # =========================
-# FETCH DATA
+# MOCK FETCH (VERVANG DIT)
 # =========================
 def fetch_data():
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
+    """
+    Vervang dit met jouw echte data bron
+    """
+    today = pd.Timestamp.today().normalize()
 
-    response = requests.get(URL, headers=headers, timeout=30)
-    response.raise_for_status()
+    data = [
+        {"date": today, "fund": "Fund A", "price": 100 + np.random.rand()},
+        {"date": today, "fund": "Fund B", "price": 200 + np.random.rand()},
+    ]
 
-    tables = pd.read_html(StringIO(response.text))
+    return pd.DataFrame(data)
 
-    if not tables:
-        raise ValueError("Geen tabellen gevonden")
+# =========================
+# LOAD BESTAANDE DATA
+# =========================
+def load_existing():
+    if not os.path.exists(DATA_PATH):
+        print("Geen bestaande data gevonden → nieuwe file")
+        return pd.DataFrame(columns=["date","fund","price"])
 
-    df = tables[0]
-
-    # Check of kolommen bestaan
-    expected_cols = ["Fonds", "Datum", "Koers"]
-    for col in expected_cols:
-        if col not in df.columns:
-            raise ValueError(f"Kolom ontbreekt: {col}")
-
-    df = df[["Fonds", "Datum", "Koers"]].copy()
-
-    # =========================
-    # DATA CLEANING
-    # =========================
-    df["Koers"] = (
-        df["Koers"]
-        .astype(str)
-        .str.replace("€", "", regex=False)
-        .str.replace(",", ".", regex=False)
-        .str.replace("\xa0", "", regex=False)
-        .str.strip()
-    )
-
-    df["Koers"] = pd.to_numeric(df["Koers"], errors="coerce")
-
-    df["Datum"] = pd.to_datetime(df["Datum"], dayfirst=True, errors="coerce")
-
-    # Drop slechte rijen
-    df = df.dropna()
-
-    if df.empty:
-        raise ValueError("Dataframe leeg na cleaning")
-
+    df = pd.read_csv(DATA_PATH)
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
     return df
+
+# =========================
+# BACKUP (OVERSCHRIJFT AUTO FILE)
+# =========================
+def backup_data(df):
+    df.to_csv(BACKUP_PATH, index=False)
+    print(f"Backup opgeslagen in: {BACKUP_PATH}")
+
+# =========================
+# MAIN PIPELINE
+# =========================
+def main():
+    print("Start pipeline...")
+
+    df_old = load_existing()
+    print(f"Bestaande records: {len(df_old)}")
+
+    df_new = fetch_data()
+    print(f"Nieuwe records: {len(df_new)}")
+
+    # =========================
+    # SAFETY CHECK
+    # =========================
+    if df_new.empty:
+        print("❌ Geen nieuwe data → STOP (voorkomt overschrijven)")
+        return
+
+    # =========================
+    # CLEAN DATA
+    # =========================
+    df_new["date"] = pd.to_datetime(df_new["date"], errors="coerce")
+
+    # =========================
+    # BACKUP (BELANGRIJK!)
+    # =========================
+    if not df_old.empty:
+        backup_data(df_old)
+
+    # =========================
+    # COMBINE
+    # =========================
+    df = pd.concat([df_old, df_new], ignore_index=True)
+    print(f"Na concat: {len(df)}")
+
+    # =========================
+    # DEDUPE (CRUCIAAL)
+    # =========================
+    df = df.drop_duplicates(subset=["date","fund"])
+    print(f"Na dedupe: {len(df)}")
+
+    # =========================
+    # SORT
+    # =========================
+    df = df.sort_values("date")
+
+    # =========================
+    # SAVE
+    # =========================
+    df.to_csv(DATA_PATH, index=False)
+    print("✅ Data opgeslagen")
+
+    print("Pipeline klaar.")
+
+if __name__ == "__main__":
+    main()
