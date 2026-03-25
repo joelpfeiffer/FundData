@@ -9,9 +9,6 @@ jobs:
   run:
     runs-on: ubuntu-latest
 
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
     steps:
       # =========================
       # CHECKOUT
@@ -36,16 +33,28 @@ jobs:
           pip install pandas requests lxml html5lib
 
       # =========================
-      # 🔥 RUN SCRAPER (BELANGRIJK!)
+      # 🔥 RUN SCRAPER (DB vullen)
       # =========================
-      - name: Run scraper (update database)
-        run: python pipeline/scraper.py
+      - name: Run scraper
+        run: |
+          echo "🔥 RUNNING SCRAPER"
+          python pipeline/scraper.py
 
       # =========================
-      # RUN EXPORT PIPELINE
+      # RUN EXPORT (CSV maken)
       # =========================
       - name: Run export pipeline
-        run: python pipeline/runner.py
+        run: |
+          echo "📦 EXPORTING TO CSV"
+          python pipeline/runner.py
+
+      # =========================
+      # DEBUG (OPTIONEEL MAAR HANDIG)
+      # =========================
+      - name: Show latest CSV info
+        run: |
+          echo "📊 CSV preview:"
+          head -n 5 data/prices.csv || true
 
       # =========================
       # COMMIT DATA
