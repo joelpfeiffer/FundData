@@ -4,85 +4,44 @@ import pandas as pd
 import requests
 from io import StringIO
 
-# =========================
-# CONFIG
-# =========================
 DB_PATH = "data/pension.db"
-CSV_PATH = "data/prices.csv"
 URL = "https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/"
 
-# =========================
-# FETCH DATA
-# =========================
 def fetch_data():
-    import pandas as pd
-    from selenium import webdriver
-    from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
+    print("🌐 Fetching data...")
 
-    print("🌐 Selenium scrape...")
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(URL, headers=headers, timeout=30)
+    response.raise_for_status()
 
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
+    tables = pd.read_html(StringIO(response.text))
 
-    driver = webdriver.Chrome(options=options)
-    driver.get("https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/")
+    df = tables[0][["Fonds", "Datum", "Koers"]]
 
-    wait = WebDriverWait(driver, 20)
-
-    # wacht tot tabel zichtbaar is
-    wait.until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, "tr.fundoverview__item"))
+    # Clean prijs
+    df["Koers"] = (
+        df["Koers"]
+        .astype(str)
+        .str.replace("€", "", regex=False)
+        .str.replace(",", ".", regex=False)
+        .str.replace("\xa0", "", regex=False)
+        .str.strip()
+        .astype(float)
     )
 
-    # 🔥 WACHT TOT NIEUWE DATA ER IS
-    wait.until(
-        lambda d: any(
-            "2026" in el.text and "24-03" in el.text
-            for el in d.find_elements(By.CSS_SELECTOR, "td.fundoverview__date")
-        )
-    )
+    # Datum fix
+    df["Datum"] = pd.to_datetime(df["Datum"], dayfirst=True)
 
-    rows = driver.find_elements(By.CSS_SELECTOR, "tr.fundoverview__item")
-
-    data = []
-
-    for row in rows:
-        fund = row.find_element(By.CSS_SELECTOR, "td.fundoverview__fund a").text
-        date = row.find_element(By.CSS_SELECTOR, "td.fundoverview__date").text
-        price = row.find_element(By.CSS_SELECTOR, "td.fundoverview__rate").text
-
-        price = (
-            price.replace("€", "")
-            .replace("\xa0", "")
-            .replace(",", ".")
-            .strip()
-        )
-
-        data.append({
-            "fund": fund,
-            "date": date,
-            "price": float(price)
-        })
-
-    driver.quit()
-
-    df = pd.DataFrame(data)
-    df["date"] = pd.to_datetime(df["date"], dayfirst=True)
-
-    print("Max datum:", df["date"].max())
-    print("🔥 USING NEW FETCH LOGIC 🔥")
-
+    print(f"✅ {len(df)} records opgehaald")
     return df
-# =========================
-# INIT DATABASE
-# =========================
-def init_db(conn):
-    conn.execute("""
+
+def save_to_db(df):
+    os.makedirs("data", exist_ok=True)
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    cur.execute("""
     CREATE TABLE IF NOT EXISTS prices (
         date TEXT,
         fund TEXT,
@@ -90,104 +49,34 @@ def init_db(conn):
         PRIMARY KEY (date, fund)
     )
     """)
-    conn.commit()
 
+    new_date = df["Datum"].iloc[0].strftime("%Y-%m-%d")
 
-# =========================
-# INSERT DATA (ALLEEN NIEUWE DATUM)
-# =========================
-def insert_data(conn, df):
-    cur = conn.cursor()
-
-    # nieuwste datum uit scrape
-    new_date = df["date"].max().strftime("%Y-%m-%d")
-
-    # check laatste datum in DB
     cur.execute("SELECT MAX(date) FROM prices")
-    result = cur.fetchone()[0]
+    last_date = cur.fetchone()[0]
 
-    print("📅 Laatste datum DB:", result)
-    print("📅 Nieuwe datum:", new_date)
+    print("Laatste datum in DB:", last_date)
+    print("Nieuwe datum:", new_date)
 
-    if result == new_date:
-        print("⏭️ Datum bestaat al → geen insert")
-        return 0
-
-    print("➕ Nieuwe data toevoegen...")
-
-    inserted = 0
-
-    for _, row in df.iterrows():
-        cur.execute(
-            """
-            INSERT OR IGNORE INTO prices (date, fund, price)
-            VALUES (?, ?, ?)
-            """,
-            (
-                row["date"].strftime("%Y-%m-%d"),
-                row["fund"],
-                float(row["price"])
+    if last_date == new_date:
+        print("⏭️ Data al aanwezig — skip")
+    else:
+        print("➕ Nieuwe data toevoegen")
+        for _, row in df.iterrows():
+            cur.execute(
+                "INSERT OR IGNORE INTO prices (date, fund, price) VALUES (?, ?, ?)",
+                (new_date, row["Fonds"], float(row["Koers"]))
             )
-        )
-        inserted += 1
-
-    conn.commit()
-
-    print(f"✅ Toegevoegd: {inserted} records")
-
-    return inserted
-
-
-# =========================
-# EXPORT NAAR CSV
-# =========================
-def export_csv(conn):
-    df = pd.read_sql_query(
-        "SELECT date, fund, price FROM prices ORDER BY date, fund",
-        conn
-    )
-
-    df.to_csv(CSV_PATH, index=False, encoding="utf-8-sig")
-
-    print("💾 CSV bijgewerkt:", CSV_PATH)
-    print("Aantal regels:", len(df))
-
-
-# =========================
-# MAIN PIPELINE
-# =========================
-def main():
-    print("🚀 START PIPELINE")
-
-    # zorg dat map bestaat
-    os.makedirs("data", exist_ok=True)
-
-    # fetch
-    df = fetch_data()
-
-    if df.empty:
-        print("❌ Geen data gevonden → STOP")
-        return
-
-    # connect DB
-    conn = sqlite3.connect(DB_PATH)
-
-    # init table
-    init_db(conn)
-
-    # insert
-    insert_data(conn, df)
-
-    # export
-    export_csv(conn)
+        conn.commit()
+        print(f"✅ {len(df)} records toegevoegd")
 
     conn.close()
 
-    print("🎉 PIPELINE KLAAR")
+def main():
+    print("🔥 SCRAPER START 🔥")
+    df = fetch_data()
+    save_to_db(df)
+    print("🎉 SCRAPER KLAAR")
 
-
-# =========================
-# RUN
-# =========================
 if __name__ == "__main__":
     main()
