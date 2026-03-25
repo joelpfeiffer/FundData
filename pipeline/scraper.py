@@ -1,150 +1,172 @@
-import pandas as pd
 import os
-import time
-
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
+import sqlite3
+import pandas as pd
+import requests
+from io import StringIO
 
 # =========================
 # CONFIG
 # =========================
-DATA_PATH = "data/prices.csv"
-BACKUP_PATH = "data/prices_backup_auto.csv"
+DB_PATH = "data/pension.db"
+CSV_PATH = "data/prices.csv"
 URL = "https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/"
 
 # =========================
-# FETCH DATA (SELENIUM)
+# FETCH DATA
 # =========================
 def fetch_data():
-    print("🌐 Start Selenium scrape...")
+    print("🌐 Fetch data...")
 
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
 
-    driver = webdriver.Chrome(options=options)
-    driver.get(URL)
+    response = requests.get(URL, headers=headers, timeout=30)
+    print("HTTP status:", response.status_code)
+    response.raise_for_status()
 
-    # wacht tot tabel geladen is
-    time.sleep(5)
+    tables = pd.read_html(StringIO(response.text))
+    print("Aantal tabellen:", len(tables))
 
-    rows = driver.find_elements(By.CSS_SELECTOR, "tr.fundoverview__item")
+    df = tables[0]
 
-    data = []
+    # juiste kolommen
+    df = df[["Fonds", "Datum", "Koers"]]
 
-    for row in rows:
-        try:
-            fund = row.find_element(By.CSS_SELECTOR, "td.fundoverview__fund a").text
-            date = row.find_element(By.CSS_SELECTOR, "td.fundoverview__date").text
-            price = row.find_element(By.CSS_SELECTOR, "td.fundoverview__rate").text
+    # prijs cleanen
+    df["Koers"] = (
+        df["Koers"]
+        .astype(str)
+        .str.replace("€", "", regex=False)
+        .str.replace(",", ".", regex=False)
+        .str.replace("\xa0", "", regex=False)
+        .str.strip()
+        .astype(float)
+    )
 
-            # prijs schoonmaken
-            price = (
-                price.replace("€", "")
-                .replace("\xa0", "")
-                .replace(",", ".")
-                .strip()
-            )
+    # datum parsen
+    df["Datum"] = pd.to_datetime(df["Datum"], dayfirst=True)
 
-            data.append({
-                "fund": fund,
-                "date": date,
-                "price": float(price)
-            })
-
-        except Exception as e:
-            print("⚠️ Fout bij rij:", e)
-
-    driver.quit()
-
-    df = pd.DataFrame(data)
-
-    # datum parsing
-    df["date"] = pd.to_datetime(df["date"], dayfirst=True, errors="coerce")
+    # rename voor consistency
+    df = df.rename(columns={
+        "Fonds": "fund",
+        "Datum": "date",
+        "Koers": "price"
+    })
 
     print("📊 Scrape resultaat:")
-    print("Aantal rows:", len(df))
+    print("Aantal records:", len(df))
     print("Max datum:", df["date"].max())
 
     return df
 
 
 # =========================
-# LOAD BESTAANDE DATA
+# INIT DATABASE
 # =========================
-def load_existing():
-    if not os.path.exists(DATA_PATH):
-        print("📁 Geen bestaande data → nieuwe dataset")
-        return pd.DataFrame(columns=["date", "fund", "price"])
-
-    df = pd.read_csv(DATA_PATH)
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    return df
+def init_db(conn):
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS prices (
+        date TEXT,
+        fund TEXT,
+        price REAL,
+        PRIMARY KEY (date, fund)
+    )
+    """)
+    conn.commit()
 
 
 # =========================
-# BACKUP
+# INSERT DATA (ALLEEN NIEUWE DATUM)
 # =========================
-def backup_data(df):
-    os.makedirs("data", exist_ok=True)
-    df.to_csv(BACKUP_PATH, index=False)
-    print(f"💾 Backup opgeslagen: {BACKUP_PATH}")
+def insert_data(conn, df):
+    cur = conn.cursor()
+
+    # nieuwste datum uit scrape
+    new_date = df["date"].max().strftime("%Y-%m-%d")
+
+    # check laatste datum in DB
+    cur.execute("SELECT MAX(date) FROM prices")
+    result = cur.fetchone()[0]
+
+    print("📅 Laatste datum DB:", result)
+    print("📅 Nieuwe datum:", new_date)
+
+    if result == new_date:
+        print("⏭️ Datum bestaat al → geen insert")
+        return 0
+
+    print("➕ Nieuwe data toevoegen...")
+
+    inserted = 0
+
+    for _, row in df.iterrows():
+        cur.execute(
+            """
+            INSERT OR IGNORE INTO prices (date, fund, price)
+            VALUES (?, ?, ?)
+            """,
+            (
+                row["date"].strftime("%Y-%m-%d"),
+                row["fund"],
+                float(row["price"])
+            )
+        )
+        inserted += 1
+
+    conn.commit()
+
+    print(f"✅ Toegevoegd: {inserted} records")
+
+    return inserted
+
+
+# =========================
+# EXPORT NAAR CSV
+# =========================
+def export_csv(conn):
+    df = pd.read_sql_query(
+        "SELECT date, fund, price FROM prices ORDER BY date, fund",
+        conn
+    )
+
+    df.to_csv(CSV_PATH, index=False, encoding="utf-8-sig")
+
+    print("💾 CSV bijgewerkt:", CSV_PATH)
+    print("Aantal regels:", len(df))
 
 
 # =========================
 # MAIN PIPELINE
 # =========================
 def main():
-    print("🚀 Start pipeline...")
+    print("🚀 START PIPELINE")
 
+    # zorg dat map bestaat
     os.makedirs("data", exist_ok=True)
 
-    df_old = load_existing()
-    print(f"Bestaande records: {len(df_old)}")
+    # fetch
+    df = fetch_data()
 
-    df_new = fetch_data()
-    print(f"Nieuwe records (scrape): {len(df_new)}")
-
-    if df_new.empty:
-        print("❌ Geen nieuwe data → STOP")
+    if df.empty:
+        print("❌ Geen data gevonden → STOP")
         return
 
-    # backup
-    if not df_old.empty:
-        backup_data(df_old)
+    # connect DB
+    conn = sqlite3.connect(DB_PATH)
 
-    # =========================
-    # COMBINE + UPDATE
-    # =========================
-    df = pd.concat([df_old, df_new], ignore_index=True)
+    # init table
+    init_db(conn)
 
-    print("Na concat:", len(df))
+    # insert
+    insert_data(conn, df)
 
-    # sorteren
-    df = df.sort_values("date")
+    # export
+    export_csv(conn)
 
-    # nieuwste waarde per fund/date behouden
-    df = df.drop_duplicates(subset=["date", "fund"], keep="last")
+    conn.close()
 
-    print("Na dedupe:", len(df))
-
-    # =========================
-    # SAVE
-    # =========================
-    df.to_csv(DATA_PATH, index=False)
-    print("✅ CSV geüpdatet:", DATA_PATH)
-
-    # =========================
-    # SAMENVATTING
-    # =========================
-    print("\n📈 Samenvatting:")
-    print("Totaal records:", len(df))
-    print("Datum range:", df["date"].min(), "→", df["date"].max())
-    print("Aantal fondsen:", df["fund"].nunique())
-
-    print("\n🎉 Pipeline succesvol afgerond!")
+    print("🎉 PIPELINE KLAAR")
 
 
 # =========================
