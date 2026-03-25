@@ -9,7 +9,6 @@ jobs:
   run:
     runs-on: ubuntu-latest
 
-    # ✅ future-proof (Node 24)
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -29,7 +28,16 @@ jobs:
           python-version: "3.11"
 
       # =========================
-      # INSTALL
+      # 🔥 CHROME + DRIVER (NIEUW)
+      # =========================
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Install ChromeDriver
+        uses: nanasess/setup-chromedriver@v2
+
+      # =========================
+      # INSTALL PYTHON DEPENDENCIES
       # =========================
       - name: Install dependencies
         run: |
@@ -50,10 +58,8 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
 
-          # alleen data folder
           git add data/
 
-          # alleen commit als er iets veranderd is
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
