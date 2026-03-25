@@ -15,25 +15,39 @@ URL = "https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondse
 # FETCH DATA
 # =========================
 def fetch_data():
+    import pandas as pd
+    import requests
+    from io import StringIO
+
     print("🌐 Fetch data...")
 
+    session = requests.Session()
+
     headers = {
-        "User-Agent": "Mozilla/5.0"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36",
+        "Accept-Language": "nl-NL,nl;q=0.9,en;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Connection": "keep-alive",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+        "Referer": "https://www.zwitserleven.nl/"
     }
 
-    response = requests.get(URL, headers=headers, timeout=30)
-    print("HTTP status:", response.status_code)
-    response.raise_for_status()
+    session.headers.update(headers)
 
-    tables = pd.read_html(StringIO(response.text))
-    print("Aantal tabellen:", len(tables))
+    res = session.get(URL, timeout=30)
+    print("HTTP status:", res.status_code)
 
+    html = res.text
+
+    # 🔥 CRUCIALE DEBUG
+    print("24-03 in HTML:", "24-03-2026" in html)
+
+    tables = pd.read_html(StringIO(html))
     df = tables[0]
 
-    # juiste kolommen
     df = df[["Fonds", "Datum", "Koers"]]
 
-    # prijs cleanen
     df["Koers"] = (
         df["Koers"]
         .astype(str)
@@ -44,23 +58,17 @@ def fetch_data():
         .astype(float)
     )
 
-    # datum parsen
     df["Datum"] = pd.to_datetime(df["Datum"], dayfirst=True)
 
-    # rename voor consistency
     df = df.rename(columns={
         "Fonds": "fund",
         "Datum": "date",
         "Koers": "price"
     })
 
-    print("📊 Scrape resultaat:")
-    print("Aantal records:", len(df))
     print("Max datum:", df["date"].max())
 
     return df
-
-
 # =========================
 # INIT DATABASE
 # =========================
