@@ -2,7 +2,7 @@ name: Update Data
 
 on:
   schedule:
-    - cron: "0 6 * * *"   # elke dag 06:00 UTC
+    - cron: "28 15 * * *"   # elke dag 06:00 UTC
   workflow_dispatch:
 
 jobs:
