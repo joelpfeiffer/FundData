@@ -75,6 +75,7 @@ def fetch_data():
     df["date"] = pd.to_datetime(df["date"], dayfirst=True)
 
     print("Max datum:", df["date"].max())
+    print("🔥 USING NEW FETCH LOGIC 🔥")
 
     return df
 # =========================
