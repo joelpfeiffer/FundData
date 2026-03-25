@@ -5,7 +5,7 @@ import os
 
 DATA_PATH = "data/prices.csv"
 BACKUP_PATH = "data/prices_backup_auto.csv"
-URL = "JOUW_URL_HIER"
+URL = "https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/"
 
 # =========================
 # FETCH DATA (FIXED)
