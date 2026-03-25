@@ -28,30 +28,27 @@ jobs:
           python-version: "3.11"
 
       # =========================
-      # 🔥 CHROME + DRIVER (NIEUW)
-      # =========================
-      - name: Install Chrome
-        uses: browser-actions/setup-chrome@v1
-
-      - name: Install ChromeDriver
-        uses: nanasess/setup-chromedriver@v2
-
-      # =========================
-      # INSTALL PYTHON DEPENDENCIES
+      # INSTALL DEPENDENCIES
       # =========================
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install pandas requests lxml html5lib
 
       # =========================
-      # RUN PIPELINE
+      # 🔥 RUN SCRAPER (BELANGRIJK!)
       # =========================
-      - name: Run data pipeline
+      - name: Run scraper (update database)
+        run: python pipeline/scraper.py
+
+      # =========================
+      # RUN EXPORT PIPELINE
+      # =========================
+      - name: Run export pipeline
         run: python pipeline/runner.py
 
       # =========================
-      # COMMIT DATA (SAFE)
+      # COMMIT DATA
       # =========================
       - name: Commit & push data
         run: |
