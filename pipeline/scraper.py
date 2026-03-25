@@ -16,55 +16,63 @@ URL = "https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondse
 # =========================
 def fetch_data():
     import pandas as pd
-    import requests
-    from io import StringIO
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
 
-    print("🌐 Fetch data...")
+    print("🌐 Selenium scrape...")
 
-    session = requests.Session()
+    options = Options()
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36",
-        "Accept-Language": "nl-NL,nl;q=0.9,en;q=0.8",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Connection": "keep-alive",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "Referer": "https://www.zwitserleven.nl/"
-    }
+    driver = webdriver.Chrome(options=options)
+    driver.get("https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/")
 
-    session.headers.update(headers)
+    wait = WebDriverWait(driver, 20)
 
-    res = session.get(URL, timeout=30)
-    print("HTTP status:", res.status_code)
-
-    html = res.text
-
-    # 🔥 CRUCIALE DEBUG
-    print("24-03 in HTML:", "24-03-2026" in html)
-
-    tables = pd.read_html(StringIO(html))
-    df = tables[0]
-
-    df = df[["Fonds", "Datum", "Koers"]]
-
-    df["Koers"] = (
-        df["Koers"]
-        .astype(str)
-        .str.replace("€", "", regex=False)
-        .str.replace(",", ".", regex=False)
-        .str.replace("\xa0", "", regex=False)
-        .str.strip()
-        .astype(float)
+    # wacht tot tabel zichtbaar is
+    wait.until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "tr.fundoverview__item"))
     )
 
-    df["Datum"] = pd.to_datetime(df["Datum"], dayfirst=True)
+    # 🔥 WACHT TOT NIEUWE DATA ER IS
+    wait.until(
+        lambda d: any(
+            "2026" in el.text and "24-03" in el.text
+            for el in d.find_elements(By.CSS_SELECTOR, "td.fundoverview__date")
+        )
+    )
 
-    df = df.rename(columns={
-        "Fonds": "fund",
-        "Datum": "date",
-        "Koers": "price"
-    })
+    rows = driver.find_elements(By.CSS_SELECTOR, "tr.fundoverview__item")
+
+    data = []
+
+    for row in rows:
+        fund = row.find_element(By.CSS_SELECTOR, "td.fundoverview__fund a").text
+        date = row.find_element(By.CSS_SELECTOR, "td.fundoverview__date").text
+        price = row.find_element(By.CSS_SELECTOR, "td.fundoverview__rate").text
+
+        price = (
+            price.replace("€", "")
+            .replace("\xa0", "")
+            .replace(",", ".")
+            .strip()
+        )
+
+        data.append({
+            "fund": fund,
+            "date": date,
+            "price": float(price)
+        })
+
+    driver.quit()
+
+    df = pd.DataFrame(data)
+    df["date"] = pd.to_datetime(df["date"], dayfirst=True)
 
     print("Max datum:", df["date"].max())
 
