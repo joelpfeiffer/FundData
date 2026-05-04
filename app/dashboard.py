@@ -248,18 +248,128 @@ with tab4:
 # OPTIMIZER
 # =========================
 with tab5:
-    st.subheader("Optimizer")
+    st.subheader("Optimizer (Portfolio Profielen)")
 
     if returns.shape[1] < 2:
         st.warning("Minimaal 2 fondsen nodig")
-    else:
-        mean_returns = returns.mean()*TRADING_DAYS
-        cov_matrix = returns.cov()*TRADING_DAYS
+        st.stop()
 
-        weights = np.random.random(len(mean_returns))
+    # =========================
+    # DATA
+    # =========================
+    mean_returns = returns.mean() * TRADING_DAYS
+    cov_matrix = returns.cov() * TRADING_DAYS
+
+    results = []
+    weights_list = []
+
+    num_assets = len(mean_returns)
+
+    # =========================
+    # SIMULATIE
+    # =========================
+    for _ in range(3000):
+        weights = np.random.random(num_assets)
         weights /= np.sum(weights)
 
-        st.write(dict(zip(mean_returns.index, weights)))
+        port_return = np.dot(weights, mean_returns)
+        port_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+        port_sharpe = port_return / port_vol if port_vol != 0 else 0
+
+        results.append([port_return, port_vol, port_sharpe])
+        weights_list.append(weights)
+
+    results = np.array(results)
+
+    # =========================
+    # PROFIELEN
+    # =========================
+    idx_min_risk = np.argmin(results[:,1])
+    idx_max_return = np.argmax(results[:,0])
+    idx_max_sharpe = np.argmax(results[:,2])
+    idx_balanced = np.argsort(results[:,2])[len(results)//2]
+
+    profiles = {
+        "Low Risk": idx_min_risk,
+        "Balanced": idx_balanced,
+        "High Return": idx_max_return,
+        "Max Sharpe": idx_max_sharpe
+    }
+
+    selected_profile = st.selectbox(
+        "Kies risicoprofiel",
+        list(profiles.keys()),
+        index=3
+    )
+
+    selected_idx = profiles[selected_profile]
+    selected_weights = weights_list[selected_idx]
+
+    # =========================
+    # RESULTAAT
+    # =========================
+    st.subheader("Portfolio verdeling")
+
+    df_profile = pd.DataFrame({
+        "Fund": mean_returns.index,
+        "Weight %": selected_weights * 100
+    }).sort_values("Weight %", ascending=False)
+
+    st.dataframe(df_profile, use_container_width=True)
+
+    # =========================
+    # HOVER INFO
+    # =========================
+    hover_text = []
+
+    for w in weights_list:
+        txt = "<br>".join([
+            f"{fund}: {weight*100:.1f}%"
+            for fund, weight in zip(mean_returns.index, w)
+        ])
+        hover_text.append(txt)
+
+    # =========================
+    # EFFICIENT FRONTIER
+    # =========================
+    st.subheader("Efficient Frontier")
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=results[:,1],
+        y=results[:,0],
+        mode="markers",
+        text=hover_text,
+        hovertemplate=
+            "Return: %{y:.2f}<br>" +
+            "Risk: %{x:.2f}<br><br>" +
+            "%{text}<extra></extra>",
+        marker=dict(
+            color=results[:,2],
+            colorscale="Viridis",
+            showscale=True,
+            size=6
+        ),
+        name="Portfolios"
+    ))
+
+    # Highlight selectie
+    fig.add_trace(go.Scatter(
+        x=[results[selected_idx,1]],
+        y=[results[selected_idx,0]],
+        mode="markers",
+        marker=dict(size=14, color="red"),
+        name=selected_profile
+    ))
+
+    fig.update_layout(
+        xaxis_title="Risico (volatiliteit)",
+        yaxis_title="Rendement",
+        height=500
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # MONTE CARLO
