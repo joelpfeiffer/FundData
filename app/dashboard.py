@@ -143,13 +143,71 @@ with tab2:
 # RISK
 # =========================
 with tab3:
+    st.subheader("Risk")
+
+    # =========================
+    # BASIS METRICS
+    # =========================
     risk_df = pd.DataFrame({
         "Volatility": vol,
         "Sharpe": sharpe,
         "Max Drawdown %": max_dd * 100
     })
-    st.dataframe(risk_df)
 
+    st.dataframe(risk_df, use_container_width=True)
+
+    # =========================
+    # ROLLING VOLATILITY
+    # =========================
+    st.subheader("Rolling Volatility (30 dagen)")
+
+    if len(returns) < 30:
+        st.warning("Minimaal 30 datapunten nodig")
+    else:
+        rolling_vol = returns.rolling(30).std() * np.sqrt(TRADING_DAYS)
+
+        rolling_vol = rolling_vol.dropna(how="all")
+
+        if rolling_vol.empty:
+            st.warning("Geen rolling volatility data")
+        else:
+            fig = go.Figure()
+
+            for col in rolling_vol.columns:
+                fig.add_trace(go.Scatter(
+                    x=rolling_vol.index,
+                    y=rolling_vol[col],
+                    name=col
+                ))
+
+            fig.update_layout(
+                xaxis_title="Datum",
+                yaxis_title="Volatiliteit"
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+    # =========================
+    # CORRELATIE
+    # =========================
+    st.subheader("Correlation Matrix")
+
+    corr = returns.corr()
+
+    if corr.isna().all().all():
+        st.warning("Geen correlatie data beschikbaar")
+    else:
+        fig_corr = go.Figure(data=go.Heatmap(
+            z=corr.values,
+            x=corr.columns,
+            y=corr.index,
+            zmid=0,
+            colorscale="RdYlGn"
+        ))
+
+        fig_corr.update_layout(height=600)
+
+        st.plotly_chart(fig_corr, use_container_width=True)
 # =========================
 # HEATMAP (FIXED)
 # =========================
