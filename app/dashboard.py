@@ -23,12 +23,19 @@ if df.empty:
     st.stop()
 
 pivot_full = df.pivot(index="date", columns="fund", values="price")
-pivot_full = pivot_full.sort_index().fillna(method="ffill")
+pivot_full = pivot_full.sort_index()
 
+if not pivot_full.empty:
+    pivot_full = pivot_full.ffill()
+
+# =========================
 # SIDEBAR
+# =========================
 st.sidebar.title("Instellingen")
+
 funds = list(pivot_full.columns)
 selected = st.sidebar.multiselect("Fondsen", funds, default=funds[:5])
+
 mode = st.sidebar.radio("Timeframe", ["Preset","Custom"])
 
 if mode == "Preset":
@@ -42,6 +49,9 @@ if not selected:
     st.warning("Selecteer minimaal 1 fonds")
     st.stop()
 
+# =========================
+# FILTER DATA
+# =========================
 pivot = pivot_full[selected].copy()
 
 if mode == "Preset" and tf != "ALL":
@@ -53,17 +63,19 @@ elif mode == "Custom":
 pivot = pivot.dropna(how="all")
 
 if len(pivot) < 2:
-    st.warning("Te weinig data")
+    st.warning("Te weinig data na filtering")
     st.dataframe(pivot)
     st.stop()
 
 returns = pivot.pct_change().dropna()
 
 if returns.empty:
-    st.warning("Te weinig data voor returns")
+    st.warning("Te weinig data voor berekeningen")
     st.stop()
 
-# CALCS
+# =========================
+# CALCULATIONS
+# =========================
 ret = (pivot.iloc[-1] / pivot.iloc[0] - 1) * 100
 vol = returns.std() * np.sqrt(TRADING_DAYS)
 sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0,np.nan)
@@ -71,12 +83,16 @@ sharpe = (returns.mean()*TRADING_DAYS)/vol.replace(0,np.nan)
 drawdown = pivot / pivot.cummax() - 1
 max_dd = drawdown.min()
 
+# =========================
 # TABS
+# =========================
 tab1,tab2,tab3,tab4,tab5,tab6,tab7 = st.tabs([
     "Overview","Performance","Risk","Heatmap","Optimizer","Rebalance","Raw Data"
 ])
 
+# =========================
 # OVERVIEW
+# =========================
 with tab1:
     st.subheader("Overview")
 
@@ -85,20 +101,20 @@ with tab1:
 
     c1,c2,c3,c4,c5 = st.columns(5)
     c1.metric("Gem. rendement", f"{ret.mean():.2f}%")
-    c2.metric("Beste", best)
-    c3.metric("Slechtste", worst)
-    c4.metric("Vol", f"{vol.mean():.2f}")
+    c2.metric("Beste fonds", best)
+    c3.metric("Slechtste fonds", worst)
+    c4.metric("Volatiliteit", f"{vol.mean():.2f}")
     c5.metric("Sharpe", f"{sharpe.mean():.2f}")
 
     if vol.notna().any():
-        risico_txt = f"{vol.idxmax()} ({vol.max():.2f})"
+        risico_txt = f"{vol.idxmax()} (volatiliteit {vol.max():.2f})"
     else:
-        risico_txt = "Geen data"
+        risico_txt = "Geen volatiliteitsdata"
 
     st.info(f"""
-Beste: {best} ({ret.max():.2f}%)
+Beste: {best} (+{ret.max():.2f}%)
 Slechtste: {worst} ({ret.min():.2f}%)
-Risico: {risico_txt}
+Hoogste risico: {risico_txt}
 """)
 
     fig = go.Figure()
@@ -106,11 +122,36 @@ Risico: {risico_txt}
         fig.add_trace(go.Scatter(x=pivot.index,y=pivot[col],name=col))
     st.plotly_chart(fig,use_container_width=True)
 
-# RAW DATA FIX
+# =========================
+# PERFORMANCE
+# =========================
+with tab2:
+    st.subheader("Momentum")
+
+    if len(pivot) < 30:
+        st.warning("Minimaal 30 dagen data nodig")
+    else:
+        mom = (pivot / pivot.shift(30) - 1) * 100
+        st.bar_chart(mom.iloc[-1].dropna())
+
+# =========================
+# RISK
+# =========================
+with tab3:
+    risk_df = pd.DataFrame({
+        "Volatility": vol,
+        "Sharpe": sharpe,
+        "Max Drawdown %": max_dd * 100
+    })
+    st.dataframe(risk_df)
+
+# =========================
+# RAW DATA
+# =========================
 with tab7:
     raw = df[df["fund"].isin(selected)].copy()
 
     if raw.empty:
-        st.warning("Geen data")
+        st.warning("Geen data voor selectie")
     else:
         st.dataframe(raw)
