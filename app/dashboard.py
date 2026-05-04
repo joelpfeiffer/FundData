@@ -125,6 +125,26 @@ Hoogste risico: {risico_txt}
         fig.add_trace(go.Scatter(x=pivot.index,y=pivot[col],name=col))
     st.plotly_chart(fig,use_container_width=True)
 
+st.subheader("Genormaliseerde groei (index = 100)")
+
+norm = pivot / pivot.iloc[0] * 100
+
+fig2 = go.Figure()
+
+for col in norm.columns:
+    fig2.add_trace(go.Scatter(
+        x=norm.index,
+        y=norm[col],
+        name=col
+    ))
+
+fig2.update_layout(
+    xaxis_title="Datum",
+    yaxis_title="Index (100 = start)"
+)
+
+st.plotly_chart(fig2, use_container_width=True)
+
 # =========================
 # PERFORMANCE
 # =========================
@@ -138,6 +158,24 @@ with tab2:
         mom_last = mom.iloc[-1].dropna().to_frame(name="Momentum")
         mom_last["Fund"] = mom_last.index
         st.bar_chart(mom_last.set_index("Fund"))
+
+st.subheader("Drawdown")
+
+fig3 = go.Figure()
+
+for col in drawdown.columns:
+    fig3.add_trace(go.Scatter(
+        x=drawdown.index,
+        y=drawdown[col] * 100,
+        name=col
+    ))
+
+fig3.update_layout(
+    xaxis_title="Datum",
+    yaxis_title="Drawdown (%)"
+)
+
+st.plotly_chart(fig3, use_container_width=True)
 
 # =========================
 # RISK
