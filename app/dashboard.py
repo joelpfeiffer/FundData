@@ -9,6 +9,9 @@ st.set_page_config(layout="wide")
 CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
 TRADING_DAYS = 252
 
+# =========================
+# LOAD DATA
+# =========================
 @st.cache_data(ttl=60)
 def load_data():
     df = pd.read_csv(CSV_URL)
@@ -122,7 +125,9 @@ Hoogste risico: {risico_txt}
         fig.add_trace(go.Scatter(x=pivot.index,y=pivot[col],name=col))
     st.plotly_chart(fig,use_container_width=True)
 
-# === PERFORMANCE FIXED ===
+# =========================
+# PERFORMANCE
+# =========================
 with tab2:
     st.subheader("Momentum")
 
@@ -130,10 +135,8 @@ with tab2:
         st.warning("Minimaal 30 dagen data nodig")
     else:
         mom = (pivot / pivot.shift(30) - 1) * 100
-
         mom_last = mom.iloc[-1].dropna().to_frame(name="Momentum")
         mom_last["Fund"] = mom_last.index
-
         st.bar_chart(mom_last.set_index("Fund"))
 
 # =========================
@@ -146,6 +149,88 @@ with tab3:
         "Max Drawdown %": max_dd * 100
     })
     st.dataframe(risk_df)
+
+# =========================
+# HEATMAP (FIXED)
+# =========================
+with tab4:
+    st.subheader("Heatmap")
+
+    latest = pivot_full.index.max()
+
+    periods = {
+        "1D":1,"1W":7,"1M":30,"3M":90,
+        "6M":180,"1Y":365
+    }
+
+    def calc(days):
+        cutoff = latest - pd.Timedelta(days=days)
+        past = pivot_full[pivot_full.index <= cutoff]
+
+        if past.empty:
+            return pd.Series(index=pivot_full.columns)
+
+        return (pivot_full.loc[latest] / past.iloc[-1] - 1) * 100
+
+    heat = pd.DataFrame({k:calc(v) for k,v in periods.items()})
+    heat = heat.reindex(selected).dropna(how="all")
+
+    if heat.empty:
+        st.warning("Geen heatmap data")
+    else:
+        fig = go.Figure(data=go.Heatmap(
+            z=heat.values,
+            x=heat.columns,
+            y=heat.index,
+            zmid=0
+        ))
+        st.plotly_chart(fig, use_container_width=True)
+
+# =========================
+# OPTIMIZER
+# =========================
+with tab5:
+    st.subheader("Optimizer")
+
+    if returns.shape[1] < 2:
+        st.warning("Minimaal 2 fondsen nodig")
+    else:
+        mean_returns = returns.mean()*TRADING_DAYS
+        cov_matrix = returns.cov()*TRADING_DAYS
+
+        weights = np.random.random(len(mean_returns))
+        weights /= np.sum(weights)
+
+        st.write(dict(zip(mean_returns.index, weights)))
+
+# =========================
+# MONTE CARLO
+# =========================
+with tab6:
+    st.subheader("Monte Carlo")
+
+    capital = st.number_input("Kapitaal", 100, 1000000, 10000)
+
+    mean = returns.mean().mean()
+    std = returns.std().mean()
+
+    sims = 100
+    days = 100
+
+    paths = []
+
+    for _ in range(sims):
+        prices = [capital]
+        for _ in range(days):
+            change = np.random.normal(mean, std)
+            prices.append(prices[-1]*(1+change))
+        paths.append(prices)
+
+    fig = go.Figure()
+    for p in paths[:20]:
+        fig.add_trace(go.Scatter(y=p, showlegend=False))
+
+    st.plotly_chart(fig)
 
 # =========================
 # RAW DATA
