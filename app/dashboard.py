@@ -404,9 +404,52 @@ with tab6:
 # RAW DATA
 # =========================
 with tab7:
+    st.subheader("Raw Data")
+
     raw = df[df["fund"].isin(selected)].copy()
 
     if raw.empty:
         st.warning("Geen data voor selectie")
     else:
-        st.dataframe(raw)
+        # =========================
+        # VIEW SELECTOR (TERUG!)
+        # =========================
+        view = st.radio(
+            "Weergave",
+            ["Long", "Wide"],
+            horizontal=True
+        )
+
+        # =========================
+        # LONG FORMAT
+        # =========================
+        if view == "Long":
+            display = raw.sort_values("date")
+
+        # =========================
+        # WIDE FORMAT (HORIZONTAL)
+        # =========================
+        else:
+            display = raw.pivot_table(
+                index="date",
+                columns="fund",
+                values="price",
+                aggfunc="last"
+            ).sort_index()
+
+        # =========================
+        # OUTPUT
+        # =========================
+        st.dataframe(display, use_container_width=True)
+
+        # =========================
+        # DOWNLOAD
+        # =========================
+        csv = display.to_csv().encode()
+
+        st.download_button(
+            "Download CSV",
+            csv,
+            "fund_data.csv",
+            mime="text/csv"
+        )
