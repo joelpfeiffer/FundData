@@ -122,9 +122,7 @@ Hoogste risico: {risico_txt}
         fig.add_trace(go.Scatter(x=pivot.index,y=pivot[col],name=col))
     st.plotly_chart(fig,use_container_width=True)
 
-# =========================
-# PERFORMANCE
-# =========================
+# === PERFORMANCE FIXED ===
 with tab2:
     st.subheader("Momentum")
 
@@ -132,7 +130,11 @@ with tab2:
         st.warning("Minimaal 30 dagen data nodig")
     else:
         mom = (pivot / pivot.shift(30) - 1) * 100
-        st.bar_chart(mom.iloc[-1].dropna())
+
+        mom_last = mom.iloc[-1].dropna().to_frame(name="Momentum")
+        mom_last["Fund"] = mom_last.index
+
+        st.bar_chart(mom_last.set_index("Fund"))
 
 # =========================
 # RISK
