@@ -28,6 +28,25 @@ if df.empty:
 pivot_full = df.pivot(index="date", columns="fund", values="price")
 pivot_full = pivot_full.sort_index()
 
+# =========================
+# MERGE FONDSNAAMWIJZIGINGEN
+# =========================
+
+old_name = "Zwitser­leven Vanguard US 500 Stock Index Fund"
+new_name = "Zwitser­leven Vanguard US 500 Hedged"
+
+if old_name in pivot_full.columns and new_name in pivot_full.columns:
+    pivot_full[new_name] = pivot_full[new_name].combine_first(
+        pivot_full[old_name]
+    )
+
+    pivot_full = pivot_full.drop(columns=[old_name])
+
+elif old_name in pivot_full.columns:
+    pivot_full = pivot_full.rename(
+        columns={old_name: new_name}
+    )
+
 if not pivot_full.empty:
     pivot_full = pivot_full.ffill()
 
