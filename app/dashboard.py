@@ -49,7 +49,13 @@ default_funds = [
 
 # Zoek Vanguard automatisch op
 vanguard_fund = next(
-    (f for f in funds if "Vanguard" in f and "500" in f),
+    (
+        f for f in funds
+        if "Vanguard" in f
+        and "500" in f
+        and "Hedged" in f
+        and "PPI" not in f
+    ),
     None
 )
 
