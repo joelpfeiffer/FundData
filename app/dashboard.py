@@ -47,20 +47,44 @@ default_funds = [
     "Zwitserleven Index Wereld Aandelenfonds"
 ]
 
+found_defaults = [f for f in default_funds if f in funds]
+
+# TEST INFO
+st.sidebar.success("Nieuwe default code actief")
+st.sidebar.write("Aantal gevonden defaults:", len(found_defaults))
+st.sidebar.write("Gevonden fondsen:")
+st.sidebar.write(found_defaults)
+
 selected = st.sidebar.multiselect(
     "Fondsen",
     funds,
-    default=[f for f in default_funds if f in funds]
+    default=found_defaults
 )
 
-mode = st.sidebar.radio("Timeframe", ["Preset","Custom"])
+mode = st.sidebar.radio("Timeframe", ["Preset", "Custom"])
 
 if mode == "Preset":
-    tf = st.sidebar.selectbox("Periode", ["1W","2W","1M","3M","6M","1Y","ALL"])
-    days_map = {"1W":7,"2W":14,"1M":30,"3M":90,"6M":180,"1Y":365}
+    tf = st.sidebar.selectbox(
+        "Periode",
+        ["1W", "2W", "1M", "3M", "6M", "1Y", "ALL"]
+    )
+    days_map = {
+        "1W": 7,
+        "2W": 14,
+        "1M": 30,
+        "3M": 90,
+        "6M": 180,
+        "1Y": 365
+    }
 else:
-    start = st.sidebar.date_input("Start", pivot_full.index.min())
-    end = st.sidebar.date_input("End", pivot_full.index.max())
+    start = st.sidebar.date_input(
+        "Start",
+        pivot_full.index.min()
+    )
+    end = st.sidebar.date_input(
+        "End",
+        pivot_full.index.max()
+    )
 
 if not selected:
     st.warning("Selecteer minimaal 1 fonds")
