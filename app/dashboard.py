@@ -38,36 +38,45 @@ st.sidebar.title("Instellingen")
 
 funds = list(pivot_full.columns)
 
+# Gewenste standaardfondsen
 default_funds = [
     "Zwitserleven Europees Aandelenfonds",
     "Zwitserleven Index Aandelenfonds Europa",
-    "Zwitser­leven Vanguard US 500 Hedged",
     "Zwitserleven Index Aandelenfonds Opkomende Landen",
     "Zwitserleven Wereld Aandelenfonds",
     "Zwitserleven Index Wereld Aandelenfonds"
 ]
 
-found_defaults = [f for f in default_funds if f in funds]
+# Zoek Vanguard automatisch op
+vanguard_fund = next(
+    (f for f in funds if "Vanguard" in f and "500" in f),
+    None
+)
 
-# TEST INFO
-st.sidebar.success("Nieuwe default code actief")
-st.sidebar.write("Aantal gevonden defaults:", len(found_defaults))
-st.sidebar.write("Gevonden fondsen:")
-st.sidebar.write(found_defaults)
+if vanguard_fund:
+    default_funds.append(vanguard_fund)
+
+# Alleen fondsen selecteren die daadwerkelijk bestaan
+found_defaults = [f for f in default_funds if f in funds]
 
 selected = st.sidebar.multiselect(
     "Fondsen",
     funds,
-    default=found_defaults
+    default=found_defaults,
+    key="fonds_selectie_v2"
 )
 
-mode = st.sidebar.radio("Timeframe", ["Preset", "Custom"])
+mode = st.sidebar.radio(
+    "Timeframe",
+    ["Preset", "Custom"]
+)
 
 if mode == "Preset":
     tf = st.sidebar.selectbox(
         "Periode",
         ["1W", "2W", "1M", "3M", "6M", "1Y", "ALL"]
     )
+
     days_map = {
         "1W": 7,
         "2W": 14,
@@ -76,11 +85,13 @@ if mode == "Preset":
         "6M": 180,
         "1Y": 365
     }
+
 else:
     start = st.sidebar.date_input(
         "Start",
         pivot_full.index.min()
     )
+
     end = st.sidebar.date_input(
         "End",
         pivot_full.index.max()
@@ -89,7 +100,6 @@ else:
 if not selected:
     st.warning("Selecteer minimaal 1 fonds")
     st.stop()
-
 # =========================
 # FILTER DATA
 # =========================
