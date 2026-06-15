@@ -41,7 +41,7 @@ funds = list(pivot_full.columns)
 default_funds = [
     "Zwitserleven Europees Aandelenfonds",
     "Zwitserleven Index Aandelenfonds Europa",
-    "Zwitserleven Vanguard US 500 Hedged",
+    "Zwitser­leven Vanguard US 500 Hedged",
     "Zwitserleven Index Aandelenfonds Opkomende Landen",
     "Zwitserleven Wereld Aandelenfonds",
     "Zwitserleven Index Wereld Aandelenfonds"
