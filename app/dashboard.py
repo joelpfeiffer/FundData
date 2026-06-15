@@ -37,7 +37,21 @@ if not pivot_full.empty:
 st.sidebar.title("Instellingen")
 
 funds = list(pivot_full.columns)
-selected = st.sidebar.multiselect("Fondsen", funds, default=funds[:5])
+
+default_funds = [
+    "Zwitserleven Europees Aandelenfonds",
+    "Zwitserleven Index Aandelenfonds Europa",
+    "Zwitserleven Vanguard US 500 Hedged",
+    "Zwitserleven Index Aandelenfonds Opkomende Landen",
+    "Zwitserleven Wereld Aandelenfonds",
+    "Zwitserleven Index Wereld Aandelenfonds"
+]
+
+selected = st.sidebar.multiselect(
+    "Fondsen",
+    funds,
+    default=[f for f in default_funds if f in funds]
+)
 
 mode = st.sidebar.radio("Timeframe", ["Preset","Custom"])
 
