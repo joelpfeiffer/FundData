@@ -72,10 +72,11 @@ mode = st.sidebar.radio(
 )
 
 if mode == "Preset":
-    tf = st.sidebar.selectbox(
-        "Periode",
-        ["1W", "2W", "1M", "3M", "6M", "1Y", "ALL"]
-    )
+tf = st.sidebar.selectbox(
+    "Periode",
+    ["1W", "2W", "1M", "3M", "6M", "1Y", "ALL"],
+    index=6
+)
 
     days_map = {
         "1W": 7,
