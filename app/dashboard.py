@@ -334,11 +334,13 @@ with tab4:
                 texttemplate="%{text:.2f}%",
 
                 colorscale=[
-                    [0.0, "#8B0000"],   # donkerrood
-                    [0.25, "#FF4444"],
-                    [0.50, "#FFFFFF"],  # wit rond 0
-                    [0.75, "#66CC66"],
-                    [1.0, "#006400"]    # donkergroen
+                [0.00, "#c00000"],  # donkerrood
+                [0.15, "#ff0000"],  # rood
+                [0.35, "#ffc000"],  # oranje
+                [0.50, "#fff2cc"],  # lichtgeel (0%)
+                [0.65, "#a9d18e"],  # lichtgroen
+                [0.85, "#70ad47"],  # groen
+                [1.00, "#006100"]   # donkergroen
                 ],
 
                 zmid=0,
