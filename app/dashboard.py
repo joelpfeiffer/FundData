@@ -3,8 +3,32 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
+import streamlit_authenticator as stauth
 
 st.set_page_config(layout="wide")
+
+config = {
+    "credentials": {
+        "usernames": {
+            "JPF": {
+                "name": st.secrets["credentials"]["usernames"]["JPF"]["name"],
+                "password": st.secrets["credentials"]["usernames"]["JPF"]["password"],
+            }
+        }
+    },
+    "cookie": {
+        "name": st.secrets["cookie"]["name"],
+        "key": st.secrets["cookie"]["key"],
+        "expiry_days": st.secrets["cookie"]["expiry_days"],
+    }
+}
+
+authenticator = stauth.Authenticate(
+    config["credentials"],
+    config["cookie"]["name"],
+    config["cookie"]["key"],
+    config["cookie"]["expiry_days"],
+)
 
 CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
 TRADING_DAYS = 252
@@ -54,6 +78,7 @@ if not pivot_full.empty:
 # SIDEBAR
 # =========================
 st.sidebar.title("Instellingen")
+authenticator.login(location="sidebar")
 
 funds = list(pivot_full.columns)
 
@@ -178,8 +203,15 @@ sortino = (returns.mean()*TRADING_DAYS) / downside_std.replace(0,np.nan)
 # =========================
 # TABS
 # =========================
-tab1,tab2,tab3,tab4,tab5,tab6,tab7 = st.tabs([
-    "Overview","Performance","Risk","Heatmap","Optimizer","Rebalance","Raw Data"
+tab1,tab2,tab3,tab4,tab5,tab6,tab7,tab8 = st.tabs([
+    "Overview",
+    "Performance",
+    "Risk",
+    "Heatmap",
+    "Optimizer",
+    "Rebalance",
+    "Raw Data",
+    "Admin"
 ])
 
 # =========================
@@ -551,4 +583,29 @@ with tab7:
             display.to_csv().encode(),
             "fund_data.csv",
             mime="text/csv"
+        )
+
+# =====================
+# Admin
+# =====================
+with tab8:
+
+    if st.session_state.get("authentication_status"):
+
+        authenticator.logout("Uitloggen", "sidebar")
+
+        st.success(
+            f"Welkom {st.session_state['name']}"
+        )
+
+        st.subheader("Admin")
+
+        st.write(
+            "Dit gedeelte is alleen toegankelijk voor ingelogde gebruikers."
+        )
+
+    else:
+
+        st.warning(
+            "Log in via de sidebar om toegang te krijgen."
         )
