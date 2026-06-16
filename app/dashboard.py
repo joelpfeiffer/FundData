@@ -291,27 +291,76 @@ with tab4:
 
     latest = pivot_full.index.max()
 
-    periods = {"1D":1,"1W":7,"1M":30,"3M":90,"6M":180,"1Y":365}
+    periods = {
+        "1D": 1,
+        "2D": 2,
+        "3D": 3,
+        "1W": 7,
+        "2W": 14,
+        "3W": 21,
+        "1M": 30,
+        "2M": 60,
+        "3M": 90,
+        "6M": 180,
+        "1Y": 365
+    }
 
     def calc(days):
         cutoff = latest - pd.Timedelta(days=days)
+
         past = pivot_full[pivot_full.index <= cutoff]
+
         if past.empty:
             return pd.Series(index=pivot_full.columns)
+
         return (pivot_full.loc[latest] / past.iloc[-1] - 1) * 100
 
-    heat = pd.DataFrame({k:calc(v) for k,v in periods.items()})
+    heat = pd.DataFrame({
+        label: calc(days)
+        for label, days in periods.items()
+    })
+
     heat = heat.reindex(selected).dropna(how="all")
 
     if not heat.empty:
-        fig = go.Figure(data=go.Heatmap(
-            z=heat.values,
-            x=heat.columns,
-            y=heat.index,
-            zmid=0
-        ))
-        st.plotly_chart(fig, use_container_width=True)
 
+        fig = go.Figure(
+            data=go.Heatmap(
+                z=heat.values,
+                x=heat.columns,
+                y=heat.index,
+
+                text=np.round(heat.values, 2),
+                texttemplate="%{text:.2f}%",
+
+                colorscale=[
+                    [0.0, "#8B0000"],   # donkerrood
+                    [0.25, "#FF4444"],
+                    [0.50, "#FFFFFF"],  # wit rond 0
+                    [0.75, "#66CC66"],
+                    [1.0, "#006400"]    # donkergroen
+                ],
+
+                zmid=0,
+
+                zmin=np.nanmin(heat.values),
+                zmax=np.nanmax(heat.values),
+
+                colorbar=dict(
+                    title="Rendement %"
+                )
+            )
+        )
+
+        fig.update_layout(
+            height=max(400, len(heat) * 35),
+            margin=dict(l=20, r=20, t=40, b=20)
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
 # =========================
 # OPTIMIZER
 # =========================
