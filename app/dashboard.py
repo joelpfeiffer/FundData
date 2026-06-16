@@ -78,7 +78,7 @@ if not pivot_full.empty:
 # SIDEBAR
 # =========================
 st.sidebar.title("Instellingen")
-authenticator.login(location="sidebar")
+
 
 funds = list(pivot_full.columns)
 
@@ -150,6 +150,9 @@ else:
 if not selected:
     st.warning("Selecteer minimaal 1 fonds")
     st.stop()
+
+
+authenticator.login(location="sidebar")
 # =========================
 # FILTER DATA
 # =========================
