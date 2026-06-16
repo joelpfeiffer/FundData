@@ -343,10 +343,9 @@ with tab4:
                 [1.00, "#006100"]   # donkergroen
                 ],
 
+                zmin=-5,
+                zmax=5,
                 zmid=0,
-
-                zmin=np.nanmin(heat.values),
-                zmax=np.nanmax(heat.values),
 
                 colorbar=dict(
                     title="Rendement %"
