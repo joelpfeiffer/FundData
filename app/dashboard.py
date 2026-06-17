@@ -624,7 +624,6 @@ with tab8:
 # ==================
 with tab9:
 
-```
 st.header("Mijn Portefeuille")
 
 from supabase_client import supabase
