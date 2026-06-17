@@ -631,18 +631,24 @@ with tab9:
 
     if st.button("Opslaan"):
 
-        try:
+    try:
 
-result = (
-    supabase
-    .table("portfolios")
-    .insert({
-        "user_id": "b13578bd-ec93-49a2-b24f-ac8dc1608d50",
-        "name": portfolio_name,
-        "is_active": True
-    })
-    .execute()
-)
+        result = (
+            supabase
+            .table("portfolios")
+            .insert({
+                "user_id": "b13578bd-ec93-49a2-b24f-ac8dc1608d50",
+                "name": portfolio_name,
+                "is_active": True
+            })
+            .execute()
+        )
+
+    st.success("Portefeuille opgeslagen")
+    st.write(result.data)
+
+except Exception as e:
+    st.error(e)
 
             st.success("Portefeuille opgeslagen")
 
