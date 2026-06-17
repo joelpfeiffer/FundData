@@ -84,6 +84,21 @@ import streamlit as st
 st.write("Beschikbare secrets:")
 st.write(list(st.secrets.keys()))
 
+import streamlit as st
+from supabase_client import supabase
+
+st.write("Supabase test")
+
+try:
+    result = supabase.table("profiles").select("*").execute()
+
+    st.success("Supabase verbinding werkt")
+    st.write(result.data)
+
+except Exception as e:
+    st.error(str(e))
+
+
 
 
 funds = list(pivot_full.columns)
