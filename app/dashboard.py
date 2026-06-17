@@ -1367,29 +1367,72 @@ with tab9:
                     f"{month_map[snapshot_month]:02d}-01"
                 )
 
-                (
-                    supabase
-                    .table("monthly_snapshots")
-                    .insert({
-                        "portfolio_id":
-                            st.session_state.portfolio_id,
-                        "snapshot_date":
-                            snapshot_date,
-                        "employer_contribution":
-                            float(employer_contribution),
-                        "personal_contribution":
-                            float(personal_contribution),
-                        "bonus_total":
-                            float(bonus_total),
-                        "costs_total":
-                            float(costs_total),
-                        "version":
-                            1,
-                        "is_active":
-                            True
-                    })
-                    .execute()
-                )
+                if existing_snapshot.data:
+
+                    snapshot_id = (
+                        existing_snapshot.data[0]["id"]
+                    )
+
+                    (
+                        supabase
+                        .table("monthly_snapshots")
+                        .update({
+                            "employer_contribution":
+                                float(employer_contribution),
+
+                            "personal_contribution":
+                                float(personal_contribution),
+
+                            "bonus_total":
+                                float(bonus_total),
+
+                            "costs_total":
+                                float(costs_total)
+                        })
+                        .eq("id", snapshot_id)
+                        .execute()
+                    )
+
+                    st.success(
+                        "Maandsnapshot bijgewerkt"
+                    )
+
+                else:
+
+                    (
+                        supabase
+                        .table("monthly_snapshots")
+                        .insert({
+                            "portfolio_id":
+                                st.session_state.portfolio_id,
+
+                            "snapshot_date":
+                                snapshot_date,
+
+                            "employer_contribution":
+                                float(employer_contribution),
+
+                            "personal_contribution":
+                                float(personal_contribution),
+
+                            "bonus_total":
+                                float(bonus_total),
+
+                            "costs_total":
+                                float(costs_total),
+
+                            "version":
+                                1,
+
+                            "is_active":
+                                True
+                        })
+                        .execute()
+                    )
+
+                    st.success(
+                        "Nieuwe maandsnapshot opgeslagen"
+                    )
 
                 st.success(
                     "Maandsnapshot opgeslagen"
