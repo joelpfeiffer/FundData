@@ -623,54 +623,154 @@ with tab8:
 # Mijn Portefeuille
 # ==================
 with tab9:
+st.header("Mijn Portefeuille")
 
-    st.header("Mijn Portefeuille")
+# -----------------------------
+# PORTFOLIO'S OPHALEN
+# -----------------------------
+
+try:
+
+    portfolios = (
+        supabase
+        .table("portfolios")
+        .select("*")
+        .execute()
+    )
+
+    st.subheader("Bestaande portfolio's")
+
+    if portfolios.data:
+        st.dataframe(portfolios.data)
+    else:
+        st.info("Nog geen portfolio's gevonden.")
+
+except Exception as e:
+    st.error(f"Fout bij ophalen portfolio's: {e}")
+
+st.divider()
+
+# -----------------------------
+# NIEUWE PORTFOLIO
+# -----------------------------
+
+st.subheader("Nieuwe portefeuille")
+
+portfolio_name = st.text_input(
+    "Naam portefeuille",
+    value="Pensioen"
+)
+
+if st.button("Opslaan Portfolio"):
 
     try:
 
-        portfolios = (
+        result = (
             supabase
             .table("portfolios")
-            .select("*")
+            .insert({
+                "user_id": "b13578bd-ec93-49a2-b24f-ac8dc1608d50",
+                "name": portfolio_name,
+                "is_active": True
+            })
             .execute()
         )
 
-        st.subheader("Bestaande portfolio's")
-
-        if portfolios.data:
-            st.write(portfolios.data)
-        else:
-            st.info("Nog geen portfolio's gevonden.")
+        st.success("Portfolio opgeslagen")
 
     except Exception as e:
-        st.error(f"Fout bij ophalen portfolio's: {e}")
+        st.error(f"Fout bij opslaan: {e}")
+
+st.divider()
+
+# -----------------------------
+# PORTFOLIO SELECTEREN
+# -----------------------------
+
+if portfolios.data:
+
+    portfolio_options = {
+        p["name"]: p["id"]
+        for p in portfolios.data
+    }
+
+    selected_portfolio = st.selectbox(
+        "Selecteer portefeuille",
+        options=list(portfolio_options.keys())
+    )
+
+    portfolio_id = portfolio_options[selected_portfolio]
+
+    st.success(f"Geselecteerd: {selected_portfolio}")
 
     st.divider()
 
-    st.subheader("Nieuwe portefeuille")
+    # -----------------------------
+    # JAARSTART
+    # -----------------------------
 
-    portfolio_name = st.text_input(
-        "Naam portefeuille",
-        value="Pensioen Joël Pfeiffer"
+    st.subheader("Jaarstart")
+
+    jaar = st.number_input(
+        "Jaar",
+        min_value=2020,
+        max_value=2100,
+        value=2026
     )
 
-    if st.button("Opslaan Portfolio"):
+    startwaarde = st.number_input(
+        "Startwaarde (€)",
+        min_value=0.0,
+        value=25000.0,
+        step=100.0
+    )
+
+    if st.button("Opslaan Jaarstart"):
 
         try:
 
             result = (
                 supabase
-                .table("portfolios")
+                .table("year_baselines")
                 .insert({
-                    "user_id": "b13578bd-ec93-49a2-b24f-ac8dc1608d50",
-                    "name": portfolio_name,
+                    "portfolio_id": portfolio_id,
+                    "year": int(jaar),
+                    "start_value": float(startwaarde),
+                    "version": 1,
                     "is_active": True
                 })
                 .execute()
             )
 
-            st.success("Portfolio opgeslagen")
-            st.write(result.data)
+            st.success("Jaarstart opgeslagen")
 
         except Exception as e:
-            st.error(f"Fout bij opslaan: {e}")
+            st.error(f"Fout bij opslaan jaarstart: {e}")
+
+    st.divider()
+
+    # -----------------------------
+    # HISTORISCHE JAARSTARTEN
+    # -----------------------------
+
+    try:
+
+        baselines = (
+            supabase
+            .table("year_baselines")
+            .select("*")
+            .eq("portfolio_id", portfolio_id)
+            .eq("is_active", True)
+            .order("year")
+            .execute()
+        )
+
+        st.subheader("Historische jaarstarts")
+
+        if baselines.data:
+            st.dataframe(baselines.data)
+        else:
+            st.info("Nog geen jaarstarts gevonden.")
+
+    except Exception as e:
+        st.error(f"Fout bij ophalen jaarstarts: {e}")
