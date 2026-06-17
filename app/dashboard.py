@@ -598,109 +598,234 @@ with tab7:
 # ==================
 # Admin
 # ==================
+# =====================
+# Admin
+# =====================
+
 with tab8:
 
-    # =====================
-    # Fondsbeheer
-    # =====================
+    if st.session_state.get("authentication_status"):
 
-    st.divider()
+        authenticator.logout("Uitloggen", "sidebar")
 
-    st.subheader("Fondsbeheer")
+        st.success(
+            f"Welkom {st.session_state['name']}"
+        )
 
-    st.info(
-        "Fondsen worden automatisch uit prices.csv "
-        "gesynchroniseerd."
-    )
+        st.subheader("Admin")
 
-    if st.button("🔄 Synchroniseer fondsen"):
+        st.write(
+            "Dit gedeelte is alleen toegankelijk voor ingelogde gebruikers."
+        )
 
-        try:
+        # =====================
+        # Fondsbeheer
+        # =====================
 
-            fund_names = sorted(
-                df["fund"]
-                .dropna()
-                .unique()
-                .tolist()
-            )
+        st.divider()
 
-            toegevoegd = 0
+        st.subheader("Fondsbeheer")
 
-            for fund_name in fund_names:
+        st.info(
+            "Fondsen worden automatisch uit prices.csv "
+            "gesynchroniseerd."
+        )
 
-                bestaande = (
-                    supabase
-                    .table("funds")
-                    .select("id")
-                    .eq(
-                        "current_name",
-                        fund_name
-                    )
-                    .execute()
+        if st.button("🔄 Synchroniseer fondsen"):
+
+            try:
+
+                fund_names = sorted(
+                    df["fund"]
+                    .dropna()
+                    .unique()
+                    .tolist()
                 )
 
-                if not bestaande.data:
+                toegevoegd = 0
 
-                    fund_code = (
-                        fund_name
-                        .upper()
-                        .replace(" ", "_")
-                        .replace("-", "_")
-                    )
+                for fund_name in fund_names:
 
-                    (
+                    bestaande = (
                         supabase
                         .table("funds")
-                        .insert({
-                            "fund_code": fund_code,
-                            "current_name": fund_name,
-                            "is_active": True
-                        })
+                        .select("id")
+                        .eq(
+                            "current_name",
+                            fund_name
+                        )
                         .execute()
                     )
 
-                    toegevoegd += 1
+                    if not bestaande.data:
 
-            st.success(
-                f"{toegevoegd} nieuwe fondsen toegevoegd."
+                        fund_code = (
+                            fund_name
+                            .upper()
+                            .replace(" ", "_")
+                            .replace("-", "_")
+                        )
+
+                        (
+                            supabase
+                            .table("funds")
+                            .insert({
+                                "fund_code": fund_code,
+                                "current_name": fund_name,
+                                "is_active": True
+                            })
+                            .execute()
+                        )
+
+                        toegevoegd += 1
+
+                st.success(
+                    f"{toegevoegd} nieuwe fondsen toegevoegd."
+                )
+
+            except Exception as e:
+
+                st.error(e)
+
+        # =====================
+        # Fondsen tonen
+        # =====================
+
+        try:
+
+            funds = (
+                supabase
+                .table("funds")
+                .select("*")
+                .order("current_name")
+                .execute()
             )
+
+            st.subheader("Geregistreerde fondsen")
+
+            if funds.data:
+
+                st.dataframe(
+                    funds.data,
+                    use_container_width=True
+                )
+
+            else:
+
+                st.info(
+                    "Nog geen fondsen geregistreerd."
+                )
 
         except Exception as e:
 
             st.error(e)
 
-    # =====================
-    # Bestaande fondsen
-    # =====================
+        # =====================
+        # Aliasbeheer
+        # =====================
 
-    try:
+        st.divider()
 
-        funds = (
-            supabase
-            .table("funds")
-            .select("*")
-            .order("current_name")
-            .execute()
+        st.subheader("Aliasbeheer")
+
+        try:
+
+            funds = (
+                supabase
+                .table("funds")
+                .select("*")
+                .eq("is_active", True)
+                .order("current_name")
+                .execute()
+            )
+
+            fund_names = [
+                f["current_name"]
+                for f in funds.data
+            ]
+
+            alias_name = st.selectbox(
+                "Oude naam (alias)",
+                options=fund_names,
+                key="alias_fund"
+            )
+
+            canonical_name = st.selectbox(
+                "Huidige naam (hoofdfonds)",
+                options=fund_names,
+                key="canonical_fund"
+            )
+
+            if st.button("Alias koppelen"):
+
+                if alias_name == canonical_name:
+
+                    st.warning(
+                        "Alias en hoofdfonds mogen niet gelijk zijn."
+                    )
+
+                else:
+
+                    canonical_fund = next(
+                        f for f in funds.data
+                        if f["current_name"] == canonical_name
+                    )
+
+                    (
+                        supabase
+                        .table("fund_aliases")
+                        .insert({
+                            "fund_id": canonical_fund["id"],
+                            "fund_name": alias_name
+                        })
+                        .execute()
+                    )
+
+                    st.success(
+                        f"{alias_name} gekoppeld aan {canonical_name}"
+                    )
+
+        except Exception as e:
+
+            st.error(e)
+
+        # =====================
+        # Alias overzicht
+        # =====================
+
+        try:
+
+            aliases = (
+                supabase
+                .table("fund_aliases")
+                .select("*")
+                .execute()
+            )
+
+            st.subheader("Bestaande alias koppelingen")
+
+            if aliases.data:
+
+                st.dataframe(
+                    aliases.data,
+                    use_container_width=True
+                )
+
+            else:
+
+                st.info(
+                    "Nog geen alias koppelingen aanwezig."
+                )
+
+        except Exception as e:
+
+            st.error(e)
+
+    else:
+
+        st.warning(
+            "Log in via de sidebar om toegang te krijgen."
         )
-
-        st.subheader("Geregistreerde fondsen")
-
-        if funds.data:
-
-            st.dataframe(
-                funds.data,
-                use_container_width=True
-            )
-
-        else:
-
-            st.info(
-                "Nog geen fondsen geregistreerd."
-            )
-
-    except Exception as e:
-
-        st.error(e)
 # ==================
 # Mijn Portefeuille
 # ==================
