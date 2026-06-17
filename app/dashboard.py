@@ -622,18 +622,28 @@ with tab8:
 # ==================
 with tab9:
 
-    st.header("Mijn Portefeuille")
+    st.subheader("Nieuwe portefeuille")
 
-    try:
-        portfolios = (
-            supabase
-            .table("portfolios")
-            .select("*")
-            .execute()
-        )
+    portfolio_name = st.text_input(
+        "Naam portefeuille",
+        value="Pensioen"
+    )
 
-        st.success("Verbinding met database werkt")
-        st.write(portfolios.data)
+    if st.button("Opslaan"):
 
-    except Exception as e:
-        st.error(e)
+        try:
+
+            result = (
+                supabase
+                .table("portfolios")
+                .insert({
+                    "name": portfolio_name,
+                    "is_active": True
+                })
+                .execute()
+            )
+
+            st.success("Portefeuille opgeslagen")
+
+        except Exception as e:
+            st.error(e)
