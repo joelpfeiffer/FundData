@@ -624,56 +624,53 @@ with tab8:
 # ==================
 with tab9:
 
-st.header("Mijn Portefeuille")
-
-from supabase_client import supabase
-
-# Bestaande portfolio's tonen
-try:
-    portfolios = (
-        supabase
-        .table("portfolios")
-        .select("*")
-        .execute()
-    )
-
-    st.subheader("Bestaande portfolio's")
-
-    if portfolios.data:
-        st.dataframe(portfolios.data)
-    else:
-        st.info("Nog geen portfolio's gevonden.")
-
-except Exception as e:
-    st.error(f"Fout bij ophalen portfolio's: {e}")
-
-st.divider()
-
-st.subheader("Nieuwe portefeuille")
-
-portfolio_name = st.text_input(
-    "Naam portefeuille",
-    value="Pensioen Joël Pfeiffer"
-)
-
-if st.button("Opslaan Portfolio"):
+    st.header("Mijn Portefeuille")
 
     try:
 
-        result = (
+        portfolios = (
             supabase
             .table("portfolios")
-            .insert({
-                "user_id": "b13578bd-ec93-49a2-b24f-ac8dc1608d50",
-                "name": portfolio_name,
-                "is_active": True
-            })
+            .select("*")
             .execute()
         )
 
-        st.success("Portfolio opgeslagen")
-        st.write(result.data)
+        st.subheader("Bestaande portfolio's")
+
+        if portfolios.data:
+            st.write(portfolios.data)
+        else:
+            st.info("Nog geen portfolio's gevonden.")
 
     except Exception as e:
-        st.error(f"Fout bij opslaan: {e}")
-```
+        st.error(f"Fout bij ophalen portfolio's: {e}")
+
+    st.divider()
+
+    st.subheader("Nieuwe portefeuille")
+
+    portfolio_name = st.text_input(
+        "Naam portefeuille",
+        value="Pensioen Joël Pfeiffer"
+    )
+
+    if st.button("Opslaan Portfolio"):
+
+        try:
+
+            result = (
+                supabase
+                .table("portfolios")
+                .insert({
+                    "user_id": "b13578bd-ec93-49a2-b24f-ac8dc1608d50",
+                    "name": portfolio_name,
+                    "is_active": True
+                })
+                .execute()
+            )
+
+            st.success("Portfolio opgeslagen")
+            st.write(result.data)
+
+        except Exception as e:
+            st.error(f"Fout bij opslaan: {e}")
