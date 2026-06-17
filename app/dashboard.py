@@ -1015,7 +1015,7 @@ with tab9:
     # Portfolio geopend
     # -------------------------
 
-      if st.session_state.portfolio_id:
+    if st.session_state.portfolio_id:
 
         st.divider()
 
@@ -1054,8 +1054,6 @@ with tab9:
                 .order("current_name")
                 .execute()
             )
-
-            # huidige fondsen tonen
 
             current_funds = [
                 f for f in funds.data
@@ -1122,6 +1120,7 @@ with tab9:
         except Exception as e:
 
             st.error(e)
+
         # =====================
         # Jaarstart
         # =====================
