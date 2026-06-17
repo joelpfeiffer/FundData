@@ -599,65 +599,90 @@ with tab7:
 # =====================
 with tab8:
 
-    if st.session_state.get("authentication_status"):
-
-        authenticator.logout("Uitloggen", "sidebar")
-
-        st.success(
-            f"Welkom {st.session_state['name']}"
-        )
-
-        st.subheader("Admin")
-
-        st.write(
-            "Dit gedeelte is alleen toegankelijk voor ingelogde gebruikers."
-        )
-
-    else:
-
-        st.warning(
-            "Log in via de sidebar om toegang te krijgen."
-        )
-
+# =====================
+# Fondsbeheer
+# =====================
 
 st.divider()
 
 st.subheader("Fondsbeheer")
 
-fund_name = st.text_input(
-    "Nieuwe fondsnaam"
+st.info(
+    "Fondsen worden automatisch uit prices.csv "
+    "gesynchroniseerd."
 )
 
-if st.button("Fonds opslaan"):
+if st.button("🔄 Synchroniseer fondsen"):
 
     try:
 
-        (
-            supabase
-            .table("funds")
-            .insert({
-                "name": fund_name,
-                "is_active": True
-            })
-            .execute()
+        fund_names = sorted(
+            df["fund"]
+            .dropna()
+            .unique()
+            .tolist()
         )
 
-        st.success("Fonds opgeslagen")
+        toegevoegd = 0
+
+        for fund_name in fund_names:
+
+            bestaande = (
+                supabase
+                .table("funds")
+                .select("id")
+                .eq(
+                    "current_name",
+                    fund_name
+                )
+                .execute()
+            )
+
+            if not bestaande.data:
+
+                fund_code = (
+                    fund_name
+                    .upper()
+                    .replace(" ", "_")
+                    .replace("-", "_")
+                )
+
+                (
+                    supabase
+                    .table("funds")
+                    .insert({
+                        "fund_code": fund_code,
+                        "current_name": fund_name,
+                        "is_active": True
+                    })
+                    .execute()
+                )
+
+                toegevoegd += 1
+
+        st.success(
+            f"{toegevoegd} nieuwe fondsen toegevoegd."
+        )
 
     except Exception as e:
 
         st.error(e)
+
+# =====================
+# Bestaande fondsen
+# =====================
+
 try:
 
     funds = (
         supabase
         .table("funds")
         .select("*")
-        .order("name")
+        .order("current_name")
         .execute()
     )
 
-    st.subheader("Bestaande fondsen")
+    st.subheader("Geregistreerde fondsen")
 
     if funds.data:
 
@@ -668,13 +693,13 @@ try:
 
     else:
 
-        st.info("Nog geen fondsen gevonden.")
+        st.info(
+            "Nog geen fondsen geregistreerd."
+        )
 
 except Exception as e:
 
     st.error(e)
-
-
 # ==================
 # Mijn Portefeuille
 # ==================
