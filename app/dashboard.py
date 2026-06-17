@@ -1285,7 +1285,7 @@ with tab9:
                     min_value=0.0,
                     value=0.0,
                     step=0.000001,
-                    format="%.4f",
+                    format="%.6f",
                     key=f"snapshot_fund_{fund['id']}"
                 )
 
