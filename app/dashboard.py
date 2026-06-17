@@ -1,4 +1,4 @@
-import streamlit as st
+    import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -1343,6 +1343,10 @@ with tab9:
                 "Nieuwe snapshot."
             )
 
+        snapshot_version_note = st.text_input(
+            "Versienotitie",
+            placeholder="Bijv. correctie bonus pensioenfonds"
+        )
         if st.button("Opslaan Maandsnapshot"):
 
             try:
