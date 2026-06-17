@@ -1244,10 +1244,6 @@ with tab9:
 
         st.subheader("Fondsposities")
 
-                st.divider()
-
-        st.subheader("Fondsposities")
-
         try:
 
             portfolio_funds = (
