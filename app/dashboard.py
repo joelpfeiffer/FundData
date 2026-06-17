@@ -225,7 +225,7 @@ sortino = (returns.mean()*TRADING_DAYS) / downside_std.replace(0,np.nan)
 # =========================
 # TABS
 # =========================
-tab1,tab2,tab3,tab4,tab5,tab6,tab7,tab8 = st.tabs([
+tab1,tab2,tab3,tab4,tab5,tab6,tab7,tab8,tab9 = st.tabs([
     "Overview",
     "Performance",
     "Risk",
@@ -234,6 +234,7 @@ tab1,tab2,tab3,tab4,tab5,tab6,tab7,tab8 = st.tabs([
     "Rebalance",
     "Raw Data",
     "Admin"
+    "Mijn Portefeuille"
 ])
 
 # =========================
@@ -631,3 +632,7 @@ with tab8:
         st.warning(
             "Log in via de sidebar om toegang te krijgen."
         )
+
+# ==================
+# Mijn Portefeuille
+# ==================
