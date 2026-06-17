@@ -1289,20 +1289,20 @@ with tab9:
                         key=f"snapshot_fund_{fund['id']}"
                     )
 
-                        fund_units[fund["id"]] = st.number_input(
-                            fund["current_name"],
-                            min_value=0.0,
-                            value=0.0,
-                            step=0.0001,
-                            format="%.4f",
-                            key=f"fund_{fund['id']}"
-                        )
+                     fund_units[fund["id"]] = st.number_input(
+                        fund["current_name"],
+                        min_value=0.0,
+                        value=0.0,
+                        step=0.0001,
+                        format="%.4f",
+                        key=f"fund_{fund['id']}"
+                    )
 
-                except Exception as e:
+            except Exception as e:
 
-                    st.error(e)
+                st.error(e)
         
-                if st.button("Opslaan Maandsnapshot"):
+            if st.button("Opslaan Maandsnapshot"):
     
                     try:
 
