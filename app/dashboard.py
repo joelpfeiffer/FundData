@@ -648,28 +648,33 @@ with tab9:
     for p in portfolios.data:
         portfolio_options[p["name"]] = p["id"]
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns([5, 1, 1])
 
-    with col1:
+with col1:
 
-        selected_portfolio = st.selectbox(
-            "Bestaande portefeuille",
-            options=list(portfolio_options.keys())
-        )
+    selected_portfolio = st.selectbox(
+        "Bestaande portefeuille",
+        options=list(portfolio_options.keys())
+    )
 
-        if st.button("Open Portfolio"):
+with col2:
 
-            st.session_state.portfolio_id = portfolio_options[selected_portfolio]
-            st.session_state.portfolio_name = selected_portfolio
+    st.write("")
+    st.write("")
 
-            st.rerun()
+    if st.button("📂 Open"):
+        st.session_state.portfolio_id = portfolio_options[selected_portfolio]
+        st.session_state.portfolio_name = selected_portfolio
+        st.rerun()
 
-    with col2:
+with col3:
 
-        if st.button("Nieuwe Portfolio"):
+    st.write("")
+    st.write("")
 
-            st.session_state.new_portfolio = True
-
+    if st.button("➕ Nieuw"):
+        st.session_state.new_portfolio = True
+        
     # Nieuwe portfolio aanmaken
     if st.session_state.new_portfolio:
 
