@@ -826,6 +826,55 @@ with tab8:
         st.warning(
             "Log in via de sidebar om toegang te krijgen."
         )
+
+
+# =====================
+# Controle
+# =====================
+
+st.divider()
+
+st.subheader("Controle")
+
+try:
+
+    fund_count = (
+        supabase
+        .table("funds")
+        .select(
+            "id",
+            count="exact"
+        )
+        .execute()
+    )
+
+    alias_count = (
+        supabase
+        .table("fund_aliases")
+        .select(
+            "id",
+            count="exact"
+        )
+        .execute()
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric(
+            "Aantal fondsen",
+            fund_count.count
+        )
+
+    with col2:
+        st.metric(
+            "Aantal aliases",
+            alias_count.count
+        )
+
+except Exception as e:
+
+    st.error(e)
 # ==================
 # Mijn Portefeuille
 # ==================
