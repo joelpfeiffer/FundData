@@ -7,7 +7,9 @@ import streamlit_authenticator as stauth
 
 st.set_page_config(layout="wide")
 
+import streamlit as st
 from supabase_client import supabase
+
 
 config = {
     "credentials": {
@@ -622,14 +624,40 @@ with tab8:
 # ==================
 with tab9:
 
-    st.subheader("Nieuwe portefeuille")
+```
+st.header("Mijn Portefeuille")
 
-    portfolio_name = st.text_input(
-        "Naam portefeuille",
-        value="Pensioen"
+from supabase_client import supabase
+
+# Bestaande portfolio's tonen
+try:
+    portfolios = (
+        supabase
+        .table("portfolios")
+        .select("*")
+        .execute()
     )
 
-    if st.button("Opslaan"):
+    st.subheader("Bestaande portfolio's")
+
+    if portfolios.data:
+        st.dataframe(portfolios.data)
+    else:
+        st.info("Nog geen portfolio's gevonden.")
+
+except Exception as e:
+    st.error(f"Fout bij ophalen portfolio's: {e}")
+
+st.divider()
+
+st.subheader("Nieuwe portefeuille")
+
+portfolio_name = st.text_input(
+    "Naam portefeuille",
+    value="Pensioen Joël Pfeiffer"
+)
+
+if st.button("Opslaan Portfolio"):
 
     try:
 
@@ -644,13 +672,9 @@ with tab9:
             .execute()
         )
 
-    st.success("Portefeuille opgeslagen")
-    st.write(result.data)
+        st.success("Portfolio opgeslagen")
+        st.write(result.data)
 
-except Exception as e:
-    st.error(e)
-
-            st.success("Portefeuille opgeslagen")
-
-        except Exception as e:
-            st.error(e)
+    except Exception as e:
+        st.error(f"Fout bij opslaan: {e}")
+```
