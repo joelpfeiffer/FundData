@@ -619,6 +619,62 @@ with tab8:
             "Log in via de sidebar om toegang te krijgen."
         )
 
+
+st.divider()
+
+st.subheader("Fondsbeheer")
+
+fund_name = st.text_input(
+    "Nieuwe fondsnaam"
+)
+
+if st.button("Fonds opslaan"):
+
+    try:
+
+        (
+            supabase
+            .table("funds")
+            .insert({
+                "name": fund_name,
+                "is_active": True
+            })
+            .execute()
+        )
+
+        st.success("Fonds opgeslagen")
+
+    except Exception as e:
+
+        st.error(e)
+try:
+
+    funds = (
+        supabase
+        .table("funds")
+        .select("*")
+        .order("name")
+        .execute()
+    )
+
+    st.subheader("Bestaande fondsen")
+
+    if funds.data:
+
+        st.dataframe(
+            funds.data,
+            use_container_width=True
+        )
+
+    else:
+
+        st.info("Nog geen fondsen gevonden.")
+
+except Exception as e:
+
+    st.error(e)
+
+
 # ==================
 # Mijn Portefeuille
 # ==================
