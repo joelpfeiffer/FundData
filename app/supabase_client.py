@@ -3,5 +3,5 @@ import streamlit as st
 
 supabase = create_client(
     st.secrets["supabase"]["url"],
-    st.secrets["subabase"]["key"]
+    st.secrets["supabase"]["key"]
 )
