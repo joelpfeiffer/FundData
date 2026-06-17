@@ -1373,14 +1373,37 @@ with tab9:
 
                 if existing_snapshot.data:
 
-                    snapshot_id = (
-                        existing_snapshot.data[0]["id"]
+                    current_snapshot = (
+                        existing_snapshot.data[0]
                     )
 
                     (
                         supabase
                         .table("monthly_snapshots")
                         .update({
+                            "is_active": False
+                        })
+                        .eq(
+                            "id",
+                            current_snapshot["id"]
+                        )
+                        .execute()
+                    )
+
+                    new_version = (
+                        current_snapshot["version"] + 1
+                    )
+
+                    (
+                        supabase
+                        .table("monthly_snapshots")
+                        .insert({
+                            "portfolio_id":
+                                st.session_state.portfolio_id,
+
+                            "snapshot_date":
+                                snapshot_date,
+
                             "employer_contribution":
                                 float(employer_contribution),
 
@@ -1391,14 +1414,28 @@ with tab9:
                                 float(bonus_total),
 
                             "costs_total":
-                                float(costs_total)
+                                float(costs_total),
+
+                            "version":
+                                new_version,
+
+                            "is_active":
+                                True,
+
+                            "snapshot_version_note":
+                                snapshot_version_note,
+        
+                            "created_by":
+                                st.session_state.get(
+                                    "username",
+                                    "system"
+                                )
                         })
-                        .eq("id", snapshot_id)
                         .execute()
                     )
 
                     st.success(
-                        "Maandsnapshot bijgewerkt"
+                        f"Nieuwe versie {new_version} opgeslagen"
                     )
 
                 else:
