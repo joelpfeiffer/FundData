@@ -1143,6 +1143,55 @@ with tab9:
             step=1.0
         )
 
+        st.divider()
+
+        st.subheader("Fondsposities")
+
+        try:
+
+            funds = (
+                supabase
+                .table("funds")
+                .select("*")
+                .eq("is_active", True)
+                .order("current_name")
+                .execute()
+            )
+
+            aliases = (
+                supabase
+                .table("fund_aliases")
+                .select("fund_name")
+                .execute()
+            )
+
+            alias_names = {
+                a["fund_name"]
+                for a in aliases.data
+            }
+
+            main_funds = [
+                f for f in funds.data
+                if f["current_name"] not in alias_names
+            ]
+
+            fund_units = {}
+
+            for fund in main_funds:
+
+                fund_units[fund["id"]] = st.number_input(
+                    fund["current_name"],
+                    min_value=0.0,
+                    value=0.0,
+                    step=0.0001,
+                    format="%.4f",
+                    key=f"fund_{fund['id']}"
+                )
+
+        except Exception as e:
+
+            st.error(e)
+        
         if st.button("Opslaan Maandsnapshot"):
 
             try:
