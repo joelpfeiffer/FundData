@@ -817,3 +817,165 @@ with tab9:
             except Exception as e:
 
                 st.error(e)
+
+
+        # =====================
+        # Maandsnapshot
+        # =====================
+
+        st.divider()
+
+        st.subheader("Maandsnapshot")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+
+            snapshot_year = st.number_input(
+                "Jaar",
+                min_value=2020,
+                max_value=2100,
+                value=2026,
+                key="snapshot_year"
+            )
+
+        with col2:
+
+            snapshot_month = st.selectbox(
+                "Maand",
+                [
+                    "Januari",
+                    "Februari",
+                    "Maart",
+                    "April",
+                    "Mei",
+                    "Juni",
+                    "Juli",
+                    "Augustus",
+                    "September",
+                    "Oktober",
+                    "November",
+                    "December"
+                ]
+            )
+
+        employer_contribution = st.number_input(
+            "Werkgeverspremie (€)",
+            min_value=0.0,
+            value=0.0,
+            step=10.0
+        )
+
+        personal_contribution = st.number_input(
+            "Eigen inleg (€)",
+            min_value=0.0,
+            value=0.0,
+            step=10.0
+        )
+
+        bonus_total = st.number_input(
+            "Bonus totaal YTD (€)",
+            min_value=0.0,
+            value=0.0,
+            step=1.0
+        )
+
+        costs_total = st.number_input(
+            "Kosten totaal YTD (€)",
+            min_value=0.0,
+            value=0.0,
+            step=1.0
+        )
+
+        if st.button("Opslaan Maandsnapshot"):
+
+            try:
+
+                month_map = {
+                    "Januari": 1,
+                    "Februari": 2,
+                    "Maart": 3,
+                    "April": 4,
+                    "Mei": 5,
+                    "Juni": 6,
+                    "Juli": 7,
+                    "Augustus": 8,
+                    "September": 9,
+                    "Oktober": 10,
+                    "November": 11,
+                    "December": 12
+                }
+
+                snapshot_date = (
+                    f"{snapshot_year}-"
+                    f"{month_map[snapshot_month]:02d}-01"
+                )
+
+                (
+                    supabase
+                    .table("monthly_snapshots")
+                    .insert({
+                        "portfolio_id":
+                            st.session_state.portfolio_id,
+
+                        "snapshot_date":
+                            snapshot_date,
+
+                        "employer_contribution":
+                            float(employer_contribution),
+    
+                        "personal_contribution":
+                            float(personal_contribution),
+
+                        "bonus_total":
+                            float(bonus_total),
+
+                        "costs_total":
+                            float(costs_total),
+
+                        "version":
+                            1,
+
+                        "is_active":
+                            True
+                    })
+                    .execute()
+                )
+
+                st.success("Maandsnapshot opgeslagen")
+
+            except Exception as e:
+
+                st.error(e)
+
+        try:
+
+            snapshots = (
+                supabase
+                .table("monthly_snapshots")
+                .select("*")
+                .eq(
+                    "portfolio_id",
+                    st.session_state.portfolio_id
+                )
+                .eq(
+                    "is_active",
+                    True
+                )
+                .order(
+                    "snapshot_date"
+                )
+                .execute()
+            )
+
+            st.subheader("Historische snapshots")
+
+            if snapshots.data:
+                st.dataframe(
+                    snapshots.data,
+                    use_container_width=True
+                )
+
+        except Exception as e:
+
+            st.error(e)
