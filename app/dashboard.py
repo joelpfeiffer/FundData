@@ -622,10 +622,12 @@ with tab8:
 # ==================
 # Mijn Portefeuille
 # ==================
+
 with tab9:
 
     st.header("Mijn Portefeuille")
 
+    # Session state
     if "portfolio_id" not in st.session_state:
         st.session_state.portfolio_id = None
 
@@ -635,48 +637,90 @@ with tab9:
     if "new_portfolio" not in st.session_state:
         st.session_state.new_portfolio = False
 
+    # -------------------------
     # Portfolio's ophalen
-    portfolios = (
-        supabase
-        .table("portfolios")
-        .select("*")
-        .execute()
-    )
+    # -------------------------
 
-    portfolio_options = {}
+    try:
 
-    for p in portfolios.data:
-        portfolio_options[p["name"]] = p["id"]
+        portfolios = (
+            supabase
+            .table("portfolios")
+            .select("*")
+            .execute()
+        )
 
-    col1, col2, col3 = st.columns([5, 1, 1])
+        portfolio_options = {
+            p["name"]: p["id"]
+            for p in portfolios.data
+        }
 
-with col1:
+    except Exception as e:
 
-    selected_portfolio = st.selectbox(
-        "Bestaande portefeuille",
-        options=list(portfolio_options.keys())
-    )
+        st.error(f"Fout bij ophalen portfolio's: {e}")
 
-with col2:
+        portfolio_options = {}
 
-    st.write("")
-    st.write("")
+    # -------------------------
+    # Portfolio kiezen
+    # -------------------------
 
-    if st.button("📂 Open"):
-        st.session_state.portfolio_id = portfolio_options[selected_portfolio]
-        st.session_state.portfolio_name = selected_portfolio
-        st.rerun()
+    col1, col2, col3 = st.columns([6, 1, 1])
 
-with col3:
+    with col1:
 
-    st.write("")
-    st.write("")
+        if portfolio_options:
 
-    if st.button("➕ Nieuw"):
-        st.session_state.new_portfolio = True
-        
-    # Nieuwe portfolio aanmaken
+            selected_portfolio = st.selectbox(
+                "Bestaande portefeuille",
+                options=list(portfolio_options.keys())
+            )
+
+        else:
+
+            selected_portfolio = None
+
+            st.info("Nog geen portfolio's aanwezig")
+
+    with col2:
+
+        st.write("")
+        st.write("")
+
+        if (
+            selected_portfolio
+            and st.button("📂 Open", use_container_width=True)
+        ):
+
+            st.session_state.portfolio_id = (
+                portfolio_options[selected_portfolio]
+            )
+
+            st.session_state.portfolio_name = (
+                selected_portfolio
+            )
+
+            st.rerun()
+
+    with col3:
+
+        st.write("")
+        st.write("")
+
+        if st.button(
+            "➕ Nieuw",
+            use_container_width=True
+        ):
+
+            st.session_state.new_portfolio = True
+
+    # -------------------------
+    # Nieuwe portfolio
+    # -------------------------
+
     if st.session_state.new_portfolio:
+
+        st.divider()
 
         st.subheader("Nieuwe portefeuille")
 
@@ -688,7 +732,7 @@ with col3:
 
             try:
 
-                result = (
+                (
                     supabase
                     .table("portfolios")
                     .insert({
@@ -699,23 +743,34 @@ with col3:
                     .execute()
                 )
 
-                st.success("Portfolio opgeslagen")
+                st.success(
+                    "Portfolio opgeslagen"
+                )
 
                 st.session_state.new_portfolio = False
 
                 st.rerun()
 
             except Exception as e:
+
                 st.error(e)
 
+    # -------------------------
     # Portfolio geopend
+    # -------------------------
+
     if st.session_state.portfolio_id:
 
         st.divider()
 
         st.success(
-            f"Geopende portefeuille: {st.session_state.portfolio_name}"
+            f"Geopende portefeuille: "
+            f"{st.session_state.portfolio_name}"
         )
+
+        # =====================
+        # Jaarstart
+        # =====================
 
         st.subheader("Jaarstart")
 
@@ -741,16 +796,24 @@ with col3:
                     supabase
                     .table("year_baselines")
                     .insert({
-                        "portfolio_id": st.session_state.portfolio_id,
-                        "year": int(jaar),
-                        "start_value": float(startwaarde),
-                        "version": 1,
-                        "is_active": True
+                        "portfolio_id":
+                            st.session_state.portfolio_id,
+                        "year":
+                            int(jaar),
+                        "start_value":
+                            float(startwaarde),
+                        "version":
+                            1,
+                        "is_active":
+                            True
                     })
                     .execute()
                 )
 
-                st.success("Jaarstart opgeslagen")
+                st.success(
+                    "Jaarstart opgeslagen"
+                )
 
             except Exception as e:
+
                 st.error(e)
