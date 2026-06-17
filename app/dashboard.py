@@ -79,6 +79,20 @@ if not pivot_full.empty:
 # =========================
 st.sidebar.title("Instellingen")
 
+import streamlit as st
+from app.supabase_client import supabase
+
+st.write("Supabase test")
+
+try:
+    result = supabase.table("profiles").select("*").execute()
+
+    st.success("Supabase verbinding werkt")
+    st.write(result.data)
+
+except Exception as e:
+    st.error(str(e))
+
 
 funds = list(pivot_full.columns)
 
