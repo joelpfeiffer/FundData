@@ -1246,35 +1246,48 @@ with tab9:
 
         try:
 
-            funds = (
-                supabase
-                .table("funds")
-                .select("*")
-                .eq("is_active", True)
-                .order("current_name")
-                .execute()
+        portfolio_funds = (
+            supabase
+            .table("portfolio_funds")
+            .select("fund_id")
+            .eq(
+                "portfolio_id",
+                st.session_state.portfolio_id
             )
+            .execute()
+        )
 
-            aliases = (
-                supabase
-                .table("fund_aliases")
-                .select("fund_name")
-                .execute()
+        linked_fund_ids = {
+            x["fund_id"]
+            for x in portfolio_funds.data
+        }
+
+        funds = (
+            supabase
+            .table("funds")
+            .select("*")
+            .eq("is_active", True)
+            .order("current_name")
+            .execute()
+        )
+
+        active_funds = [
+            f for f in funds.data
+            if f["id"] in linked_fund_ids
+        ]
+
+        fund_units = {}
+
+        for fund in active_funds:
+
+            fund_units[fund["id"]] = st.number_input(
+                fund["current_name"],
+                min_value=0.0,
+                value=0.0,
+                step=0.0001,
+                format="%.4f",
+                key=f"snapshot_fund_{fund['id']}"
             )
-
-            alias_names = {
-                a["fund_name"]
-                for a in aliases.data
-            }
-
-            main_funds = [
-                f for f in funds.data
-                if f["current_name"] not in alias_names
-            ]
-
-            fund_units = {}
-
-            for fund in main_funds:
 
                 fund_units[fund["id"]] = st.number_input(
                     fund["current_name"],
