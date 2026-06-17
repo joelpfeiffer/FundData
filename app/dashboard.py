@@ -1484,7 +1484,12 @@ with tab9:
                 st.error(e)
         try:
 
-            snapshots = (
+            show_all_versions = st.checkbox(
+                "Toon alle versies",
+                value=False
+            )
+
+            snapshots_query = (
                 supabase
                 .table("monthly_snapshots")
                 .select("*")
@@ -1492,10 +1497,20 @@ with tab9:
                     "portfolio_id",
                     st.session_state.portfolio_id
                 )
-                .eq(
+            )
+
+            if not show_all_versions:
+
+                snapshots_query = (
+                    snapshots_query
+                    .eq(
                     "is_active",
-                    True
+                        True
+                    )
                 )
+
+            snapshots = (
+                snapshots_query
                 .order(
                     "snapshot_date"
                 )
