@@ -156,7 +156,6 @@ if not selected:
     st.warning("Selecteer minimaal 1 fonds")
     st.stop()
 
-
 authenticator.login(location="sidebar")
 # =========================
 # FILTER DATA
