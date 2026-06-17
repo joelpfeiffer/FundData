@@ -1015,7 +1015,7 @@ with tab9:
     # Portfolio geopend
     # -------------------------
 
-    if st.session_state.portfolio_id:
+      if st.session_state.portfolio_id:
 
         st.divider()
 
@@ -1024,6 +1024,104 @@ with tab9:
             f"{st.session_state.portfolio_name}"
         )
 
+        st.divider()
+
+st.subheader("Fondsen in portefeuille")
+
+try:
+
+    portfolio_funds = (
+        supabase
+        .table("portfolio_funds")
+        .select("fund_id")
+        .eq(
+            "portfolio_id",
+            st.session_state.portfolio_id
+        )
+        .execute()
+    )
+
+    linked_fund_ids = {
+        x["fund_id"]
+        for x in portfolio_funds.data
+    }
+
+    funds = (
+        supabase
+        .table("funds")
+        .select("*")
+        .eq("is_active", True)
+        .order("current_name")
+        .execute()
+    )
+
+    # huidige fondsen tonen
+
+    current_funds = [
+        f for f in funds.data
+        if f["id"] in linked_fund_ids
+    ]
+
+    if current_funds:
+
+        for fund in current_funds:
+
+            st.write(
+                f"✓ {fund['current_name']}"
+            )
+
+    else:
+
+        st.info(
+            "Nog geen fondsen gekoppeld."
+        )
+
+    st.divider()
+
+    available_funds = [
+        f for f in funds.data
+        if f["id"] not in linked_fund_ids
+    ]
+
+    if available_funds:
+
+        fund_lookup = {
+            f["current_name"]: f["id"]
+            for f in available_funds
+        }
+
+        selected_fund = st.selectbox(
+            "Nieuw fonds toevoegen",
+            options=list(
+                fund_lookup.keys()
+            )
+        )
+
+        if st.button(
+            "Fonds toevoegen"
+        ):
+
+            (
+                supabase
+                .table("portfolio_funds")
+                .insert({
+                    "portfolio_id":
+                        st.session_state.portfolio_id,
+                    "fund_id":
+                        fund_lookup[selected_fund]
+                })
+                .execute()
+            )
+
+            st.success(
+                f"{selected_fund} toegevoegd"
+            )
+
+            st.rerun()
+
+except Exception as e:
+
+    st.error(e)
         # =====================
         # Jaarstart
         # =====================
