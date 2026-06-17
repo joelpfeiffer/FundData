@@ -1292,6 +1292,58 @@ with tab9:
 
             st.error(e)
 
+        month_map = {
+            "Januari": 1,
+            "Februari": 2,
+            "Maart": 3,
+            "April": 4,
+            "Mei": 5,
+            "Juni": 6,
+            "Juli": 7,
+            "Augustus": 8,
+            "September": 9,
+            "Oktober": 10,
+            "November": 11,
+            "December": 12
+        }
+
+        snapshot_date = (
+            f"{snapshot_year}-"
+            f"{month_map[snapshot_month]:02d}-01"
+        )
+
+        existing_snapshot = (
+            supabase
+            .table("monthly_snapshots")
+            .select("*")
+            .eq(
+                "portfolio_id",
+                st.session_state.portfolio_id
+            )
+            .eq(
+                "snapshot_date",
+                snapshot_date
+            )
+            .eq(
+                "is_active",
+                True
+            )
+            .execute()
+        )
+
+        if existing_snapshot.data:
+
+            st.info(
+                "Snapshot bestaat al en kan later "
+                "worden bijgewerkt."
+            )
+
+        else:
+
+            st.success(
+                "Nieuwe snapshot."
+            )
+
         if st.button("Opslaan Maandsnapshot"):
 
             try:
