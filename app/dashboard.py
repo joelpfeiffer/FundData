@@ -7,6 +7,8 @@ import streamlit_authenticator as stauth
 
 st.set_page_config(layout="wide")
 
+from supabase_client import supabase
+
 config = {
     "credentials": {
         "usernames": {
@@ -51,6 +53,8 @@ if df.empty:
 
 pivot_full = df.pivot(index="date", columns="fund", values="price")
 pivot_full = pivot_full.sort_index()
+
+
 
 # =========================
 # MERGE FONDSNAAMWIJZIGINGEN
