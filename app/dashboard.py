@@ -1246,122 +1246,122 @@ with tab9:
 
         try:
 
-        portfolio_funds = (
-            supabase
-            .table("portfolio_funds")
-            .select("fund_id")
-            .eq(
-                "portfolio_id",
-                st.session_state.portfolio_id
-            )
-            .execute()
-        )
-
-        linked_fund_ids = {
-            x["fund_id"]
-            for x in portfolio_funds.data
-        }
-
-        funds = (
-            supabase
-            .table("funds")
-            .select("*")
-            .eq("is_active", True)
-            .order("current_name")
-            .execute()
-        )
-
-        active_funds = [
-            f for f in funds.data
-            if f["id"] in linked_fund_ids
-        ]
-
-        fund_units = {}
-
-        for fund in active_funds:
-
-            fund_units[fund["id"]] = st.number_input(
-                fund["current_name"],
-                min_value=0.0,
-                value=0.0,
-                step=0.0001,
-                format="%.4f",
-                key=f"snapshot_fund_{fund['id']}"
-            )
-
-                fund_units[fund["id"]] = st.number_input(
-                    fund["current_name"],
-                    min_value=0.0,
-                    value=0.0,
-                    step=0.0001,
-                    format="%.4f",
-                    key=f"fund_{fund['id']}"
-                )
-
-        except Exception as e:
-
-            st.error(e)
-        
-        if st.button("Opslaan Maandsnapshot"):
-
-            try:
-
-                month_map = {
-                    "Januari": 1,
-                    "Februari": 2,
-                    "Maart": 3,
-                    "April": 4,
-                    "Mei": 5,
-                    "Juni": 6,
-                    "Juli": 7,
-                    "Augustus": 8,
-                    "September": 9,
-                    "Oktober": 10,
-                    "November": 11,
-                    "December": 12
-                }
-
-                snapshot_date = (
-                    f"{snapshot_year}-"
-                    f"{month_map[snapshot_month]:02d}-01"
-                )
-
-                (
+                portfolio_funds = (
                     supabase
-                    .table("monthly_snapshots")
-                    .insert({
-                        "portfolio_id":
-                            st.session_state.portfolio_id,
-
-                        "snapshot_date":
-                            snapshot_date,
-
-                        "employer_contribution":
-                            float(employer_contribution),
-    
-                        "personal_contribution":
-                            float(personal_contribution),
-
-                        "bonus_total":
-                            float(bonus_total),
-
-                        "costs_total":
-                            float(costs_total),
-
-                        "version":
-                            1,
-
-                        "is_active":
-                            True
-                    })
+                    .table("portfolio_funds")
+                    .select("fund_id")
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
                     .execute()
                 )
 
-                st.success("Maandsnapshot opgeslagen")
+                linked_fund_ids = {
+                    x["fund_id"]
+                    for x in portfolio_funds.data
+                }
 
-            except Exception as e:
+                funds = (
+                    supabase
+                    .table("funds")
+                    .select("*")
+                    .eq("is_active", True)
+                    .order("current_name")
+                    .execute()
+                )
 
-                st.error(e)
+                active_funds = [
+                    f for f in funds.data
+                    if f["id"] in linked_fund_ids
+                ]
+
+                fund_units = {}
+
+                for fund in active_funds:
+
+                    fund_units[fund["id"]] = st.number_input(
+                        fund["current_name"],
+                        min_value=0.0,
+                        value=0.0,
+                        step=0.0001,
+                        format="%.4f",
+                        key=f"snapshot_fund_{fund['id']}"
+                    )
+
+                        fund_units[fund["id"]] = st.number_input(
+                            fund["current_name"],
+                            min_value=0.0,
+                            value=0.0,
+                            step=0.0001,
+                            format="%.4f",
+                            key=f"fund_{fund['id']}"
+                        )
+
+                except Exception as e:
+
+                    st.error(e)
+        
+                if st.button("Opslaan Maandsnapshot"):
+    
+                    try:
+
+                        month_map = {
+                            "Januari": 1,
+                            "Februari": 2,
+                            "Maart": 3,
+                             "April": 4,
+                            "Mei": 5,
+                            "Juni": 6,
+                            "Juli": 7,
+                            "Augustus": 8,
+                            "September": 9,
+                            "Oktober": 10,
+                            "November": 11,
+                            "December": 12
+                        }
+
+                          snapshot_date = (
+                            f"{snapshot_year}-"
+                            f"{month_map[snapshot_month]:02d}-01"
+                        )
+
+                        (
+                            supabase
+                            .table("monthly_snapshots")
+                            .insert({
+                                "portfolio_id":
+                                    st.session_state.portfolio_id,
+
+                                "snapshot_date":
+                                    snapshot_date,
+
+                                "employer_contribution":
+                                    float(employer_contribution),
+    
+                                "personal_contribution":
+                                    float(personal_contribution),
+
+                                "bonus_total":
+                                    float(bonus_total),
+
+                                "costs_total":
+                                    float(costs_total),
+
+                                "version":
+                                    1,
+
+                                "is_active":
+                                    True
+                            })
+                            .execute()
+                        )
+
+                        st.success("Maandsnapshot opgeslagen")
+
+                    except Exception as e:
+
+                        st.error(e)
 
         try:
 
