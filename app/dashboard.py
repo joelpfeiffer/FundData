@@ -80,7 +80,7 @@ if not pivot_full.empty:
 st.sidebar.title("Instellingen")
 
 import streamlit as st
-from app.supabase_client import supabase
+from supabase_client import supabase
 
 st.write("Supabase test")
 
