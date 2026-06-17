@@ -594,112 +594,113 @@ with tab7:
             mime="text/csv"
         )
 
-# =====================
+
+# ==================
 # Admin
-# =====================
+# ==================
 with tab8:
 
-# =====================
-# Fondsbeheer
-# =====================
+    # =====================
+    # Fondsbeheer
+    # =====================
 
-st.divider()
+    st.divider()
 
-st.subheader("Fondsbeheer")
+    st.subheader("Fondsbeheer")
 
-st.info(
-    "Fondsen worden automatisch uit prices.csv "
-    "gesynchroniseerd."
-)
+    st.info(
+        "Fondsen worden automatisch uit prices.csv "
+        "gesynchroniseerd."
+    )
 
-if st.button("🔄 Synchroniseer fondsen"):
+    if st.button("🔄 Synchroniseer fondsen"):
 
-    try:
+        try:
 
-        fund_names = sorted(
-            df["fund"]
-            .dropna()
-            .unique()
-            .tolist()
-        )
-
-        toegevoegd = 0
-
-        for fund_name in fund_names:
-
-            bestaande = (
-                supabase
-                .table("funds")
-                .select("id")
-                .eq(
-                    "current_name",
-                    fund_name
-                )
-                .execute()
+            fund_names = sorted(
+                df["fund"]
+                .dropna()
+                .unique()
+                .tolist()
             )
 
-            if not bestaande.data:
+            toegevoegd = 0
 
-                fund_code = (
-                    fund_name
-                    .upper()
-                    .replace(" ", "_")
-                    .replace("-", "_")
-                )
+            for fund_name in fund_names:
 
-                (
+                bestaande = (
                     supabase
                     .table("funds")
-                    .insert({
-                        "fund_code": fund_code,
-                        "current_name": fund_name,
-                        "is_active": True
-                    })
+                    .select("id")
+                    .eq(
+                        "current_name",
+                        fund_name
+                    )
                     .execute()
                 )
 
-                toegevoegd += 1
+                if not bestaande.data:
 
-        st.success(
-            f"{toegevoegd} nieuwe fondsen toegevoegd."
+                    fund_code = (
+                        fund_name
+                        .upper()
+                        .replace(" ", "_")
+                        .replace("-", "_")
+                    )
+
+                    (
+                        supabase
+                        .table("funds")
+                        .insert({
+                            "fund_code": fund_code,
+                            "current_name": fund_name,
+                            "is_active": True
+                        })
+                        .execute()
+                    )
+
+                    toegevoegd += 1
+
+            st.success(
+                f"{toegevoegd} nieuwe fondsen toegevoegd."
+            )
+
+        except Exception as e:
+
+            st.error(e)
+
+    # =====================
+    # Bestaande fondsen
+    # =====================
+
+    try:
+
+        funds = (
+            supabase
+            .table("funds")
+            .select("*")
+            .order("current_name")
+            .execute()
         )
+
+        st.subheader("Geregistreerde fondsen")
+
+        if funds.data:
+
+            st.dataframe(
+                funds.data,
+                use_container_width=True
+            )
+
+        else:
+
+            st.info(
+                "Nog geen fondsen geregistreerd."
+            )
 
     except Exception as e:
 
         st.error(e)
-
-# =====================
-# Bestaande fondsen
-# =====================
-
-try:
-
-    funds = (
-        supabase
-        .table("funds")
-        .select("*")
-        .order("current_name")
-        .execute()
-    )
-
-    st.subheader("Geregistreerde fondsen")
-
-    if funds.data:
-
-        st.dataframe(
-            funds.data,
-            use_container_width=True
-        )
-
-    else:
-
-        st.info(
-            "Nog geen fondsen geregistreerd."
-        )
-
-except Exception as e:
-
-    st.error(e)
 # ==================
 # Mijn Portefeuille
 # ==================
