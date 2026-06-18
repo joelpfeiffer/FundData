@@ -1041,6 +1041,12 @@ with tab9:
             if st.button("🎯 Jaarstart"):
 
                 st.session_state.portfolio_view = "year"
+
+
+        st.write(
+            f"Geselecteerd scherm: "
+            f"{st.session_state.portfolio_view}"
+        )
         
 
         st.divider()
