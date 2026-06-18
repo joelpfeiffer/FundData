@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-#import streamlit_authenticator as stauth
 from datetime import date
+from datetime import datetime
 
 st.set_page_config(layout="wide")
 
@@ -183,6 +183,20 @@ if not st.session_state.get("logged_in"):
             st.session_state.user_id = result.user.id
             st.session_state.username = profile.data["display_name"]
             st.session_state.role = profile.data["role"]
+
+            (
+                supabase
+                .table("profiles")
+                .update({
+                    "last_login":
+                        datetime.now().isoformat()
+                })
+                .eq(
+                    "id",
+                    result.user.id
+                )
+                .execute()
+            )
 
             st.rerun()
 
