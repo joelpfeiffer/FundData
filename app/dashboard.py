@@ -1198,344 +1198,149 @@ with tab9:
 
                     st.error(e)
 
+        if st.session_state.portfolio_view == "month":
+            # =====================
+            # Maandsnapshot
+            # =====================
 
-        # =====================
-        # Maandsnapshot
-        # =====================
+            st.divider()
 
-        st.divider()
+            st.subheader("Maandsnapshot")
 
-        st.subheader("Maandsnapshot")
+            col1, col2 = st.columns(2)
 
-        col1, col2 = st.columns(2)
+            with col1:
 
-        with col1:
-
-            snapshot_year = st.number_input(
-                "Jaar",
-                min_value=2020,
-                max_value=2100,
-                value=2026,
-                key="snapshot_year"
-            )
-
-        with col2:
-
-            snapshot_month = st.selectbox(
-                "Maand",
-                [
-                    "Januari",
-                    "Februari",
-                    "Maart",
-                    "April",
-                    "Mei",
-                    "Juni",
-                    "Juli",
-                    "Augustus",
-                    "September",
-                    "Oktober",
-                    "November",
-                    "December"
-                ]
-            )
-
-        employer_contribution = st.number_input(
-            "Werkgeverspremie (€)",
-            min_value=0.0,
-            value=0.0,
-            step=10.0
-        )
-
-        personal_contribution = st.number_input(
-            "Eigen inleg (€)",
-            min_value=0.0,
-            value=0.0,
-            step=10.0
-        )
-
-        bonus_total = st.number_input(
-            "Bonus totaal YTD (€)",
-            min_value=0.0,
-            value=0.0,
-            step=1.0
-        )
-
-        costs_total = st.number_input(
-            "Kosten totaal YTD (€)",
-            min_value=0.0,
-            value=0.0,
-            step=1.0
-        )
-
-        st.divider()
-
-        st.subheader("Fondsposities")
-
-        try:
-
-            portfolio_funds = (
-                supabase
-                .table("portfolio_funds")
-                .select("fund_id")
-                .eq(
-                    "portfolio_id",
-                    st.session_state.portfolio_id
-                )
-                .execute()
-            )
-
-            linked_fund_ids = {
-                x["fund_id"]
-                for x in portfolio_funds.data
-            }
-
-            funds = (
-                supabase
-                .table("funds")
-                .select("*")
-                .eq("is_active", True)
-                .order("current_name")
-                .execute()
-            )
-
-            active_funds = [
-                f for f in funds.data
-                if f["id"] in linked_fund_ids
-            ]
-
-            fund_units = {}
-
-            for fund in active_funds:
-
-                fund_units[fund["id"]] = st.number_input(
-                    fund["current_name"],
-                    min_value=0.0,
-                    value=0.0,
-                    step=0.000001,
-                    format="%.6f",
-                    key=f"snapshot_fund_{fund['id']}"
+                snapshot_year = st.number_input(
+                    "Jaar",
+                    min_value=2020,
+                    max_value=2100,
+                    value=2026,
+                    key="snapshot_year"
                 )
 
-        except Exception as e:
+            with col2:
 
-            st.error(e)
+                snapshot_month = st.selectbox(
+                    "Maand",
+                    [
+                        "Januari",
+                        "Februari",
+                        "Maart",
+                        "April",
+                        "Mei",
+                        "Juni",
+                        "Juli",
+                        "Augustus",
+                        "September",
+                        "Oktober",
+                        "November",
+                        "December"
+                    ]
+                )
 
-        month_map = {
-            "Januari": 1,
-            "Februari": 2,
-            "Maart": 3,
-            "April": 4,
-            "Mei": 5,
-            "Juni": 6,
-            "Juli": 7,
-            "Augustus": 8,
-            "September": 9,
-            "Oktober": 10,
-            "November": 11,
-            "December": 12
-        }
-
-        snapshot_date = (
-            f"{snapshot_year}-"
-            f"{month_map[snapshot_month]:02d}-01"
-        )
-
-        existing_snapshot = (
-            supabase
-            .table("monthly_snapshots")
-            .select("*")
-            .eq(
-                "portfolio_id",
-                st.session_state.portfolio_id
-            )
-            .eq(
-                "snapshot_date",
-                snapshot_date
-            )
-            .eq(
-                "is_active",
-                True
-            )
-            .execute()
-        )
-
-        if existing_snapshot.data:
-
-            st.info(
-                "Snapshot bestaat al en kan later "
-                "worden bijgewerkt."
+            employer_contribution = st.number_input(
+                "Werkgeverspremie (€)",
+                min_value=0.0,
+                value=0.0,
+                step=10.0
             )
 
-        else:
-
-            st.success(
-                "Nieuwe snapshot."
+            personal_contribution = st.number_input(
+                "Eigen inleg (€)",
+                min_value=0.0,
+                value=0.0,
+                step=10.0
             )
 
-        snapshot_version_note = st.text_input(
-            "Versienotitie",
-            placeholder="Bijv. correctie bonus pensioenfonds"
-        )
-        if st.button("Opslaan Maandsnapshot"):
+            bonus_total = st.number_input(
+                "Bonus totaal YTD (€)",
+                min_value=0.0,
+                value=0.0,
+                step=1.0
+            )
+
+            costs_total = st.number_input(
+                "Kosten totaal YTD (€)",
+                min_value=0.0,
+                value=0.0,
+                step=1.0
+            )
+
+            st.divider()
+
+            st.subheader("Fondsposities")
 
             try:
 
-                month_map = {
-                    "Januari": 1,
-                    "Februari": 2,
-                    "Maart": 3,
-                    "April": 4,
-                    "Mei": 5,
-                    "Juni": 6,
-                    "Juli": 7,
-                    "Augustus": 8,
-                    "September": 9,
-                    "Oktober": 10,
-                    "November": 11,
-                    "December": 12
+                portfolio_funds = (
+                    supabase
+                    .table("portfolio_funds")
+                    .select("fund_id")
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .execute()
+                )
+
+                linked_fund_ids = {
+                    x["fund_id"]
+                    for x in portfolio_funds.data
                 }
 
-                snapshot_date = (
-                    f"{snapshot_year}-"
-                    f"{month_map[snapshot_month]:02d}-01"
+                funds = (
+                    supabase
+                    .table("funds")
+                    .select("*")
+                    .eq("is_active", True)
+                    .order("current_name")
+                    .execute()
                 )
 
-                if existing_snapshot.data:
+                active_funds = [
+                    f for f in funds.data
+                    if f["id"] in linked_fund_ids
+                ]
 
-                    current_snapshot = (
-                        existing_snapshot.data[0]
+                fund_units = {}
+
+                for fund in active_funds:
+
+                    fund_units[fund["id"]] = st.number_input(
+                        fund["current_name"],
+                        min_value=0.0,
+                        value=0.0,
+                        step=0.000001,
+                        format="%.6f",
+                        key=f"snapshot_fund_{fund['id']}"
                     )
-
-                    (
-                        supabase
-                        .table("monthly_snapshots")
-                        .update({
-                            "is_active": False
-                        })
-                        .eq(
-                            "id",
-                            current_snapshot["id"]
-                        )
-                        .execute()
-                    )
-
-                    new_version = (
-                        current_snapshot["version"] + 1
-                    )
-
-                    (
-                        supabase
-                        .table("monthly_snapshots")
-                        .insert({
-                            "portfolio_id":
-                                st.session_state.portfolio_id,
-
-                            "snapshot_date":
-                                snapshot_date,
-
-                            "employer_contribution":
-                                float(employer_contribution),
-
-                            "personal_contribution":
-                                float(personal_contribution),
-
-                            "bonus_total":
-                                float(bonus_total),
-
-                            "costs_total":
-                                float(costs_total),
-
-                            "version":
-                                new_version,
-
-                            "is_active":
-                                True,
-
-                            "snapshot_version_note":
-                                snapshot_version_note,
-        
-                            "created_by":
-                                st.session_state.get(
-                                    "username",
-                                    "system"
-                                )
-                        })
-                        .execute()
-                    )
-
-                    snapshot_id = (
-                        snapshot_result.data[0]["id"]
-                    )
-
-                    st.success(
-                        f"Nieuwe versie {new_version} opgeslagen"
-                    )
-
-                else:
-
-                    (
-                        supabase
-                        .table("monthly_snapshots")
-                        .insert({
-                            "portfolio_id":
-                                st.session_state.portfolio_id,
-
-                            "snapshot_date":
-                                snapshot_date,
-
-                            "employer_contribution":
-                                float(employer_contribution),
-
-                            "personal_contribution":
-                                float(personal_contribution),
-
-                            "bonus_total":
-                                float(bonus_total),
-
-                            "costs_total":
-                                float(costs_total),
-
-                            "version":
-                                1,
-
-                            "is_active":
-                                True,
-
-                            "snapshot_version_note":
-                                snapshot_version_note,
-        
-                            "created_by":
-                                st.session_state.get(
-                                    "username",
-                                    "system"
-                                )
-                        })
-                        .execute()
-                    )
-
-                    sanpshot_id = (
-                        snapshot_result.data[0]["id"]
-                    )
-
-                    st.success(
-                        "Nieuwe maandsnapshot opgeslagen"
-                    )
-
-                st.success(
-                    "Maandsnapshot opgeslagen"
-                )
 
             except Exception as e:
 
                 st.error(e)
-        try:
 
-            show_all_versions = st.checkbox(
-                "Toon alle versies",
-                value=False
+            month_map = {
+                "Januari": 1,
+                "Februari": 2,
+                "Maart": 3,
+                "April": 4,
+                "Mei": 5,
+                "Juni": 6,
+                "Juli": 7,
+                "Augustus": 8,
+                "September": 9,
+                "Oktober": 10,
+                "November": 11,
+                "December": 12
+            }
+
+            snapshot_date = (
+                f"{snapshot_year}-"
+                f"{month_map[snapshot_month]:02d}-01"
             )
 
-            snapshots_query = (
+            existing_snapshot = (
                 supabase
                 .table("monthly_snapshots")
                 .select("*")
@@ -1543,34 +1348,229 @@ with tab9:
                     "portfolio_id",
                     st.session_state.portfolio_id
                 )
-            )
-
-            if not show_all_versions:
-
-                snapshots_query = (
-                    snapshots_query
-                    .eq(
-                    "is_active",
-                        True
-                    )
+                .eq(
+                    "snapshot_date",
+                    snapshot_date
                 )
-
-            snapshots = (
-                snapshots_query
-                .order(
-                    "snapshot_date"
+                .eq(
+                    "is_active",
+                    True
                 )
                 .execute()
             )
 
-            st.subheader("Historische snapshots")
+            if existing_snapshot.data:
 
-            if snapshots.data:
-                st.dataframe(
-                    snapshots.data,
-                    use_container_width=True
+                st.info(
+                    "Snapshot bestaat al en kan later "
+                    "worden bijgewerkt."
                 )
 
-        except Exception as e:
+            else:
 
-            st.error(e)
+                st.success(
+                    "Nieuwe snapshot."
+                )
+
+            snapshot_version_note = st.text_input(
+                "Versienotitie",
+                placeholder="Bijv. correctie bonus pensioenfonds"
+            )
+            if st.button("Opslaan Maandsnapshot"):
+
+                try:
+
+                    month_map = {
+                        "Januari": 1,
+                        "Februari": 2,
+                        "Maart": 3,
+                        "April": 4,
+                        "Mei": 5,
+                        "Juni": 6,
+                        "Juli": 7,
+                        "Augustus": 8,
+                        "September": 9,
+                        "Oktober": 10,
+                        "November": 11,
+                        "December": 12
+                    }
+
+                    snapshot_date = (
+                        f"{snapshot_year}-"
+                        f"{month_map[snapshot_month]:02d}-01"
+                    )
+
+                    if existing_snapshot.data:
+
+                        current_snapshot = (
+                            existing_snapshot.data[0]
+                        )
+
+                        (
+                            supabase
+                            .table("monthly_snapshots")
+                            .update({
+                                "is_active": False
+                            })
+                            .eq(
+                                "id",
+                                current_snapshot["id"]
+                            )
+                            .execute()
+                        )
+
+                        new_version = (
+                            current_snapshot["version"] + 1
+                        )
+
+                        (
+                            supabase
+                            .table("monthly_snapshots")
+                            .insert({
+                                "portfolio_id":
+                                    st.session_state.portfolio_id,
+
+                                "snapshot_date":
+                                    snapshot_date,
+
+                                "employer_contribution":
+                                    float(employer_contribution),
+
+                                "personal_contribution":
+                                    float(personal_contribution),
+
+                                "bonus_total":
+                                    float(bonus_total),
+
+                                "costs_total":
+                                    float(costs_total),
+
+                                "version":
+                                    new_version,
+
+                                "is_active":
+                                    True,
+
+                                "snapshot_version_note":
+                                    snapshot_version_note,
+        
+                                "created_by":
+                                    st.session_state.get(
+                                        "username",
+                                        "system"
+                                    )
+                            })
+                            .execute()
+                        )
+
+                        snapshot_id = (
+                            snapshot_result.data[0]["id"]
+                        )
+
+                        st.success(
+                            f"Nieuwe versie {new_version} opgeslagen"
+                        )
+
+                    else:
+
+                        (
+                            supabase
+                            .table("monthly_snapshots")
+                            .insert({
+                                "portfolio_id":
+                                    st.session_state.portfolio_id,
+
+                                "snapshot_date":
+                                    snapshot_date,
+
+                                "employer_contribution":
+                                    float(employer_contribution),
+
+                                "personal_contribution":
+                                    float(personal_contribution),
+
+                                "bonus_total":
+                                    float(bonus_total),
+
+                                "costs_total":
+                                    float(costs_total),
+
+                                "version":
+                                    1,
+
+                                "is_active":
+                                    True,
+
+                                "snapshot_version_note":
+                                    snapshot_version_note,
+        
+                                "created_by":
+                                    st.session_state.get(
+                                        "username",
+                                        "system"
+                                    )
+                            })
+                            .execute()
+                        )
+
+                        sanpshot_id = (
+                            snapshot_result.data[0]["id"]
+                        )
+
+                        st.success(
+                            "Nieuwe maandsnapshot opgeslagen"
+                        )
+
+                    st.success(
+                        "Maandsnapshot opgeslagen"
+                    )
+
+                except Exception as e:
+
+                    st.error(e)
+            try:
+
+                show_all_versions = st.checkbox(
+                    "Toon alle versies",
+                    value=False
+                )
+
+                snapshots_query = (
+                    supabase
+                    .table("monthly_snapshots")
+                    .select("*")
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                )
+
+                if not show_all_versions:
+
+                    snapshots_query = (
+                        snapshots_query
+                        .eq(
+                        "is_active",
+                            True
+                        )
+                    )
+
+                snapshots = (
+                    snapshots_query
+                    .order(
+                        "snapshot_date"
+                    )
+                    .execute()
+                )
+
+                st.subheader("Historische snapshots")
+
+                if snapshots.data:
+                    st.dataframe(
+                        snapshots.data,
+                        use_container_width=True
+                    )
+
+            except Exception as e:
+
+                st.error(e)
