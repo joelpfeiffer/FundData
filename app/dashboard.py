@@ -660,7 +660,7 @@ with tab8:
             "Geen toegang"
         )
 
-        st.stop()
+        
 
 
     st.divider()
@@ -727,7 +727,8 @@ with tab8:
         except Exception as e:
 
             st.error(e)
-
+            
+        st.stop()
     # =====================
     # Fondsen tonen
     # =====================
@@ -909,6 +910,8 @@ with tab8:
     except Exception as e:
 
         st.error(e)
+
+
 # ==================
 # Mijn Portefeuille
 # ==================
