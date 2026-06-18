@@ -179,6 +179,19 @@ if not st.session_state.get("logged_in"):
                 .execute()
             )
 
+            if not profile.data["is_active"]:
+
+                st.error(
+                    "Account is geblokkeerd"
+                )
+
+                try:
+                    supabase.auth.sign_out()
+                except Exception:
+                    pass
+
+                st.stop()
+
             st.session_state.logged_in = True
             st.session_state.user_id = result.user.id
             st.session_state.username = profile.data["display_name"]
