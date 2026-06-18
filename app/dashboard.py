@@ -1554,6 +1554,7 @@ with tab9:
                         sanpshot_id = (
                             snapshot_result.data[0]["id"]
                         )
+                        
                         for fund_id, units in fund_units.items():
 
                             if units > 0:
@@ -1579,11 +1580,7 @@ with tab9:
                                     })
                                     .execute()
                                 )
-
-                        st.success(
-                            "Nieuwe maandsnapshot opgeslagen"
-                        )
-
+                    
                     st.success(
                         "Maandsnapshot opgeslagen"
                     )
