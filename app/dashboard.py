@@ -1467,7 +1467,16 @@ with tab9:
                                 1,
 
                             "is_active":
-                                True
+                                True,
+
+                            "snapshot_version_note":
+                                snapshot_version_note,
+        
+                            "created_by":
+                                st.session_state.get(
+                                    "username",
+                                    "system"
+                                )
                         })
                         .execute()
                     )
