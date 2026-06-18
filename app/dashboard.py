@@ -727,8 +727,7 @@ with tab8:
         except Exception as e:
 
             st.error(e)
-            
-        st.stop()
+
     # =====================
     # Fondsen tonen
     # =====================
@@ -911,7 +910,7 @@ with tab8:
 
         st.error(e)
 
-
+        st.stop()
 # ==================
 # Mijn Portefeuille
 # ==================
