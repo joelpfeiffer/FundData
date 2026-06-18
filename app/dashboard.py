@@ -1778,7 +1778,7 @@ with tab9:
             if st.button(
                 "Opslaan waardering"
             ):
-                try:
+                #try:
                     #existing_valuation = (
                     #    supabase
                     #    .table("portfolio_valuations")
@@ -1801,13 +1801,13 @@ with tab9:
                     #    )
 
                     #    st.stop()
-                    if existing_valuation.data:
+                if existing_valuation.data:
 
-                        st.info(
-                            "Waardering bestaat al."
-                        )
+                    st.info(
+                        "Waardering bestaat al."
+                    )
 
-                    else:
+                else:
 
                     valuation_result = (
                         supabase
