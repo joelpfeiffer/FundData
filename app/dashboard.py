@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-import streamlit_authenticator as stauth
+#import streamlit_authenticator as stauth
 from datetime import date
 
 st.set_page_config(layout="wide")
@@ -12,28 +12,28 @@ import streamlit as st
 from supabase_client import supabase
 
 
-config = {
-    "credentials": {
-        "usernames": {
-            "JPF": {
-                "name": st.secrets["credentials"]["usernames"]["JPF"]["name"],
-                "password": st.secrets["credentials"]["usernames"]["JPF"]["password"],
-            }
-        }
-    },
-    "cookie": {
-        "name": st.secrets["cookie"]["name"],
-        "key": st.secrets["cookie"]["key"],
-        "expiry_days": st.secrets["cookie"]["expiry_days"],
-    }
-}
+#config = {
+    #"credentials": {
+        #"usernames": {
+            #"JPF": {
+                #"name": st.secrets["credentials"]["usernames"]["JPF"]["name"],
+               #"password": st.secrets["credentials"]["usernames"]["JPF"]["password"],
+           #}
+       #}
+   #},
+    #"cookie": {
+        #"name": st.secrets["cookie"]["name"],
+        #"key": st.secrets["cookie"]["key"],
+        #"expiry_days": st.secrets["cookie"]["expiry_days"],
+   #}
+#}
 
-authenticator = stauth.Authenticate(
-    config["credentials"],
-    config["cookie"]["name"],
-    config["cookie"]["key"],
-    config["cookie"]["expiry_days"],
-)
+#authenticator = stauth.Authenticate(
+    #config["credentials"],
+    #config["cookie"]["name"],
+    #config["cookie"]["key"],
+    #config["cookie"]["expiry_days"],
+#)
 
 CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
 TRADING_DAYS = 252
@@ -600,19 +600,19 @@ with tab7:
 
 with tab8:
 
-    if st.session_state.get("authentication_status"):
+   # if st.session_state.get("authentication_status"):
 
-        authenticator.logout("Uitloggen", "sidebar")
+        #authenticator.logout("Uitloggen", "sidebar")
 
-        st.success(
+        #st.success(
             f"Welkom {st.session_state['name']}"
-        )
+        #)
 
-        st.subheader("Admin")
+        #st.subheader("Admin")
 
-        st.write(
+        #st.write(
             "Dit gedeelte is alleen toegankelijk voor ingelogde gebruikers."
-        )
+        #)
 
         # =====================
         # Fondsbeheer
