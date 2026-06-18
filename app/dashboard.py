@@ -139,14 +139,6 @@ if not selected:
 st.sidebar.divider()
 st.sidebar.subheader("Inloggen")
 
-email = st.sidebar.text_input(
-    "E-mail"
-)
-
-password = st.sidebar.text_input(
-    "Wachtwoord",
-    type="password"
-)
 
 if not st.session_state.get("logged_in"):
 
