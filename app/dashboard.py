@@ -1479,6 +1479,32 @@ with tab9:
                             snapshot_result.data[0]["id"]
                         )
 
+                        for fund_id, units in fund_units.items():
+
+                            if units > 0:
+
+                                (
+                                    supabase
+                                    .table("snapshot_positions")
+                                    .insert({
+                                        "snapshot_id":
+                                            snapshot_id,
+
+                                        "fund_id":
+                                            fund_id,
+
+                                        "units":
+                                            float(units),
+
+                                        "created_by":
+                                            st.session_state.get(
+                                                "username",
+                                                "system"
+                                            )
+                                    })
+                                    .execute()
+                                )
+
                         st.success(
                             f"Nieuwe versie {new_version} opgeslagen"
                         )
@@ -1528,6 +1554,31 @@ with tab9:
                         sanpshot_id = (
                             snapshot_result.data[0]["id"]
                         )
+                        for fund_id, units in fund_units.items():
+
+                            if units > 0:
+
+                                (
+                                    supabase
+                                    .table("snapshot_positions")
+                                    .insert({
+                                        "snapshot_id":
+                                            snapshot_id,
+
+                                        "fund_id":
+                                            fund_id,
+
+                                        "units":
+                                            float(units),
+
+                                        "created_by":
+                                            st.session_state.get(
+                                                "username",
+                                                "system"
+                                            )
+                                    })
+                                    .execute()
+                                )
 
                         st.success(
                             "Nieuwe maandsnapshot opgeslagen"
@@ -1586,7 +1637,11 @@ with tab9:
             except Exception as e:
 
                 st.error(e)
-
+                
+# ===================
+# weekly
+# ===================
+        
         if st.session_state.portfolio_view == "week":
             st.subheader("weeksnapshot")
 
@@ -1594,56 +1649,5 @@ with tab9:
                 "snapshotdatum"
             )
             
-            st.divider()
 
-        try:
-
-            portfolio_funds = (
-                supabase
-                .table("portfolio_funds")
-                .select("fund_id")
-                .eq(
-                    "portfolio_id",
-                    st.session_state.portfolio_id
-                )
-                .execute()
-            )
-
-            linked_fund_ids = {
-                x["fund_id"]
-                for x in portfolio_funds.data
-            }
-
-            funds = (
-                supabase
-                .table("funds")
-                .select("*")
-                .eq("is_active", True)
-                .order("current_name")
-                .execute()
-            )
-
-            active_funds = [
-                f for f in funds.data
-                if f["id"] in linked_fund_ids
-            ]
-
-            fund_units = {}
-
-            st.subheader("Fondsposities")
-
-            for fund in active_funds:
-
-                fund_units[fund["id"]] = st.number_input(
-                    fund["current_name"],
-                    min_value=0.0,
-                    value=0.0,
-                    step=0.000001,
-                    format="%.6f",
-                    key=f"week_fund_{fund['id']}"
-                )
-
-        except Exception as e:
-
-            st.error(e)
         
