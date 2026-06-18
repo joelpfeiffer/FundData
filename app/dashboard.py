@@ -1789,6 +1789,9 @@ with tab9:
 
                             "valuation_date":
                                 str(latest_price_date),
+                            
+                            "price_date":
+                                str(latest_price_date),
 
                             "total_value":
                                 float(total_value)
@@ -1820,6 +1823,8 @@ with tab9:
 
                                 "value":
                                     float(row["Waarde"]),
+                                "price_date":
+                                    str(latest_price_date),
 
                                 "version":
                                     1,
