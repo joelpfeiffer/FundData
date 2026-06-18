@@ -12,28 +12,6 @@ import streamlit as st
 from supabase_client import supabase
 
 
-#config = {
-    #"credentials": {
-        #"usernames": {
-            #"JPF": {
-                #"name": st.secrets["credentials"]["usernames"]["JPF"]["name"],
-               #"password": st.secrets["credentials"]["usernames"]["JPF"]["password"],
-           #}
-       #}
-   #},
-    #"cookie": {
-        #"name": st.secrets["cookie"]["name"],
-        #"key": st.secrets["cookie"]["key"],
-        #"expiry_days": st.secrets["cookie"]["expiry_days"],
-   #}
-#}
-
-#authenticator = stauth.Authenticate(
-    #config["credentials"],
-    #config["cookie"]["name"],
-    #config["cookie"]["key"],
-    #config["cookie"]["expiry_days"],
-#)
 
 CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
 TRADING_DAYS = 252
@@ -156,7 +134,6 @@ if not selected:
     st.warning("Selecteer minimaal 1 fonds")
     st.stop()
 
-#authenticator.login(location="sidebar")
 # =========================
 # FILTER DATA
 # =========================
@@ -598,23 +575,6 @@ with tab7:
 # =============
 with tab8:
 
-    #if st.session_state.get("authentication_status"):
-
-        #authenticator.logout("Uitloggen", "sidebar")
-
-        #st.success(
-            #f"Welkom {st.session_state['name']}"
-        #)
-
-        #st.subheader("Admin")
-
-        #st.write(
-            #"Dit gedeelte is alleen toegankelijk voor ingelogde gebruikers."
-        #)
-
-        # =====================
-        # Fondsbeheer
-        # =====================
 
     st.divider()
 
@@ -815,11 +775,6 @@ with tab8:
 
         st.error(e)
 
-#else:
-
-    #st.warning(
-        #"Log in via de sidebar om toegang te krijgen."
-   #)
 
 
 # =====================
