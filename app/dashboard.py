@@ -160,31 +160,31 @@ if st.button("Inloggen"):
         st.error("Onjuiste login")
 
 
-profile = (
-    supabase
-    .table("profiles")
-    .select("*")
-    .eq(
-        "id",
+    profile = (
+        supabase
+        .table("profiles")
+        .select("*")
+        .eq(
+            "id",
+            result.user.id
+        )
+        .single()
+        .execute()
+    )
+
+    st.session_state.logged_in = True
+
+    st.session_state.user_id = (
         result.user.id
     )
-    .single()
-    .execute()
-)
 
-st.session_state.logged_in = True
+    st.session_state.username = (
+        profile.data["display_name"]
+    )
 
-st.session_state.user_id = (
-    result.user.id
-)
-
-st.session_state.username = (
-    profile.data["display_name"]
-)
-
-st.session_state.role = (
-    profile.data["role"]
-)
+    st.session_state.role = (
+        profile.data["role"]
+    )
 
 # =========================
 # FILTER DATA
