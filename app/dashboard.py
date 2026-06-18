@@ -135,6 +135,9 @@ if not selected:
     st.stop()
 
 #login
+st.sidebar.divider()
+st.sidebar.subheader("Inloggen")
+
 email = st.text_input(
     "E-mail"
 )
