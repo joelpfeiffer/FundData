@@ -1737,6 +1737,7 @@ with tab9:
                         units * price
                     )
                     valuation_rows.append({
+                        "fund_id": position["fund_id"],
                         "Fonds": fund_name,
                         "Eenheden": round(units, 6),
                         "Koers": round(price, 4),
@@ -1774,6 +1775,74 @@ with tab9:
                 "Totale portefeuillewaarde",
                 f"€{total_value:,.2f}"
             )
+            if st.button(
+                "Opslaan waardering"
+            ):
+            try:
+
+                valuation_result = (
+                    supabase
+                    .table("portfolio_valuations")
+                    .insert({
+                        "portfolio_id":
+                            st.session_state.portfolio_id,
+
+                        "valuation_date":
+                            str(latest_price_date),
+
+                        "total_value":
+                            float(total_value)
+                        })
+                    .execute()
+                )
+
+                valuation_id = (
+                    valuation_result.data[0]["id"]
+                )
+
+                for row in valuation_rows:
+
+                    (
+                        supabase
+                        .table("valuation_positions")
+                        .insert({
+                            "valuation_id":
+                                valuation_id,
+
+                            "fund_id":
+                                row["fund_id"],
+
+                            "units":
+                                float(row["Eenheden"]),
+
+                            "price":
+                                float(row["Koers"]),
+
+                            "value":
+                                float(row["Waarde"]),
+
+                            "version":
+                                1,
+
+                            "is_active":
+                                True,
+
+                            "created_by":
+                                st.session_state.get(
+                                    "username",
+                                    "system"
+                                )
+                        })
+                        .execute()
+                    )
+
+                st.success(
+                    "Waardering opgeslagen"
+                )
+
+            except Exception as e:
+
+                st.error(e)
 
             st.success(
                 f"Snapshot gevonden: "
