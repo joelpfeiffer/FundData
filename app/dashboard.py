@@ -1062,7 +1062,7 @@ with tab9:
 
             if st.button("Fondsen"):
               
-                st.session_state.portfolio_view = "funds"
+                    st.session_state.portfolio_view = "funds"
                 
             st.subheader("Fondsen in portefeuille")
 
