@@ -663,252 +663,252 @@ with tab8:
         
 
 
-    st.divider()
+        st.divider()
 
-    st.subheader("Fondsbeheer")
+        st.subheader("Fondsbeheer")
 
-    st.info(
-        "Fondsen worden automatisch uit prices.csv "
-        "gesynchroniseerd."
-    )
+        st.info(
+            "Fondsen worden automatisch uit prices.csv "
+            "gesynchroniseerd."
+        )
 
-    if st.button("🔄 Synchroniseer fondsen"):
+        if st.button("🔄 Synchroniseer fondsen"):
 
-        try:
+            try:
 
-            fund_names = sorted(
-                df["fund"]
-                .dropna()
-                .unique()
-                .tolist()
-            )
-
-            toegevoegd = 0
-
-            for fund_name in fund_names:
-
-                bestaande = (
-                    supabase
-                    .table("funds")
-                    .select("id")
-                    .eq(
-                        "current_name",
-                        fund_name
-                    )
-                    .execute()
+                fund_names = sorted(
+                    df["fund"]
+                    .dropna()
+                    .unique()
+                    .tolist()
                 )
 
-                if not bestaande.data:
+                toegevoegd = 0
 
-                    fund_code = (
-                        fund_name
-                        .upper()
-                        .replace(" ", "_")
-                        .replace("-", "_")
-                    )
+                for fund_name in fund_names:
 
-                    (
+                    bestaande = (
                         supabase
                         .table("funds")
-                        .insert({
-                            "fund_code": fund_code,
-                            "current_name": fund_name,
-                            "is_active": True
-                        })
+                        .select("id")
+                        .eq(
+                            "current_name",
+                            fund_name
+                        )
                         .execute()
                     )
 
-                    toegevoegd += 1
+                    if not bestaande.data:
 
-            st.success(
-                f"{toegevoegd} nieuwe fondsen toegevoegd."
+                        fund_code = (
+                            fund_name
+                            .upper()
+                            .replace(" ", "_")
+                            .replace("-", "_")
+                        )
+
+                        (
+                            supabase
+                            .table("funds")
+                            .insert({
+                                "fund_code": fund_code,
+                                "current_name": fund_name,
+                                "is_active": True
+                            })
+                            .execute()
+                        )
+
+                        toegevoegd += 1
+
+                st.success(
+                    f"{toegevoegd} nieuwe fondsen toegevoegd."
+                )
+
+            except Exception as e:
+
+                st.error(e)
+
+        # =====================
+        # Fondsen tonen
+        # =====================
+
+        try:
+
+            funds = (
+                supabase
+                .table("funds")
+                .select("*")
+                .order("current_name")
+                .execute()
             )
+
+            st.subheader("Geregistreerde fondsen")
+
+            if funds.data:
+
+                st.dataframe(
+                    funds.data,
+                    use_container_width=True
+                )
+
+            else:
+
+                st.info(
+                    "Nog geen fondsen geregistreerd."
+                )
 
         except Exception as e:
 
             st.error(e)
 
-    # =====================
-    # Fondsen tonen
-    # =====================
+        # =====================
+        # Aliasbeheer
+        # =====================
 
-    try:
+        st.divider()
 
-        funds = (
-            supabase
-            .table("funds")
-            .select("*")
-            .order("current_name")
-            .execute()
-        )
+        st.subheader("Aliasbeheer")
 
-        st.subheader("Geregistreerde fondsen")
+        try:
 
-        if funds.data:
-
-            st.dataframe(
-                funds.data,
-                use_container_width=True
+            funds = (
+                supabase
+                .table("funds")
+                .select("*")
+                .eq("is_active", True)
+                .order("current_name")
+                .execute()
             )
 
-        else:
+            fund_names = [
+                f["current_name"]
+                for f in funds.data
+            ]
 
-            st.info(
-                "Nog geen fondsen geregistreerd."
+            alias_name = st.selectbox(
+                "Oude naam (alias)",
+                options=fund_names,
+                key="alias_fund"
             )
 
-    except Exception as e:
+            canonical_name = st.selectbox(
+                "Huidige naam (hoofdfonds)",
+                options=fund_names,
+                key="canonical_fund"
+            )
 
-        st.error(e)
+            if st.button("Alias koppelen"):
 
-    # =====================
-    # Aliasbeheer
-    # =====================
+                if alias_name == canonical_name:
 
-    st.divider()
+                    st.warning(
+                        "Alias en hoofdfonds mogen niet gelijk zijn."
+                    )
 
-    st.subheader("Aliasbeheer")
+                else:
 
-    try:
+                    canonical_fund = next(
+                        f for f in funds.data
+                        if f["current_name"] == canonical_name
+                    )
 
-        funds = (
-            supabase
-            .table("funds")
-            .select("*")
-            .eq("is_active", True)
-            .order("current_name")
-            .execute()
-        )
+                    (
+                        supabase
+                        .table("fund_aliases")
+                        .insert({
+                            "fund_id": canonical_fund["id"],
+                            "fund_name": alias_name
+                        })
+                        .execute()
+                    )
 
-        fund_names = [
-            f["current_name"]
-            for f in funds.data
-        ]
+                    st.success(
+                        f"{alias_name} gekoppeld aan {canonical_name}"
+                    )
 
-        alias_name = st.selectbox(
-            "Oude naam (alias)",
-            options=fund_names,
-            key="alias_fund"
-        )
+        except Exception as e:
 
-        canonical_name = st.selectbox(
-            "Huidige naam (hoofdfonds)",
-            options=fund_names,
-            key="canonical_fund"
-        )
+            st.error(e)
 
-        if st.button("Alias koppelen"):
+        # =====================
+        # Alias overzicht
+        # =====================
 
-            if alias_name == canonical_name:
+        try:
 
-                st.warning(
-                    "Alias en hoofdfonds mogen niet gelijk zijn."
+            aliases = (
+                supabase
+                .table("fund_aliases")
+                .select("*")
+                .execute()
+            )
+
+            st.subheader("Bestaande alias koppelingen")
+
+            if aliases.data:
+
+                st.dataframe(
+                    aliases.data,
+                    use_container_width=True
                 )
 
             else:
 
-                canonical_fund = next(
-                    f for f in funds.data
-                    if f["current_name"] == canonical_name
+                st.info(
+                    "Nog geen alias koppelingen aanwezig."
                 )
 
-                (
-                    supabase
-                    .table("fund_aliases")
-                    .insert({
-                        "fund_id": canonical_fund["id"],
-                        "fund_name": alias_name
-                    })
-                    .execute()
-                )
+        except Exception as e:
 
-                st.success(
-                    f"{alias_name} gekoppeld aan {canonical_name}"
-                )
+            st.error(e)
 
-    except Exception as e:
-
-        st.error(e)
 
     # =====================
-    # Alias overzicht
+    # Controle
     # =====================
 
-    try:
 
-        aliases = (
-            supabase
-            .table("fund_aliases")
-            .select("*")
-            .execute()
-        )
+            st.subheader("Controle")
 
-        st.subheader("Bestaande alias koppelingen")
+        try:
 
-        if aliases.data:
-
-            st.dataframe(
-                aliases.data,
-                use_container_width=True
+            fund_count = (
+                supabase
+                .table("funds")
+                .select(
+                    "id",
+                    count="exact"
+                )
+                .execute()
             )
 
-        else:
-
-            st.info(
-                "Nog geen alias koppelingen aanwezig."
+            alias_count = (
+                supabase
+                .table("fund_aliases")
+                .select(
+                    "id",
+                    count="exact"
+                )
+                .execute()
             )
 
-    except Exception as e:
+            col1, col2 = st.columns(2)
 
-        st.error(e)
+            with col1:
+                st.metric(
+                    "Aantal fondsen",
+                    fund_count.count
+                )
 
+            with col2:
+                st.metric(
+                    "Aantal aliases",
+                    alias_count.count
+                )
 
-# =====================
-# Controle
-# =====================
+        except Exception as e:
 
-
-        st.subheader("Controle")
-
-    try:
-
-        fund_count = (
-            supabase
-            .table("funds")
-            .select(
-                "id",
-                count="exact"
-            )
-            .execute()
-        )
-
-        alias_count = (
-            supabase
-            .table("fund_aliases")
-            .select(
-                "id",
-                count="exact"
-            )
-            .execute()
-        )
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.metric(
-                "Aantal fondsen",
-                fund_count.count
-            )
-
-        with col2:
-            st.metric(
-                "Aantal aliases",
-                alias_count.count
-            )
-
-    except Exception as e:
-
-        st.error(e)
+            st.error(e)
 
         st.stop()
 # ==================
