@@ -1694,7 +1694,9 @@ with tab9:
                 )
                 .execute()
             )
-
+            
+            valuation_rows = []
+            
             for position in positions.data:
 
                 fund = (
@@ -1734,6 +1736,12 @@ with tab9:
                     value = (
                         units * price
                     )
+                    valuation_rows.append({
+                        "Fonds": fund_name,
+                        "Eenheden": round(units, 6),
+                        "Koers": round(price, 4),
+                        "Waarde": round(value, 2)
+                    })
 
                     st.write(
                         f"{fund_name}"
@@ -1759,6 +1767,30 @@ with tab9:
                         f"Geen koers gevonden voor "
                         f"{fund_name}"
                     )
+
+            valuation_df = pd.DataFrame(
+                valuation_rows
+            )
+
+            st.divider()
+
+            st.subheader(
+                "Portefeuillewaardering"
+            )
+
+            st.dataframe(
+                valuation_df,
+                use_container_width=True
+            )
+
+            total_value = (
+                valuation_df["Waarde"].sum()
+            )
+
+            st.metric(
+                "Totale portefeuillewaarde",
+                f"€{total_value:,.2f}"
+            )
 
             st.success(
                 f"Snapshot gevonden: "
