@@ -148,48 +148,73 @@ password = st.sidebar.text_input(
     type="password"
 )
 
-if st.sidebar.button("Inloggen"):
-    try:
+if not st.session_state.get("logged_in"):
 
-        result = (
-            supabase.auth.sign_in_with_password(
-                {
-                    "email": email,
-                    "password": password
-                }
+    email = st.sidebar.text_input("E-mail")
+
+    password = st.sidebar.text_input(
+        "Wachtwoord",
+        type="password"
+    )
+
+    if st.sidebar.button("Inloggen"):
+
+        try:
+
+            result = (
+                supabase.auth.sign_in_with_password(
+                    {
+                        "email": email,
+                        "password": password
+                    }
+                )
             )
-        )
 
-    except Exception as e:
+            profile = (
+                supabase
+                .table("profiles")
+                .select("*")
+                .eq(
+                    "id",
+                    result.user.id
+                )
+                .single()
+                .execute()
+            )
 
-        st.error("Onjuiste login")
+            st.session_state.logged_in = True
+            st.session_state.user_id = result.user.id
+            st.session_state.username = profile.data["display_name"]
+            st.session_state.role = profile.data["role"]
 
+            st.rerun()
 
-    profile = (
-        supabase
-        .table("profiles")
-        .select("*")
-        .eq(
-            "id",
-            result.user.id
-        )
-        .single()
-        .execute()
+        except Exception as e:
+
+            st.error("Onjuiste login")
+
+else:
+
+    st.sidebar.success(
+        f"Ingelogd als "
+        f"{st.session_state.username}"
     )
 
-    st.session_state.logged_in = True
-
-    st.session_state.user_id = (
-        result.user.id
+    st.sidebar.write(
+        f"Rol: "
+        f"{st.session_state.role}"
     )
 
-    st.session_state.username = (
-        profile.data["display_name"]
-    )
+    if st.sidebar.button("Uitloggen"):
 
-    st.session_state.role = (
-        profile.data["role"]
-    )
+        try:
+            supabase.auth.sign_out()
+        except Exception:
+            pass
+
+        st.session_state.clear()
+
+        st.rerun()
 
 # =========================
 # FILTER DATA
