@@ -135,18 +135,20 @@ if not selected:
     st.stop()
 
 #login
+
 st.sidebar.divider()
 st.sidebar.subheader("Inloggen")
 
-email = st.text_input(
+email = st.sidebar.text_input(
     "E-mail"
 )
 
-password = st.text_input(
+password = st.sidebar.text_input(
     "Wachtwoord",
     type="password"
 )
-if st.button("Inloggen"):
+
+if st.sidebar.button("Inloggen"):
     try:
 
         result = (
@@ -155,8 +157,8 @@ if st.button("Inloggen"):
                     "email": email,
                     "password": password
                 }
+            )
         )
-    )
 
     except Exception as e:
 
