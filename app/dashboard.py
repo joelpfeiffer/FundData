@@ -978,8 +978,27 @@ with tab8:
             "Userbeheer"
         )
 
-        st.info(
-            "Gebruikersbeheer komt hier."
+        profiles = (
+            supabase
+            .table("profiles")
+            .select("*")
+            .order("display_name")
+            .execute()
+        )
+        import pandas as pd
+
+        user_df = pd.DataFrame(
+            profiles.data
+        )[[
+            "display_name",
+            "role",
+            "is_active",
+            "last_login"
+        ]]
+
+        st.dataframe(
+            user_df,
+            use_container_width=True
         )
 
 # ==================
