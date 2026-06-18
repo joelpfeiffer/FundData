@@ -1642,6 +1642,55 @@ with tab9:
         if st.session_state.portfolio_view == "week":
             st.subheader("weeksnapshot")
 
+            latest_price_date = (
+                df["date"].max()
+            )
+
+            st.info(
+                f"Laatste koersdatum: "
+                f"{latest_price_date:%d-%m-%Y}"
+            )
+            latest_snapshot = (
+                supabase
+                .table("monthly_snapshots")
+                .select("*")
+                .eq(
+                    "portfolio_id",
+                    st.session_state.portfolio_id
+                )
+                .eq(
+                    "is_active",
+                    True
+                )
+                .lte(
+                    "snapshot_date",
+                    str(latest_price_date)
+                )
+                .order(
+                    "snapshot_date",
+                    desc=True
+                )
+                .limit(1)
+                .execute()
+            )
+            if not latest_snapshot.data:
+
+                st.warning(
+                    "Geen actieve maandsnapshot gevonden."
+                )
+
+                st.stop()
+
+            snapshot_id = (
+                latest_snapshot.data[0]["id"]
+            )
+
+            st.success(
+                f"Snapshot gevonden: "
+                f"{latest_snapshot.data[0]['snapshot_date']}"
+            )
+
+            
             snapshot_date = st.date_input(
                 "snapshotdatum"
             )
