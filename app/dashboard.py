@@ -843,47 +843,47 @@ with tab8:
 # =====================
 
 
-    st.subheader("Controle")
+            st.subheader("Controle")
 
-try:
+        try:
 
-    fund_count = (
-        supabase
-        .table("funds")
-        .select(
-            "id",
-            count="exact"
-        )
-        .execute()
-    )
+            fund_count = (
+                supabase
+                .table("funds")
+                .select(
+                    "id",
+                    count="exact"
+                )
+                .execute()
+            )
 
-    alias_count = (
-        supabase
-        .table("fund_aliases")
-        .select(
-            "id",
-            count="exact"
-        )
-        .execute()
-    )
+            alias_count = (
+                supabase
+                .table("fund_aliases")
+                .select(
+                    "id",
+                    count="exact"
+                )
+                .execute()
+            )
 
-    col1, col2 = st.columns(2)
+            col1, col2 = st.columns(2)
 
-    with col1:
-        st.metric(
-            "Aantal fondsen",
-            fund_count.count
-        )
+            with col1:
+                st.metric(
+                    "Aantal fondsen",
+                    fund_count.count
+                )
 
-    with col2:
-        st.metric(
-            "Aantal aliases",
-            alias_count.count
-        )
+            with col2:
+                st.metric(
+                    "Aantal aliases",
+                    alias_count.count
+                )
 
-except Exception as e:
+        except Exception as e:
 
-    st.error(e)
+            st.error(e)
 # ==================
 # Mijn Portefeuille
 # ==================
