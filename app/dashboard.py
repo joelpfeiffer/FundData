@@ -1591,6 +1591,59 @@ with tab9:
             st.subheader("weeksnapshot")
 
             snapshot_date = st.date_input(
-                "snaphotdatum"
+                "snapshotdatum"
             )
+            
+            st.divider()
+
+        try:
+
+            portfolio_funds = (
+                supabase
+                .table("portfolio_funds")
+                .select("fund_id")
+                .eq(
+                    "portfolio_id",
+                    st.session_state.portfolio_id
+                )
+                .execute()
+            )
+
+            linked_fund_ids = {
+                x["fund_id"]
+                for x in portfolio_funds.data
+            }
+
+            funds = (
+                supabase
+                .table("funds")
+                .select("*")
+                .eq("is_active", True)
+                .order("current_name")
+                .execute()
+            )
+
+            active_funds = [
+                f for f in funds.data
+                if f["id"] in linked_fund_ids
+            ]
+
+            fund_units = {}
+
+            st.subheader("Fondsposities")
+
+            for fund in active_funds:
+
+                fund_units[fund["id"]] = st.number_input(
+                    fund["current_name"],
+                    min_value=0.0,
+                    value=0.0,
+                    step=0.000001,
+                    format="%.6f",
+                    key=f"week_fund_{fund['id']}"
+                )
+
+        except Exception as e:
+
+            st.error(e)
         
