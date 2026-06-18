@@ -1060,7 +1060,7 @@ with tab9:
 
         st.divider()
 
-        if st.session_state.portfolio_view == "year":
+        if st.session_state.portfolio_view == "funds":
                 
             st.subheader("Fondsen in portefeuille")
 
