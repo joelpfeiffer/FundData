@@ -1431,6 +1431,10 @@ with tab9:
                         .execute()
                     )
 
+                    snapshot_id = (
+                        snapshot_result.data[0]["id"]
+                    )
+
                     st.success(
                         f"Nieuwe versie {new_version} opgeslagen"
                     )
@@ -1466,6 +1470,10 @@ with tab9:
                                 True
                         })
                         .execute()
+                    )
+
+                    sanpshot_id = (
+                        snapshot_result.data[0]["id"]
                     )
 
                     st.success(
