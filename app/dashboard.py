@@ -1012,12 +1012,13 @@ with tab9:
 
     if st.session_state.portfolio_id:
 
-        st.divider()
-
+        
         st.success(
             f"Geopende portefeuille: "
             f"{st.session_state.portfolio_name}"
         )
+
+        st.divider()
 
         if "portfolio_view" not in st.session_state:
             st.session_state.portfolio_view = "month"
