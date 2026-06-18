@@ -1019,6 +1019,30 @@ with tab9:
             f"{st.session_state.portfolio_name}"
         )
 
+        if "portfolio_view" not in st.session_state:
+            st.session_state.portfolio_view = "month"
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+
+            if st.button("📅 Weeksnapshot"):
+
+                st.session_state.portfolio_view = "week"
+
+        with col2:
+
+            if st.button("📈 Maandinvoer"):
+
+        st.session_state.portfolio_view = "month"
+
+        with col3:
+
+            if st.button("🎯 Jaarstart"):
+
+                st.session_state.portfolio_view = "year"
+        
+
         st.divider()
 
         st.subheader("Fondsen in portefeuille")
