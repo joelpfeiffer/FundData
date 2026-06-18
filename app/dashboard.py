@@ -1695,10 +1695,24 @@ with tab9:
                 .execute()
             )
 
-            st.write(
-                f"Aantal fondsposities: "
-                f"{len(positions.data)}"
-            )
+            for position in positions.data:
+
+                fund = (
+                    supabase
+                    .table("funds")
+                    .select("current_name")
+                    .eq(
+                        "id",
+                        position["fund_id"]
+                    )
+                    .single()
+                    .execute()
+                )
+
+                st.write(
+                    f"{fund.data['current_name']} : "
+                    f"{position['units']:.6f}"
+                )
 
             st.success(
                 f"Snapshot gevonden: "
