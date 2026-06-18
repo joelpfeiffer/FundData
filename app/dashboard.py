@@ -1743,24 +1743,7 @@ with tab9:
                         "Waarde": round(value, 2)
                     })
 
-                    st.write(
-                        f"{fund_name}"
-                    )
-
-                    st.write(
-                        f"Eenheden: {units:.6f}"
-                    )
-
-                    st.write(
-                        f"Koers: €{price:.4f}"
-                    )
-
-                    st.write(
-                        f"Waarde: €{value:,.2f}"
-                    )
-
-                    st.divider()
-
+                    
                 else:
 
                     st.warning(
