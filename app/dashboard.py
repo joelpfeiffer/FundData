@@ -212,7 +212,10 @@ else:
         except Exception:
             pass
 
-        st.session_state.clear()
+        st.session_state.logged_in = False
+        st.session_state.user_id = None
+        st.session_state.username = None
+        st.session_state.role = None
 
         st.rerun()
 
