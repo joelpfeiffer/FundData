@@ -1034,7 +1034,7 @@ with tab9:
 
             if st.button("📈 Maandinvoer"):
 
-        st.session_state.portfolio_view = "month"
+                st.session_state.portfolio_view = "month"
 
         with col3:
 
