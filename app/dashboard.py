@@ -1586,3 +1586,11 @@ with tab9:
             except Exception as e:
 
                 st.error(e)
+
+        if st.session_state.portfolio_view == "week":
+            st.subheader("weeksnapshot")
+
+            snapshot_date = st.date_input(
+                "snaphotdatum"
+            )
+        
