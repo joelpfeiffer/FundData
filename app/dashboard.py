@@ -1778,36 +1778,30 @@ with tab9:
             if st.button(
                 "Opslaan waardering"
             ):
-                #try:
-                    #existing_valuation = (
-                    #    supabase
-                    #    .table("portfolio_valuations")
-                    #    .select("id")
-                    #    .eq(
-                   #         "portfolio_id",
-                   #         st.session_state.portfolio_id
-                   #     )
-                   #     .eq(
-                   #         "valuation_date",
-                   #         str(date.today())
-                    #    )
-                    #    .execute()
-                    #)
-
-                   # if existing_valuation.data:
-
-                   #     st.warning(
-                    #        "Voor vandaag bestaat al een waardering."
-                    #    )
-
-                    #    st.stop()
-                if existing_valuation.data:
-
-                    st.info(
-                        "Waardering bestaat al."
+                try:
+                    existing_valuation = (
+                        supabase
+                        .table("portfolio_valuations")
+                        .select("id")
+                        .eq(
+                            "portfolio_id",
+                            st.session_state.portfolio_id
+                        )
+                        .eq(
+                            "valuation_date",
+                            str(date.today())
+                        )
+                        .execute()
                     )
 
-                else:
+                    if existing_valuation.data:
+
+                        st.warning(
+                            "Voor vandaag bestaat al een waardering."
+                        )
+
+                        st.stop()
+
 
                     valuation_result = (
                         supabase
