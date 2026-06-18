@@ -651,18 +651,21 @@ with tab7:
 # admin
 # =============
 with tab8:
-    if (
+
+    is_admin = (
         st.session_state.get("role")
-        != "admin"
-    ):
+        == "admin"
+    )
+
+    if not is_admin:
 
         st.warning(
             "Geen toegang"
         )
 
-        
+    else:
 
-
+      
         st.divider()
 
         st.subheader("Fondsbeheer")
@@ -910,7 +913,7 @@ with tab8:
 
             st.error(e)
 
-        st.stop()
+
 # ==================
 # Mijn Portefeuille
 # ==================
