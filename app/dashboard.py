@@ -1435,7 +1435,7 @@ with tab9:
                             current_snapshot["version"] + 1
                         )
 
-                        (
+                        snapshot_result = (
                             supabase
                             .table("monthly_snapshots")
                             .insert({
@@ -1511,7 +1511,7 @@ with tab9:
 
                     else:
 
-                        (
+                        snapshot_result = (
                             supabase
                             .table("monthly_snapshots")
                             .insert({
@@ -1551,7 +1551,7 @@ with tab9:
                             .execute()
                         )
 
-                        sanpshot_id = (
+                        snapshot_id = (
                             snapshot_result.data[0]["id"]
                         )
                         
