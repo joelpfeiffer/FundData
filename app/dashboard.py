@@ -1047,7 +1047,7 @@ with tab9:
 
         with col4:
 
-            if st.button("Fondsen"):
+            if st.button("🗂️ Fondsen"):
 
                 st.session_state.portfolio_view = "funds"
 
