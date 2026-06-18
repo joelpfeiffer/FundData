@@ -989,16 +989,48 @@ with tab8:
 
         user_df = pd.DataFrame(
             profiles.data
-        )[[
-            "display_name",
-            "role",
-            "is_active",
-            "last_login"
-        ]]
+        )
+
+        user_df = user_df.rename(
+            columns={
+                "display_name": "Naam",
+                "role": "Rol",
+                "is_active": "Actief",
+                "last_login": "Laatste login"
+            }
+        )
 
         st.dataframe(
-            user_df,
+            user_df[
+                [
+                    "Naam",
+                    "Rol",
+                    "Actief",
+                    "Laatste login"
+                ]
+            ],
             use_container_width=True
+        )
+        user_names = [
+            p["display_name"]
+            for p in profiles.data
+        ]
+
+        selected_user = st.selectbox(
+            "Gebruiker",
+            user_names
+        )
+        selected_profile = next(
+            p for p in profiles.data
+            if p["display_name"] == selected_user
+        )
+
+        st.write(
+            f"Rol: {selected_profile['role']}"
+        )
+
+        st.write(
+            f"Actief: {selected_profile['is_active']}"
         )
 
 # ==================
