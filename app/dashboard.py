@@ -1690,10 +1690,3 @@ with tab9:
                 f"{latest_snapshot.data[0]['snapshot_date']}"
             )
 
-            
-            snapshot_date = st.date_input(
-                "snapshotdatum"
-            )
-            
-
-        
