@@ -1709,10 +1709,56 @@ with tab9:
                     .execute()
                 )
 
-                st.write(
-                    f"{fund.data['current_name']} : "
-                    f"{position['units']:.6f}"
+                fund_name = (
+                    fund.data["current_name"]
                 )
+
+                units = (
+                    position["units"]
+                )
+
+                price_row = df[
+                    (df["fund"] == fund_name)
+                    &
+                    (df["date"] == latest_price_date)
+                ]
+
+                if not price_row.empty:
+
+                    price = (
+                        float(
+                            price_row.iloc[0]["price"]
+                        )
+                    )
+
+                    value = (
+                        units * price
+                    )
+
+                    st.write(
+                        f"{fund_name}"
+                    )
+
+                    st.write(
+                        f"Eenheden: {units:.6f}"
+                    )
+
+                    st.write(
+                        f"Koers: €{price:.4f}"
+                    )
+
+                    st.write(
+                        f"Waarde: €{value:,.2f}"
+                    )
+
+                    st.divider()
+
+                else:
+
+                    st.warning(
+                        f"Geen koers gevonden voor "
+                        f"{fund_name}"
+                    )
 
             st.success(
                 f"Snapshot gevonden: "
