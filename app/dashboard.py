@@ -1684,6 +1684,21 @@ with tab9:
             snapshot_id = (
                 latest_snapshot.data[0]["id"]
             )
+            positions = (
+                supabase
+                .table("snapshot_positions")
+                .select("*")
+                .eq(
+                    "snapshot_id",
+                    snapshot_id
+                )
+                .execute()
+            )
+
+            st.write(
+                f"Aantal fondsposities: "
+                f"{len(positions.data)}"
+            )
 
             st.success(
                 f"Snapshot gevonden: "
