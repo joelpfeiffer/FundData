@@ -815,11 +815,11 @@ with tab8:
 
         st.error(e)
 
-else:
+#else:
 
-    st.warning(
-        "Log in via de sidebar om toegang te krijgen."
-    )
+    #st.warning(
+        #"Log in via de sidebar om toegang te krijgen."
+   #)
 
 
 # =====================
