@@ -1630,7 +1630,7 @@ with tab9:
 
             fund_units = {}
 
-            st.subheader("Fondsposities")
+            st.subheader("Fonds Eenheden")
 
             for fund in active_funds:
 
