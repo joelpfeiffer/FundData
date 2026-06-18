@@ -11,7 +11,12 @@ st.set_page_config(layout="wide")
 import streamlit as st
 from supabase_client import supabase
 
+if "portfolio_view" not in st.session_state:
+                st.session_state.portfolio_view = "week"
 
+if "admin_view" not in st.session_state:
+
+    st.session_state.admin_view = "funds"
 
 CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
 TRADING_DAYS = 252
@@ -665,8 +670,32 @@ with tab8:
 
     else:
 
-      
-        st.divider()
+        
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button( 
+                "Fondsbeheer"
+            ):
+
+                st.session_state.admin_view = (
+                    "funds"
+                ) 
+
+        with col2:
+            if st.button(
+                "Userbeheer"
+            ):
+
+                st.session_state.admin_view = (
+                    "users"
+                )
+
+
+    if (
+        st.session_state.admin_view
+        == "funds"
+    ):
 
         st.subheader("Fondsbeheer")
 
@@ -913,6 +942,18 @@ with tab8:
 
             st.error(e)
 
+    elif (
+        st.session_state.admin_view
+        == "users"
+        ):
+
+        st.subheader(
+            "Userbeheer"
+        )
+
+        st.info(
+            "Gebruikersbeheer komt hier."
+        )
 
 # ==================
 # Mijn Portefeuille
@@ -1079,8 +1120,7 @@ with tab9:
             
             st.divider()
 
-            if "portfolio_view" not in st.session_state:
-                st.session_state.portfolio_view = "month"
+            
 
             col1, col2, col3, col4 = st.columns(4)
 
