@@ -1145,56 +1145,58 @@ with tab9:
         except Exception as e:
 
             st.error(e)
+            
+        if st.session_state.portfolio_view == "year":
+        
+            # =====================
+            # Jaarstart
+            # =====================
 
-        # =====================
-        # Jaarstart
-        # =====================
+            st.subheader("Jaarstart")
 
-        st.subheader("Jaarstart")
+            jaar = st.number_input(
+                "Jaar",
+                min_value=2020,
+                max_value=2100,
+                value=2026
+            )
 
-        jaar = st.number_input(
-            "Jaar",
-            min_value=2020,
-            max_value=2100,
-            value=2026
-        )
+            startwaarde = st.number_input(
+                "Startwaarde (€)",
+                min_value=0.0,
+                value=25000.0,
+                step=100.0
+            )
 
-        startwaarde = st.number_input(
-            "Startwaarde (€)",
-            min_value=0.0,
-            value=25000.0,
-            step=100.0
-        )
+            if st.button("Opslaan Jaarstart"):
 
-        if st.button("Opslaan Jaarstart"):
+                try:
 
-            try:
+                    (
+                        supabase
+                        .table("year_baselines")
+                        .insert({
+                            "portfolio_id":
+                                st.session_state.portfolio_id,
+                            "year":
+                                int(jaar),
+                            "start_value":
+                                float(startwaarde),
+                            "version":
+                                1,
+                            "is_active":
+                                True
+                        })
+                        .execute()
+                    )
 
-                (
-                    supabase
-                    .table("year_baselines")
-                    .insert({
-                        "portfolio_id":
-                            st.session_state.portfolio_id,
-                        "year":
-                            int(jaar),
-                        "start_value":
-                            float(startwaarde),
-                        "version":
-                            1,
-                        "is_active":
-                            True
-                    })
-                    .execute()
-                )
+                    st.success(
+                        "Jaarstart opgeslagen"
+                    )
 
-                st.success(
-                    "Jaarstart opgeslagen"
-                )
+                except Exception as e:
 
-            except Exception as e:
-
-                st.error(e)
+                    st.error(e)
 
 
         # =====================
