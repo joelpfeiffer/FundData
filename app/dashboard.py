@@ -3919,15 +3919,7 @@ if tab10 is not None:
                     if "Δ€" in col
                     or "Δ%" in col
                 ]
-                #############################
-                st.write(
-                    matrix_df.columns.tolist()
-                )
 
-                st.dataframe(
-                    matrix_df.head()
-                )
-                ############################
                 matrix_df = matrix_df.round(2)
                 
                 pct_cols = [
@@ -3958,7 +3950,6 @@ if tab10 is not None:
                     )
                 )
 
-                st.write(styled_df)
 
                 st.dataframe(
                     styled_df,
