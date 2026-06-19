@@ -3775,7 +3775,7 @@ if tab10 is not None:
                 st.dataframe(
                     styled_df,
                     use_container_width=True,
-                    height=500
+                    height=600
                 )
             
             except Exception as e:
