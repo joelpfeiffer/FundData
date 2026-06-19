@@ -2214,3 +2214,221 @@ with tab9:
                     f"{latest_snapshot.data[0]['snapshot_date']}"
                 )
 
+                # =====================
+                # Historische invoer
+                # =====================
+
+                st.divider()
+
+                st.subheader(
+                    "Historische invoer"
+                )
+
+                try:
+
+                    snapshots = (
+                        supabase
+                        .table("monthly_snapshots")
+                        .select("*")
+                        .eq(
+                            "is_active",
+                            True
+                        )
+                        .order(
+                            "snapshot_date",
+                            desc=True
+                        )
+                        .execute()
+                    )
+
+                    if not snapshots.data:
+
+                        st.warning(
+                            "Geen maandelijkse snapshots gevonden."
+                        )
+
+                    else:
+
+                        snapshot_options = {
+                            str(s["snapshot_date"]): s["id"]
+                            for s in snapshots.data
+                        }
+
+                        selected_snapshot_date = (
+                            st.selectbox(
+                                "Maandsnapshot",
+                                list(snapshot_options.keys())
+                            )
+                        )
+
+                        selected_date = (
+                            st.date_input(
+                                "Koersdatum"
+                            )
+                        )
+
+                        if st.button(
+                            "Bereken historische waarde"
+                        ):
+
+                            snapshot_id = (
+                                snapshot_options[
+                                    selected_snapshot_date
+                                ]
+                            )
+
+                            snapshot_date = (
+                                pd.to_datetime(
+                                    selected_snapshot_date
+                                ).date()
+                            )
+
+                            if selected_date < snapshot_date:
+
+                                st.error(
+                                    "Koersdatum ligt vóór "
+                                    "de snapshotdatum."
+                                )
+
+                                st.stop()
+
+                            positions = (
+                                supabase
+                                .table(
+                                    "snapshot_positions"
+                                )
+                                .select("*")
+                                .eq(
+                                    "snapshot_id",
+                                    snapshot_id
+                                )
+                                .execute()
+                            )
+
+                            valuation_rows = []
+
+                            total_value = 0
+
+                            for position in positions.data:
+
+                                fund = (
+                                    supabase
+                                    .table("funds")
+                                    .select(
+                                        "current_name"
+                                    )
+                                    .eq(
+                                        "id",
+                                        position["fund_id"]
+                                    )
+                                    .single()
+                                    .execute()
+                                )
+
+                                fund_name = (
+                                    fund.data[
+                                        "current_name"
+                                    ]
+                                )
+
+                                units = (
+                                    position["units"]
+                                )
+
+                                price_rows = (
+                                    df[
+                                        (
+                                            df["fund"]
+                                            == fund_name
+                                        )
+                                        &
+                                        (
+                                            pd.to_datetime(
+                                                df["date"]
+                                            ).dt.date
+                                            <= selected_date
+                                        )
+                                    ]
+                                    .sort_values(
+                                        "date"
+                                    )
+                                )
+
+                                if price_rows.empty:
+
+                                    continue
+
+                                price_row = (
+                                    price_rows
+                                    .tail(1)
+                                )
+
+                                actual_price_date = (
+                                    pd.to_datetime(
+                                        price_row.iloc[0]["date"]
+                                    )
+                                    .date()
+                                )
+
+                                price = float(
+                                    price_row.iloc[0]["price"]
+                                )
+
+                                value = (
+                                    units * price
+                                )
+
+                                total_value += value
+
+                                valuation_rows.append(
+                                    {
+                                        "Fonds":
+                                            fund_name,
+                                        "Eenheden":
+                                            round(
+                                                units,
+                                                6
+                                            ),
+                                        "Koers":
+                                            round(
+                                                price,
+                                                4
+                                            ),
+                                        "Koersdatum":
+                                            actual_price_date,
+                                        "Waarde":
+                                            round(
+                                                value,
+                                                2
+                                            )
+                                    }
+                                )
+
+                            if valuation_rows:
+
+                                valuation_df = (
+                                    pd.DataFrame(
+                                        valuation_rows
+                                    )
+                                )
+
+                                st.dataframe(
+                                    valuation_df,
+                                    use_container_width=True
+                                )
+
+                                st.metric(
+                                    "Historische portefeuillewaarde",
+                                    f"€{total_value:,.2f}"
+                                )
+
+                            else:
+
+                                st.warning(
+                                    "Geen historische "
+                                    "koersen gevonden."
+                                )
+
+                except Exception as e:
+
+                    st.error(e)
