@@ -403,6 +403,7 @@ if is_admin:
 
 if is_logged_in:
     tab_names.append("Mijn Portefeuille")
+    tab_names.append("Analyse")
 
 tabs = st.tabs(tab_names)
 
@@ -416,11 +417,13 @@ tab7 = tabs[6]
 
 tab8 = None
 tab9 = None
+tab10 = None
 
 if is_admin and is_logged_in:
 
     tab8 = tabs[7]
     tab9 = tabs[8]
+    tab10 = tabs[9]
 
 elif is_admin:
 
@@ -429,6 +432,7 @@ elif is_admin:
 elif is_logged_in:
 
     tab9 = tabs[7]
+    tab10 = tabs[9]
 
 # =========================
 # OVERVIEW
@@ -3067,3 +3071,233 @@ if tab9 is not None:
                     except Exception as e:
 
                         st.error(e)
+
+# =====================
+# Analyse
+# =====================
+
+if tab10 is not None:
+
+    with tab10:
+
+        if not st.session_state.get(
+            "logged_in",
+            False
+        ):
+
+            st.warning(
+                "Log eerst in."
+            )
+
+        else:
+            st.subheader(
+                "Dashboard"
+            )
+
+            try:
+
+                valuations = (
+                    supabase
+                    .table(
+                        "portfolio_valuations"
+                    )
+                    .select("*")
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .order(
+                        "valuation_date"
+                    )
+                    .execute()
+                )
+
+                snapshots = (
+                    supabase
+                    .table(
+                        "monthly_snapshot"
+                    )
+                    .select("*")
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .execute()
+                )
+
+                baseline = (
+                    supabase
+                    .table(
+                        "year_baseline"
+                    )
+                    .select("*")
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .order(
+                        "year",
+                        desc=True
+                    )
+                    .limit(1)
+                    .execute()
+                )
+
+                if valuations.data:
+
+                    current_value = (
+                        valuations
+                        .data[-1]
+                        ["total_value"]
+                    )
+
+                    start_value = (
+                        baseline.data[0]["start_value"]
+                        if baseline.data
+                        else 0
+                    )
+
+                    total_personal = sum(
+                        s["personal_contribution"]
+                        or 0
+                        for s in snapshots.data
+                    )
+
+                    total_employer = sum(
+                        s["employer_contribution"]
+                        or 0
+                        for s in snapshots.data
+                    )
+
+                    total_bonus = sum(
+                        s["bonus_total"]
+                        or 0
+                        for s in snapshots.data
+                    )
+
+                    total_cost = sum(
+                        s["cost_total"]
+                        or 0
+                        for s in snapshots.data
+                    )
+
+                    result = (
+                        current_value
+                        - start_value
+                        - total_personal
+                        - total_employer
+                        - total_bonus
+                        + total_cost
+                    )
+
+                    col1,col2,col3,col4 = (
+                        st.columns(4)
+                    )
+
+                    with col1:
+                        st.metric(
+                            "Waarde",
+                            f"€{current_value:,.0f}"
+                        )
+
+                    with col2:
+                        st.metric(
+                            "Begin jaar",
+                            f"€{start_value:,.0f}"
+                        )
+
+                    with col3:
+                        st.metric(
+                            "Inleg",
+                            f"€{total_personal + total_employer:,.0f}"
+                        )
+
+                    with col4:
+                        st.metric(
+                            "Resultaat",
+                            f"€{result:,.0f}"
+                        )
+
+            except Exception as e:
+
+                st.error(e)
+
+#blok 2
+            st.divider()
+
+            st.subheader(
+                "Vermogensontwikkeling"
+            )
+
+            try:
+
+                if valuations.data:
+
+                    trend_df = pd.DataFrame(
+                        valuations.data
+                    )
+
+                    trend_df[
+                        "valuation_date"
+                    ] = pd.to_datetime(
+                        trend_df[
+                            "valuation_date"
+                        ]
+                    )
+
+                    st.line_chart(
+                        trend_df.set_index(
+                            "valuation_date"
+                        )[
+                            "total_value"
+                        ]
+                    )
+
+            except Exception as e:
+
+                st.error(e)
+#blok 3
+            st.divider()
+
+            st.subheader(
+                "Cashflow"
+            )
+
+            try:
+
+                if snapshots.data:
+
+                    cash_df = pd.DataFrame(
+                        snapshots.data
+                    )
+
+                    cash_df[
+                        "snapshot_date"
+                    ] = pd.to_datetime(
+                        cash_df[
+                            "snapshot_date"
+                        ]
+                    )
+
+                    cash_df = (
+                        cash_df.sort_values(
+                            "snapshot_date"
+                        )
+                    )
+
+                    st.dataframe(
+                        cash_df[
+                            [
+                                "snapshot_date",
+                                "personal_contribution",
+                                "employer_contribution",
+                                "bonus_total",
+                                "cost_total"
+                            ]
+                        ],
+                        use_container_width=True
+                    )
+
+            except Exception as e:
+
+                st.error(e)
