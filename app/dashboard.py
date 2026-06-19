@@ -3644,58 +3644,7 @@ if tab10 is not None:
 
                 st.error(e)
 
-            
-            st.divider()
-
-            st.subheader(
-                "Concentratierisico"
-            )
-
-            try:
-
-                top3 = (
-                    alloc_table[
-                        "Allocatie %"
-                    ]
-                    .head(3)
-                    .sum()
-                )
-
-                top5 = (
-                    alloc_table[
-                        "Allocatie %"
-                    ]
-                    .head(5)
-                    .sum()
-                )
-
-                col1,col2 = st.columns(2)
-
-                with col1:
-
-                    st.metric(
-                        "Top 3 fondsen",
-                        f"{top3:.1f}%"
-                    )
-
-                with col2:
-
-                    st.metric(
-                        "Top 5 fondsen",
-                        f"{top5:.1f}%"
-                    )
-
-                if top3 > 70:
-
-                    st.warning(
-                        "Portefeuille is sterk geconcentreerd."
-                    )
-
-            except Exception as e:
-
-                st.error(e)
-
-            
+                       
   ####################################          
             st.divider()
 
