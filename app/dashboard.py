@@ -3842,6 +3842,7 @@ if tab10 is not None:
                             short_name
                         ]
                         .diff()
+                        .round(2)
                     )
 
                     matrix_df[
@@ -3851,7 +3852,8 @@ if tab10 is not None:
                             short_name
                         ]
                         .pct_change()
-                        * 100
+                        .mul(100)
+                        .round(2)
                     )
 
                 totals = (
@@ -3883,6 +3885,7 @@ if tab10 is not None:
                         "Totaal"
                     ]
                     .diff()
+                    .round(2)
                 )
 
                 matrix_df[
@@ -3892,7 +3895,8 @@ if tab10 is not None:
                         "Totaal"
                     ]
                     .pct_change()
-                    * 100
+                    .mul(100)
+                    .round(2)
                 )
 
                 matrix_df[
@@ -3951,14 +3955,12 @@ if tab10 is not None:
                 )
 
 
-                #st.dataframe(
-                #    styled_df,
-                #    use_container_width=True,
-                #    height=700
-                #)
-                st.write(
-                    styled_df
+                st.dataframe(
+                    styled_df,
+                    use_container_width=True,
+                    height=700
                 )
+
             except Exception as e:
 
                 st.error(e)
