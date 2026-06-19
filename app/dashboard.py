@@ -3771,13 +3771,13 @@ if tab10 is not None:
                     ].unique()
                 )
 
-                st.write(
-                    sorted(
-                        merged[
-                            "current_name"
-                        ].unique()
-                    )
-                )
+                #st.write(
+                #    sorted(
+                #        merged[
+                #            "current_name"
+                #        ].unique()
+                #    )
+                #)
                 for fund_name in sorted(
                     merged[
                         "current_name"
@@ -3957,6 +3957,8 @@ if tab10 is not None:
                         subset=delta_columns
                     )
                 )
+
+                st.write(styled_df)
 
                 st.dataframe(
                     styled_df,
