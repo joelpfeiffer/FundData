@@ -3644,7 +3644,310 @@ if tab10 is not None:
 
                 st.error(e)
 
-                       
+            st.divider()
+
+            st.subheader(
+                "Performance Matrix"
+            )
+
+            try:
+
+                valuations = (
+                    supabase
+                    .table(
+                        "portfolio_valuations"
+                    )
+                    .select(
+                        "id,valuation_date,total_value"
+                    )
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .order(
+                        "valuation_date"
+                    )
+                    .execute()
+                )
+
+                valuation_df = pd.DataFrame(
+                    valuations.data
+                )
+
+                positions = (
+                    supabase
+                    .table(
+                        "valuation_positions"
+                    )
+                    .select(
+                        "valuation_id,fund_id,value"
+                    )
+                    .eq(
+                        "is_active",
+                        True
+                    )
+                    .execute()
+                )
+
+                pos_df = pd.DataFrame(
+                    positions.data
+                )
+
+                funds = (
+                    supabase
+                    .table(
+                        "funds"
+                    )
+                    .select(
+                        "id,current_name"
+                    )
+                    .execute()
+                )
+
+                funds_df = pd.DataFrame(
+                    funds.data
+                )
+
+                merged = (
+                    pos_df
+                    .merge(
+                        valuation_df,
+                        left_on="valuation_id",
+                        right_on="id"
+                    )
+                    .merge(
+                        funds_df,
+                        left_on="fund_id",
+                        right_on="id"
+                    )
+                )
+
+                merged[
+                    "valuation_date"
+                ] = pd.to_datetime(
+                    merged[
+                        "valuation_date"
+                    ]
+                )
+
+                all_dates = sorted(
+                    merged[
+                        "valuation_date"
+                    ].unique()
+                )
+
+                matrix_rows = []
+
+                for valuation_date in all_dates:
+
+                    row = {
+                        "Datum":
+                            pd.to_datetime(
+                                valuation_date
+                            ).date()
+                    }
+
+                    day_df = (
+                        merged[
+                            merged[
+                                "valuation_date"
+                            ]
+                            == valuation_date
+                        ]
+                        .copy()
+                    )
+
+                    for fund_name in sorted(
+                        merged[
+                            "current_name"
+                        ].unique()
+                    ):
+
+                        fund_history = (
+                            merged[
+                                merged[
+                                    "current_name"
+                                ]
+                                == fund_name
+                            ]
+                            .sort_values(
+                                "valuation_date"
+                            )
+                        )
+
+                        current_row = (
+                            fund_history[
+                                fund_history[
+                                    "valuation_date"
+                                ]
+                                == valuation_date
+                            ]
+                        )
+
+                        if current_row.empty:
+
+                            continue
+
+                        current_value = float(
+                            current_row.iloc[0][
+                                "value"
+                            ]
+                        )
+
+                        previous_rows = (
+                            fund_history[
+                                fund_history[
+                                    "valuation_date"
+                                ]
+                                < valuation_date
+                            ]
+                        )
+
+                        if previous_rows.empty:
+
+                            growth_eur = None
+                            growth_pct = None
+
+                        else:
+
+                            previous_value = float(
+                                previous_rows.iloc[-1][
+                                    "value"
+                                ]
+                            )
+
+                            growth_eur = (
+                                current_value
+                                - previous_value
+                            )
+
+                            growth_pct = (
+                                growth_eur
+                                / previous_value
+                                * 100
+                            )
+
+                        row[
+                            f"{fund_name} €"
+                        ] = round(
+                            current_value,
+                            2
+                        )
+
+                        row[
+                            f"{fund_name} Δ€"
+                        ] = (
+                            round(
+                                growth_eur,
+                                2
+                            )
+                            if growth_eur is not None
+                            else None
+                        )
+
+                        row[
+                            f"{fund_name} Δ%"
+                        ] = (
+                            round(
+                                growth_pct,
+                                2
+                            )
+                            if growth_pct is not None
+                            else None
+                        )
+
+                    total_value = float(
+                        valuation_df[
+                            valuation_df[
+                                "valuation_date"
+                            ]
+                            == valuation_date
+                        ]
+                        .iloc[0][
+                            "total_value"
+                        ]
+                    )
+
+                    previous_total = (
+                        valuation_df[
+                            valuation_df[
+                                "valuation_date"
+                            ]
+                            < valuation_date
+                        ]
+                    )
+
+                    if previous_total.empty:
+
+                        total_growth = None
+                        total_pct = None
+
+                    else:
+
+                        previous_value = float(
+                            previous_total.iloc[-1][
+                                "total_value"
+                            ]
+                        )
+
+                        total_growth = (
+                            total_value
+                            - previous_value
+                        )
+
+                        total_pct = (
+                            total_growth
+                            / previous_value
+                            * 100
+                        )
+
+                    row[
+                        "Totaal €"
+                    ] = round(
+                        total_value,
+                        2
+                    )
+
+                    row[
+                        "Totaal Δ€"
+                    ] = (
+                        round(
+                            total_growth,
+                            2
+                        )
+                        if total_growth is not None
+                        else None
+                    )
+
+                    row[
+                        "Totaal Δ%"
+                    ] = (
+                        round(
+                            total_pct,
+                            2
+                        )
+                        if total_pct is not None
+                        else None
+                    )
+
+                    matrix_rows.append(
+                        row
+                    )
+
+                matrix_df = pd.DataFrame(
+                    matrix_rows
+                )
+
+                st.dataframe(
+                    matrix_df,
+                    use_container_width=True,
+                    height=700
+                )
+
+            except Exception as e:
+
+                st.error(e)
+
   ####################################          
             st.divider()
 
