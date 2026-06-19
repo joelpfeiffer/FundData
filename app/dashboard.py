@@ -3139,7 +3139,7 @@ if tab10 is not None:
                 baseline = (
                     supabase
                     .table(
-                        "year_baseline"
+                        "year_baselines"
                     )
                     .select("*")
                     .eq(
