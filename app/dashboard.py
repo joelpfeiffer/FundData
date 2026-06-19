@@ -3927,18 +3927,19 @@ if tab10 is not None:
                     if "Δ€" in col
                     or "Δ%" in col
                 ]
+
                 matrix_df = matrix_df.round(2)
-                
+
                 styled_df = (
                     matrix_df
-                    .round(2)
                     .style
+                    .format("{:.2f}")
                     .map(
                         color_delta,
                         subset=delta_columns
                     )
                 )
-                                
+
                 st.dataframe(
                     styled_df,
                     use_container_width=True,
