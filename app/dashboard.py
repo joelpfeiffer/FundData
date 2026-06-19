@@ -3770,7 +3770,22 @@ if tab10 is not None:
                         "valuation_date"
                     ].unique()
                 )
+                st.write(
+                    "Aantal fondsen:",
+                    len(
+                        merged[
+                            "current_name"
+                        ].unique()
+                    )
+                )
 
+                st.write(
+                    sorted(
+                        merged[
+                            "current_name"
+                        ].unique()
+                    )
+                )
                 for fund_name in sorted(
                     merged[
                         "current_name"
