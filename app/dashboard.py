@@ -1091,6 +1091,35 @@ with tab8:
 
                     st.rerun()
 
+        st.divider()
+
+        st.subheader(
+            "Gebruiker uitnodigen"
+        )
+        with st.form(
+            "invite_user_form"
+        ):
+
+            invite_email = st.text_input(
+                "E-mail"
+            )
+
+            invite_name = st.text_input(
+                "Naam"
+            )
+
+            invite_role = st.selectbox(
+                "Rol",
+                [
+                    "user",
+                    "admin"
+                ]
+            )
+
+            submit_invite = st.form_submit_button(
+                "Uitnodigen"
+            )
+
 # ==================
 # Mijn Portefeuille
 # ==================
