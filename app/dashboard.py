@@ -3742,6 +3742,14 @@ if tab10 is not None:
 
                     else:
 
+                        valuation_df[
+                            "valuation_date"
+                        ] = pd.to_datetime(
+                            valuation_df[
+                                "valuation_date"
+                            ]
+                        )
+
                         merged = (
                             pos_df
                             .merge(
@@ -3764,30 +3772,22 @@ if tab10 is not None:
                             ]
                         )
 
-                        result_rows = []
-
-                        for valuation_date in sorted(
+                        all_dates = sorted(
                             merged[
                                 "valuation_date"
                             ].unique()
-                        ):
+                        )
+
+                        result_rows = []
+
+                        for current_date in all_dates:
 
                             row = {
                                 "Datum":
                                     pd.to_datetime(
-                                        valuation_date
+                                        current_date
                                     ).date()
                             }
-
-                            day_data = (
-                                merged[
-                                    merged[
-                                        "valuation_date"
-                                    ]
-                                    == valuation_date
-                                ]
-                                .copy()
-                            )
 
                             for fund_name in sorted(
                                 merged[
@@ -3812,7 +3812,7 @@ if tab10 is not None:
                                         fund_history[
                                             "valuation_date"
                                         ]
-                                        == valuation_date
+                                        == current_date
                                     ]
                                 )
 
@@ -3831,7 +3831,7 @@ if tab10 is not None:
                                         fund_history[
                                             "valuation_date"
                                         ]
-                                        < valuation_date
+                                        < current_date
                                     ]
                                 )
 
@@ -3900,23 +3900,19 @@ if tab10 is not None:
                                     else None
                                 )
 
-                            total_row = (
+                            total_match = (
                                 valuation_df[
                                     valuation_df[
                                         "valuation_date"
                                     ]
-                                    == str(
-                                        pd.to_datetime(
-                                            valuation_date
-                                        ).date()
-                                    )
+                                    == current_date
                                 ]
                             )
 
-                            if not total_row.empty:
+                            if not total_match.empty:
 
                                 total_value = float(
-                                    total_row.iloc[0][
+                                    total_match.iloc[0][
                                         "total_value"
                                     ]
                                 )
@@ -3927,6 +3923,48 @@ if tab10 is not None:
                                     total_value,
                                     2
                                 )
+
+                                previous_total = (
+                                    valuation_df[
+                                        valuation_df[
+                                            "valuation_date"
+                                        ]
+                                        < current_date
+                                    ]
+                                )
+
+                                if not previous_total.empty:
+
+                                    previous_value = float(
+                                        previous_total.iloc[-1][
+                                            "total_value"
+                                        ]
+                                    )
+
+                                    total_diff = (
+                                        total_value
+                                        - previous_value
+                                    )
+
+                                    total_pct = (
+                                        total_diff
+                                        / previous_value
+                                        * 100
+                                    )
+
+                                    row[
+                                        "Totaal Δ€"
+                                    ] = round(
+                                        total_diff,
+                                        2
+                                    )
+
+                                    row[
+                                        "Totaal Δ%"
+                                    ] = round(
+                                        total_pct,
+                                        2
+                                    )
 
                             result_rows.append(
                                 row
@@ -3945,7 +3983,6 @@ if tab10 is not None:
                 except Exception as e:
 
                     st.error(e)
-
   ####################################          
             st.divider()
 
