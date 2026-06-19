@@ -3949,6 +3949,108 @@ if tab10 is not None:
 
                 st.error(e)
 
+            st.divider()
+
+            st.subheader(
+                "Resultaat sinds eerste waardering"
+            )
+
+            try:
+
+                summary_rows = []
+
+                fund_columns = [
+                    col
+                    for col in matrix_df.columns
+                    if (
+                        col != "Datum"
+                        and "Δ" not in col
+                        and col != "Totaal"
+                    )
+                ]
+
+                for fund in fund_columns:
+
+                    start_value = (
+                        matrix_df[fund]
+                        .dropna()
+                        .iloc[0]
+                    )
+
+                    current_value = (
+                        matrix_df[fund]
+                        .dropna()
+                        .iloc[-1]
+                    )
+
+                    profit = (
+                        current_value
+                        - start_value
+                    )
+
+                    return_pct = (
+                        (
+                            current_value
+                            / start_value
+                        )
+                        - 1
+                    ) * 100
+
+                    summary_rows.append({
+                        "Fonds": fund,
+                        "Startwaarde": start_value,
+                        "Huidige waarde": current_value,
+                        "Verschil €": profit,
+                        "Rendement %": return_pct
+                    })
+
+                summary_df = pd.DataFrame(
+                    summary_rows
+                )
+
+                summary_df = (
+                    summary_df
+                    .sort_values(
+                        "Rendement %",
+                        ascending=False
+                    )
+                )
+
+                def color_summary(val):
+
+                    if val > 0:
+                        return "color: lightgreen"
+
+                    if val < 0:
+                        return "color: salmon"
+
+                    return ""
+
+                styled_summary = (
+                    summary_df
+                    .style
+                    .format(
+                        precision=2
+                    )
+                    .map(
+                        color_summary,
+                        subset=[
+                            "Verschil €",
+                            "Rendement %"
+                        ]
+                    )
+                )
+
+                st.dataframe(
+                    styled_summary,
+                    use_container_width=True
+                )
+
+            except Exception as e:
+
+                st.error(e)
+
+
   ####################################           
             st.divider()
 
