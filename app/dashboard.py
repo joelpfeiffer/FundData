@@ -3770,19 +3770,7 @@ if tab10 is not None:
                         "valuation_date"
                     ].unique()
                 )
-                ##########################
-                st.write(
-                    "Aantal fondsen:",
-                    len(
-                        merged[
-                            "current_name"
-                        ].unique()
-                    )
-                )
-                st.write(
-                    matrix_df.columns.tolist()
-                )
-##############################################
+
                 st.write(
                     sorted(
                         merged[
@@ -3931,8 +3919,17 @@ if tab10 is not None:
                     if "Δ€" in col
                     or "Δ%" in col
                 ]
+                #############################
+                st.write(
+                    matrix_df.columns.tolist()
+                )
 
+                st.dataframe(
+                    matrix_df.head()
+                )
+                ############################
                 matrix_df = matrix_df.round(2)
+                
                 pct_cols = [
                     col
                     for col in matrix_df.columns
