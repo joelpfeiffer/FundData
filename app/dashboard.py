@@ -3517,22 +3517,7 @@ if tab10 is not None:
                         "valuation_date"
                     ]
                 ).dt.date
-                merged[
-                    "valuation_date"
-                ] = pd.to_datetime(
-                    merged[
-                        "valuation_date"
-                    ]
-                ).dt.date
-                ##############################
-                st.write(
-                    valuation_date
-                )
 
-                st.write(
-                    valuation_df.head()
-                )
-                ##############################
                 positions = (
                     supabase
                     .table(
@@ -3571,6 +3556,13 @@ if tab10 is not None:
                         left_on="fund_id",
                         right_on="id"
                     )
+                )
+                merged[
+                    "valuation_date"
+                ] = pd.to_datetime(
+                    merged[
+                        "valuation_date"
+                    ]
                 )
 
                 chart_df = (
