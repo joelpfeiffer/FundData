@@ -3126,7 +3126,7 @@ if tab10 is not None:
                 snapshots = (
                     supabase
                     .table(
-                        "monthly_snapshot"
+                        "monthly_snapshots"
                     )
                     .select("*")
                     .eq(
