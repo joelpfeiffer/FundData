@@ -804,7 +804,83 @@ with tab7:
             "fund_data.csv",
             mime="text/csv"
         )
+    
+    st.divider()
 
+    st.subheader(
+        "Koersen op datum"
+    )
+
+    selected_price_date = st.date_input(
+        "Selecteer datum",
+        key="historische_koersdatum"
+    )
+
+    try:
+
+        price_rows = []
+
+        for fund in selected:
+
+            if fund not in pivot_full.columns:
+
+                continue
+
+            fund_series = (
+                pivot_full[fund]
+            )
+
+            fund_series.index = pd.to_datetime(
+                fund_series.index
+            )
+
+            match = (
+                fund_series[
+                    fund_series.index.date
+                    == selected_price_date
+                ]
+            )
+
+            if not match.empty:
+
+                price_rows.append(
+                    {
+                        "Fonds":
+                            fund,
+
+                        "Datum":
+                            selected_price_date,
+
+                        "Koers":
+                            round(
+                                float(
+                                    match.iloc[0]
+                                ),
+                                4
+                            )
+                    }
+                )
+
+        if price_rows:
+
+            koers_df = pd.DataFrame(
+                price_rows
+            )
+
+            st.dataframe(
+                koers_df,
+                use_container_width=True
+            )
+
+        else:
+
+            st.warning(
+                "Geen koersen gevonden op deze datum."
+            )
+
+    except Exception as e:
+
+        st.error(e)
 # =============
 # admin
 # =============
