@@ -2754,3 +2754,195 @@ try:
 except Exception as e:
 
     st.error(e)
+
+# =====================
+# Fondstrends
+# =====================
+
+st.divider()
+
+st.subheader(
+    "Fondstrends"
+)
+
+try:
+
+    positions = (
+        supabase
+        .table(
+            "valuation_positions"
+        )
+        .select(
+            """
+            valuation_id,
+            fund_id,
+            value
+            """
+        )
+        .execute()
+    )
+
+    if not positions.data:
+
+        st.info(
+            "Nog geen waarderingen aanwezig."
+        )
+
+    else:
+
+        positions_df = (
+            pd.DataFrame(
+                positions.data
+            )
+        )
+
+        valuations = (
+            supabase
+            .table(
+                "portfolio_valuations"
+            )
+            .select(
+                "id,valuation_date"
+            )
+            .execute()
+        )
+
+        valuations_df = (
+            pd.DataFrame(
+                valuations.data
+            )
+        )
+
+        funds = (
+            supabase
+            .table(
+                "funds"
+            )
+            .select(
+                "id,current_name"
+            )
+            .execute()
+        )
+
+        funds_df = (
+            pd.DataFrame(
+                funds.data
+            )
+        )
+
+        merged = (
+            positions_df
+            .merge(
+                valuations_df,
+                left_on="valuation_id",
+                right_on="id"
+            )
+            .merge(
+                funds_df,
+                left_on="fund_id",
+                right_on="id"
+            )
+        )
+
+        merged[
+            "valuation_date"
+        ] = pd.to_datetime(
+            merged[
+                "valuation_date"
+            ]
+        )
+
+        selected_fund = (
+            st.selectbox(
+                "Fonds",
+                sorted(
+                    merged[
+                        "current_name"
+                    ]
+                    .unique()
+                    .tolist()
+                )
+            )
+        )
+
+        fund_df = (
+            merged[
+                merged[
+                    "current_name"
+                ]
+                == selected_fund
+            ]
+            .sort_values(
+                "valuation_date"
+            )
+        )
+
+        if not fund_df.empty:
+
+            chart_df = (
+                fund_df[
+                    [
+                        "valuation_date",
+                        "value"
+                    ]
+                ]
+                .set_index(
+                    "valuation_date"
+                )
+            )
+
+            st.line_chart(
+                chart_df
+            )
+
+            first_value = (
+                fund_df[
+                    "value"
+                ]
+                .iloc[0]
+            )
+
+            last_value = (
+                fund_df[
+                    "value"
+                ]
+                .iloc[-1]
+            )
+
+            change_pct = (
+                (
+                    last_value
+                    - first_value
+                )
+                / first_value
+                * 100
+            )
+
+            col1, col2, col3 = (
+                st.columns(3)
+            )
+
+            with col1:
+
+                st.metric(
+                    "Startwaarde",
+                    f"€{first_value:,.0f}"
+                )
+
+            with col2:
+
+                st.metric(
+                    "Huidige waarde",
+                    f"€{last_value:,.0f}"
+                )
+
+            with col3:
+
+                st.metric(
+                    "Trend",
+                    f"{change_pct:.2f}%"
+                )
+
+except Exception as e:
+
+    st.error(e)
