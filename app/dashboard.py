@@ -2773,11 +2773,7 @@ try:
             "valuation_positions"
         )
         .select(
-            """
-            valuation_id,
-            fund_id,
-            value
-            """
+            "valuation_id,fund_id,value"
         )
         .execute()
     )
@@ -2790,10 +2786,8 @@ try:
 
     else:
 
-        positions_df = (
-            pd.DataFrame(
-                positions.data
-            )
+        positions_df = pd.DataFrame(
+            positions.data
         )
 
         valuations = (
@@ -2804,30 +2798,28 @@ try:
             .select(
                 "id,valuation_date"
             )
+            .eq(
+                "portfolio_id",
+                st.session_state.portfolio_id
+            )
             .execute()
         )
 
-        valuations_df = (
-            pd.DataFrame(
-                valuations.data
-            )
+        valuations_df = pd.DataFrame(
+            valuations.data
         )
 
         funds = (
             supabase
-            .table(
-                "funds"
-            )
+            .table("funds")
             .select(
                 "id,current_name"
             )
             .execute()
         )
 
-        funds_df = (
-            pd.DataFrame(
-                funds.data
-            )
+        funds_df = pd.DataFrame(
+            funds.data
         )
 
         merged = (
@@ -2852,96 +2844,88 @@ try:
             ]
         )
 
-        selected_fund = (
-            st.selectbox(
-                "Fonds",
-                sorted(
-                    merged[
-                        "current_name"
-                    ]
-                    .unique()
-                    .tolist()
-                )
+        chart_df = (
+            merged
+            .pivot_table(
+                index="valuation_date",
+                columns="current_name",
+                values="value"
             )
+            .sort_index()
         )
 
-        fund_df = (
-            merged[
-                merged[
-                    "current_name"
-                ]
-                == selected_fund
-            ]
-            .sort_values(
-                "valuation_date"
-            )
+        st.line_chart(
+            chart_df
         )
 
-        if not fund_df.empty:
+        trend_rows = []
 
-            chart_df = (
-                fund_df[
-                    [
-                        "valuation_date",
-                        "value"
-                    ]
-                ]
-                .set_index(
-                    "valuation_date"
-                )
+        for fund in chart_df.columns:
+
+            series = (
+                chart_df[fund]
+                .dropna()
             )
 
-            st.line_chart(
-                chart_df
+            if len(series) < 2:
+
+                continue
+
+            start_value = (
+                series.iloc[0]
             )
 
-            first_value = (
-                fund_df[
-                    "value"
-                ]
-                .iloc[0]
-            )
-
-            last_value = (
-                fund_df[
-                    "value"
-                ]
-                .iloc[-1]
+            end_value = (
+                series.iloc[-1]
             )
 
             change_pct = (
                 (
-                    last_value
-                    - first_value
+                    end_value
+                    - start_value
                 )
-                / first_value
+                / start_value
                 * 100
             )
 
-            col1, col2, col3 = (
-                st.columns(3)
+            trend_rows.append(
+                {
+                    "Fonds":
+                        fund,
+                    "Start":
+                        round(
+                            start_value,
+                            2
+                        ),
+                    "Laatste":
+                        round(
+                            end_value,
+                            2
+                        ),
+                    "Trend %":
+                        round(
+                            change_pct,
+                            2
+                        )
+                }
             )
 
-            with col1:
+        if trend_rows:
 
-                st.metric(
-                    "Startwaarde",
-                    f"€{first_value:,.0f}"
+            trend_table = (
+                pd.DataFrame(
+                    trend_rows
                 )
-
-            with col2:
-
-                st.metric(
-                    "Huidige waarde",
-                    f"€{last_value:,.0f}"
+                .sort_values(
+                    "Trend %",
+                    ascending=False
                 )
+            )
 
-            with col3:
-
-                st.metric(
-                    "Trend",
-                    f"{change_pct:.2f}%"
-                )
+            st.dataframe(
+                trend_table,
+                use_container_width=True
+            )
 
 except Exception as e:
 
