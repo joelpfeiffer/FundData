@@ -3958,12 +3958,12 @@ if tab10 is not None:
                 )
 
 
-                st.dataframe(
-                    styled_df,
-                    use_container_width=True,
-                    height=700
-                )
-
+                #st.dataframe(
+                #    styled_df,
+                #    use_container_width=True,
+                #    height=700
+                #)
+                st.write(styled_df)
             except Exception as e:
 
                 st.error(e)
