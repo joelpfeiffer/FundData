@@ -3187,7 +3187,7 @@ if tab10 is not None:
                     )
 
                     total_cost = sum(
-                        s["costS_total"]
+                        s["costs_total"]
                         or 0
                         for s in snapshots.data
                     )
