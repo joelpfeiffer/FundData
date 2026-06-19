@@ -3933,7 +3933,6 @@ if tab10 is not None:
                 styled_df = (
                     matrix_df
                     .style
-                    .format("{:.2f}")
                     .map(
                         color_delta,
                         subset=delta_columns
