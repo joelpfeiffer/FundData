@@ -2461,6 +2461,117 @@ with tab9:
                                     "Historische portefeuillewaarde",
                                     f"€{total_value:,.2f}"
                                 )
+                                if st.button(
+                                    "Historische waardering opslaan"
+                                ):
+                                    existing = (
+                                        supabase
+                                        .table(
+                                            "portfolio_valuations"
+                                        )
+                                        .select("id")
+                                        .eq(
+                                            "portfolio_id",
+                                            st.session_state.portfolio_id
+                                        )
+                                        .eq(
+                                            "valuation_date",
+                                            str(selected_date)
+                                        )
+                                        .execute()
+                                    )
+
+                                    if existing.data:
+
+                                        st.warning(
+                                            "Voor deze datum bestaat al een waardering."
+                                        )
+
+                                        st.stop()
+                                        
+                                    valuation_result = (
+                                        supabase
+                                        .table("portfolio_valuations")
+                                        .insert({
+                                            "portfolio_id":
+                                                st.session_state.portfolio_id,
+
+                                            "valuation_date":
+                                                str(selected_date),
+
+                                            "price_date":
+                                                str(selected_date),
+
+                                            "total_value":
+                                                float(total_value)
+                                        })
+                                        .execute()
+                                    )
+                                    valuation_id = (
+                                        valuation_result.data[0]["id"]
+                                    )
+                                    for row in valuation_rows:
+
+                                        fund_id = next(
+                                            p["fund_id"]
+                                            for p in positions.data
+                                            if round(
+                                                p["units"],
+                                                6
+                                            ) == row["Eenheden"]
+                                        )
+
+                                        (
+                                            supabase
+                                            .table(
+                                                "valuation_positions"
+                                            )
+                                            .insert({
+                                                "valuation_id":
+                                                    valuation_id,
+
+                                                "fund_id":
+                                                    fund_id,
+
+                                                "units":
+                                                    float(
+                                                        row["Eenheden"]
+                                                    ),
+
+                                                "price":
+                                                    float(
+                                                        row["Koers"]
+                                                    ),
+
+                                                "value":
+                                                    float(
+                                                        row["Waarde"]
+                                                    ),
+
+                                                "price_date":
+                                                    str(
+                                                        row["Koersdatum"]
+                                                    ),
+
+                                                "version":
+                                                    1,
+
+                                                "is_active":
+                                                    True,
+
+                                                "created_by":
+                                                    st.session_state.get(
+                                                        "username",
+                                                        "system"
+                                                    )
+                                            })
+                                            .execute()
+                                        )
+                                        st.success(
+                                            "Historische waardering opgeslagen."
+                                        )
+
+
 
                             else:
 
