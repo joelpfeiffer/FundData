@@ -3306,7 +3306,7 @@ if tab10 is not None:
                                 "personal_contribution",
                                 "employer_contribution",
                                 "bonus_total",
-                                "cost_total"
+                                "costs_total"
                             ]
                         ],
                         use_container_width=True
