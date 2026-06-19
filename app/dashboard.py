@@ -1033,6 +1033,64 @@ with tab8:
             f"Actief: {selected_profile['is_active']}"
         )
 
+        if selected_profile["role"] == "admin":
+
+            st.warning(
+                "Admin accounts kunnen niet geblokkeerd worden."
+            )
+
+        else:
+
+            if selected_profile["is_active"]:
+
+                if st.button(
+                    "Gebruiker blokkeren"
+                ):
+
+                    (
+                        supabase
+                        .table("profiles")
+                        .update({
+                            "is_active": False
+                        })
+                        .eq(
+                            "id",
+                            selected_profile["id"]
+                        )
+                        .execute()
+                    )
+
+                    st.success(
+                        "Gebruiker geblokkeerd"
+                    )
+
+                    st.rerun()
+
+            else:
+
+                if st.button(
+                    "Gebruiker deblokkeren"
+                ):
+
+                    (
+                        supabase
+                        .table("profiles")
+                        .update({
+                            "is_active": True
+                        })
+                        .eq(
+                            "id",
+                            selected_profile["id"]
+                        )
+                        .execute()
+                    )
+
+                    st.success(
+                        "Gebruiker geactiveerd"
+                    )
+
+                    st.rerun()
+
 # ==================
 # Mijn Portefeuille
 # ==================
