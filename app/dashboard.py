@@ -3133,6 +3133,10 @@ if tab10 is not None:
                         "portfolio_id",
                         st.session_state.portfolio_id
                     )
+                    .eq(
+                        "is_active",
+                        True
+                    )
                     .execute()
                 )
 
@@ -3280,9 +3284,6 @@ if tab10 is not None:
 
                     cash_df = pd.DataFrame(
                         snapshots.data
-                    )
-                    st.write(
-                        cash_df.columns.tolist()
                     )
 
                     cash_df[
