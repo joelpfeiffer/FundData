@@ -3927,6 +3927,8 @@ if tab10 is not None:
                     if "Δ€" in col
                     or "Δ%" in col
                 ]
+                matrix_df = matrix_df.round(2)
+                
                 styled_df = (
                     matrix_df
                     .round(2)
