@@ -3466,8 +3466,6 @@ if tab10 is not None:
 
                 st.error(e)
 
-st.divider()
-
             st.divider()
 
             st.subheader(
