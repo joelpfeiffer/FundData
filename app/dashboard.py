@@ -3934,6 +3934,17 @@ if tab10 is not None:
                     for col in matrix_df.columns
                     if col.endswith("Δ%")
                 ]
+                ###############
+                st.write(
+                    matrix_df[
+                        [
+                            col
+                            for col in matrix_df.columns
+                            if "Δ%" in col
+                        ]
+                    ].head()
+                )
+                ################
                 styled_df = (
                     matrix_df
                     .style
