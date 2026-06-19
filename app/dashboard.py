@@ -1099,8 +1099,9 @@ with tab8:
         st.subheader(
             "Gebruiker uitnodigen"
         )
+
         with st.form(
-            "invite_user_form"
+            "invite_user"
         ):
 
             invite_email = st.text_input(
@@ -1122,9 +1123,32 @@ with tab8:
             submit_invite = st.form_submit_button(
                 "Uitnodigen"
             )
-            st.write(
-                "Admin client geladen"
-            )
+
+        if submit_invite:
+
+            try:
+
+                supabase_admin.auth.admin.invite_user_by_email(
+                    invite_email,
+                    {
+                        "data": {
+                            "display_name":
+                                invite_name,
+
+                            "role":
+                                invite_role
+                        }
+                    }
+                )
+
+                st.success(
+                    f"Uitnodiging verstuurd naar "
+                    f"{invite_email}"
+                )
+
+            except Exception as e:
+
+                st.error(e)
 
 # ==================
 # Mijn Portefeuille
