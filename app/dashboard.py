@@ -2375,24 +2375,6 @@ with tab9:
                                     )
                                 )
 
-                              #  price_rows = (
-                               #     df[
-                               #         (
-                               #             df["fund"]
-                               #             == fund_name
-                               #         )
-                               #         &
-                               #         (
-                               #             pd.to_datetime(
-                               #                 df["date"]
-                                #            ).dt.date
-                                #            <= selected_date
-                               #         )
-                               #     ]
-                               #     .sort_values(
-                               #         "date"
-                                #    )
-                                #)
 
                                 if price_rows.empty:
 
@@ -2453,6 +2435,7 @@ with tab9:
 
                             if valuation_rows:
 
+                                
                                 valuation_df = (
                                     pd.DataFrame(
                                         valuation_rows
@@ -2468,136 +2451,151 @@ with tab9:
                                     "Historische portefeuillewaarde",
                                     f"€{total_value:,.2f}"
                                 )
-                                if st.button(
-                                    "Historische waardering opslaan"
-                                ):
 
-                                    existing = (
-                                        supabase
-                                        .table(
-                                            "portfolio_valuations"
-                                        )
-                                        .select("id")
-                                        .eq(
-                                            "portfolio_id",
-                                            st.session_state.portfolio_id
-                                        )
-                                        .eq(
-                                            "valuation_date",
-                                            str(selected_date)
-                                        )
-                                        .execute()
-                                    )
+                                if "historical_rows" in st.session_state:
 
-                                    if existing.data:
+                                    if st.button(
+                                        "Historische waardering opslaan"
+                                    ):
 
-                                        st.warning(
-                                            "Voor deze datum bestaat al een waardering."
+                                        valuation_rows = (
+                                            st.session_state.historical_rows
                                         )
 
-                                    else:
+                                        total_value = (
+                                            st.session_state.historical_total
+                                        )
 
-                                        try:
-                                            
-                                            st.write(
-                                                "selected_date:",
-                                                selected_date
+                                        selected_date = (
+                                            st.session_state.historical_date
+                                        )
+
+                                        existing = (
+                                            supabase
+                                            .table(
+                                                "portfolio_valuations"
+                                            )
+                                            .select("id")
+                                            .eq(
+                                                "portfolio_id",
+                                                st.session_state.portfolio_id
+                                            )
+                                            .eq(
+                                                "valuation_date",
+                                                str(selected_date)
+                                            )
+                                            .execute()
+                                        )
+
+                                        if existing.data:
+
+                                            st.warning(
+                                                "Voor deze datum bestaat al een waardering."
                                             )
 
-                                            st.write(
-                                                "total_value:",
-                                                total_value
-                                            )
+                                        else:
 
-                                            st.write(
-                                                valuation_rows[:3]
-                                            )
-
-                                            valuation_result = (
-                                                supabase
-                                                .table(
-                                                    "portfolio_valuations"
+                                            try:
+                                                
+                                                st.write(
+                                                    "selected_date:",
+                                                    selected_date
                                                 )
-                                                .insert({
-                                                    "portfolio_id":
-                                                        st.session_state.portfolio_id,
 
-                                                    "valuation_date":
-                                                        str(selected_date),
+                                                st.write(
+                                                    "total_value:",
+                                                    total_value
+                                                )
 
-                                                    "price_date":
-                                                        str(selected_date),
+                                                st.write(
+                                                    valuation_rows[:3]
+                                                )
 
-                                                    "total_value":
-                                                        float(total_value)
-                                                })
-                                                .execute()
-                                            )
-
-                                            valuation_id = (
-                                                valuation_result.data[0]["id"]
-                                            )
-                                            st.write(
-                                                "valuation_id:",
-                                                valuation_id
-                                            )
-
-                                            for row in valuation_rows:
-
-                                                (
+                                                valuation_result = (
                                                     supabase
                                                     .table(
-                                                        "valuation_positions"
+                                                        "portfolio_valuations"
                                                     )
                                                     .insert({
-                                                        "valuation_id":
-                                                            valuation_id,
+                                                        "portfolio_id":
+                                                            st.session_state.portfolio_id,
 
-                                                        "fund_id":
-                                                            row["fund_id"],
-
-                                                        "units":
-                                                            float(
-                                                                row["Eenheden"]
-                                                            ),
-
-                                                        "price":
-                                                            float(
-                                                                row["Koers"]
-                                                            ),
-
-                                                        "value":
-                                                            float(
-                                                                row["Waarde"]
-                                                            ),
+                                                        "valuation_date":
+                                                            str(selected_date),
 
                                                         "price_date":
-                                                            str(
-                                                                row["Koersdatum"]
-                                                            ),
+                                                            str(selected_date),
 
-                                                        "version":
-                                                            1,
-
-                                                        "is_active":
-                                                            True,
-
-                                                        "created_by":
-                                                            st.session_state.get(
-                                                                "username",
-                                                                "system"
-                                                            )
+                                                        "total_value":
+                                                            float(total_value)
                                                     })
                                                     .execute()
                                                 )
 
-                                            st.success(
-                                                "Historische waardering opgeslagen."
-                                            )
+                                                valuation_id = (
+                                                    valuation_result.data[0]["id"]
+                                                )
+                                                st.write(
+                                                    "valuation_id:",
+                                                    valuation_id
+                                                )
 
-                                        except Exception as e:
+                                                for row in valuation_rows:
 
-                                            st.error(e)
+                                                    (
+                                                        supabase
+                                                        .table(
+                                                            "valuation_positions"
+                                                        )
+                                                        .insert({
+                                                            "valuation_id":
+                                                                valuation_id,
+
+                                                            "fund_id":
+                                                                row["fund_id"],
+
+                                                            "units":
+                                                                float(
+                                                                    row["Eenheden"]
+                                                                ),
+
+                                                            "price":
+                                                                float(
+                                                                    row["Koers"]
+                                                                ),
+
+                                                            "value":
+                                                                float(
+                                                                    row["Waarde"]
+                                                                ),
+
+                                                            "price_date":
+                                                                str(
+                                                                    row["Koersdatum"]
+                                                                ),
+
+                                                            "version":
+                                                                1,
+
+                                                            "is_active":
+                                                                True,
+
+                                                            "created_by":
+                                                                st.session_state.get(
+                                                                    "username",
+                                                                    "system"
+                                                                )
+                                                        })
+                                                        .execute()
+                                                    )
+
+                                                st.success(
+                                                    "Historische waardering opgeslagen."
+                                                )
+
+                                            except Exception as e:
+
+                                                st.error(e)
 
 
 ###
