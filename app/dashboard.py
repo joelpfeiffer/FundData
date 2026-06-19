@@ -3501,7 +3501,15 @@ if tab10 is not None:
                 valuation_df = pd.DataFrame(
                     valuations.data
                 )
+                ##############################
+                st.write(
+                    valuation_date
+                )
 
+                st.write(
+                    valuation_df.head()
+                )
+                ##############################
                 positions = (
                     supabase
                     .table(
@@ -3855,15 +3863,30 @@ if tab10 is not None:
                             if growth_pct is not None
                             else None
                         )
+                    ########################
+                    st.write(
+                        valuation_date
+                    )
 
-                    total_value = float(
+                    st.write(
+                        valuation_df.head()
+                    )
+                    ########################
+                    match = (
                         valuation_df[
                             valuation_df[
                                 "valuation_date"
                             ]
                             == valuation_date
                         ]
-                        .iloc[0][
+                    )
+
+                    if match.empty:
+
+                        continue
+
+                    total_value = float(
+                        match.iloc[0][
                             "total_value"
                         ]
                     )
