@@ -3281,6 +3281,9 @@ if tab10 is not None:
                     cash_df = pd.DataFrame(
                         snapshots.data
                     )
+                    st.write(
+                        cash_df.columns.tolist()
+                    )
 
                     cash_df[
                         "snapshot_date"
