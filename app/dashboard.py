@@ -3825,7 +3825,9 @@ if tab10 is not None:
                     ] = values.values
 
                     matrix_df[
-                        f"{short_name} Δ€"
+                        "Δ€"
+                        if f"{short_name} Δ€" not in matrix_df.columns
+                        else f"{short_name} Δ€"
                     ] = (
                         matrix_df[
                             f"{short_name}"
@@ -3834,7 +3836,9 @@ if tab10 is not None:
                     )
 
                     matrix_df[
-                        f"{short_name} Δ%"
+                        "Δ%"
+                        if f"{short_name} Δ%" not in matrix_df.columns
+                        else f"{short_name} Δ%"
                     ] = (
                         matrix_df[
                             f"{short_name}"
