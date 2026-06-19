@@ -3501,6 +3501,20 @@ if tab10 is not None:
                 valuation_df = pd.DataFrame(
                     valuations.data
                 )
+                valuation_df[
+                    "valuation_date"
+                ] = pd.to_datetime(
+                    valuation_df[
+                        "valuation_date"
+                    ]
+                ).dt.date
+                merged[
+                    "valuation_date"
+                ] = pd.to_datetime(
+                    merged[
+                        "valuation_date"
+                    ]
+                ).dt.date
                 ##############################
                 st.write(
                     valuation_date
