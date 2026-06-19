@@ -1214,8 +1214,51 @@ if tab8 is not None:
                             )
         
                             st.rerun()
-        
+
                 st.divider()
+
+                st.subheader(
+                    "Wachtwoord wijzigen"
+                )
+
+                new_password = st.text_input(
+                    "Nieuw wachtwoord",
+                    type="password",
+                    key="admin_password_reset"
+                )
+
+                if st.button(
+                    "Wachtwoord opslaan"
+                ):
+
+                    if len(new_password) < 8:
+
+                        st.warning(
+                            "Gebruik minimaal 8 tekens."
+                        )
+
+                    else:
+
+                        try:
+
+                            supabase_admin.auth.admin.update_user_by_id(
+                                selected_profile["id"],
+                                {
+                                    "password":
+                                        new_password
+                                }
+                            )
+
+                            st.success(
+                                f"Wachtwoord gewijzigd voor "
+                                f"{selected_profile['display_name']}"
+                            )
+
+                        except Exception as e:
+
+                            st.error(e)
+                st.divider()
+               
         
                 st.subheader(
                     "Gebruiker uitnodigen"
