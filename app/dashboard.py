@@ -4007,17 +4007,48 @@ if tab10 is not None:
                 summary_df = pd.DataFrame(
                     summary_rows
                 )
+                baseline = (
+                    supabase
+                    .table(
+                        "year_baselines"
+                    )
+                    .select(
+                        "start_value"
+                    )
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .eq(
+                        "year",
+                        datetime.now().year
+                    )
+                    .execute()
+                )
+                baseline_value = (
+                    baseline.data[0]["start_value"]
+                    if baseline.data
+                    else summary_df["Startwaarde"].sum()
+                )
                 total_row = pd.DataFrame([
                     {
                         "Fonds": "TOTAAL",
+
                         "Startwaarde":
-                            summary_df["Startwaarde"].sum(),
+                            baseline_value,
 
                         "Huidige waarde":
-                            summary_df["Huidige waarde"].sum(),
+                            summary_df[
+                                "Huidige waarde"
+                            ].sum(),
 
                         "Verschil €":
-                            summary_df["Verschil €"].sum(),
+                            (
+                                summary_df[
+                                    "Huidige waarde"
+                                ].sum()
+                                - baseline_value
+                            ),
 
                         "Rendement %":
                             (
@@ -4026,9 +4057,7 @@ if tab10 is not None:
                                         "Huidige waarde"
                                     ].sum()
                                     /
-                                    summary_df[
-                                        "Startwaarde"
-                                    ].sum()
+                                    baseline_value
                                 )
                                 - 1
                             )
