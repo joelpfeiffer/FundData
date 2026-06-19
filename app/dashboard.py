@@ -2508,20 +2508,7 @@ with tab9:
 
                                     try:
                                         
-                                        st.write(
-                                            "selected_date:",
-                                            selected_date
-                                        )
-
-                                        st.write(
-                                            "total_value:",
-                                            total_value
-                                        )
-
-                                        st.write(
-                                            valuation_rows[:3]
-                                        )
-
+                                        
                                         valuation_result = (
                                             supabase
                                             .table(
@@ -2546,10 +2533,7 @@ with tab9:
                                         valuation_id = (
                                             valuation_result.data[0]["id"]
                                         )
-                                        st.write(
-                                            "valuation_id:",
-                                            valuation_id
-                                        )
+                                        
 
                                         for row in valuation_rows:
 
