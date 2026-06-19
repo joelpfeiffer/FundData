@@ -3832,23 +3832,19 @@ if tab10 is not None:
                     ] = values.values
 
                     matrix_df[
-                        "Δ€"
-                        if f"{short_name} Δ€" not in matrix_df.columns
-                        else f"{short_name} Δ€"
+                        f"{short_name} Δ€"
                     ] = (
                         matrix_df[
-                            f"{short_name}"
+                            short_name
                         ]
                         .diff()
                     )
 
                     matrix_df[
-                        "Δ%"
-                        if f"{short_name} Δ%" not in matrix_df.columns
-                        else f"{short_name} Δ%"
+                        f"{short_name} Δ%"
                     ] = (
                         matrix_df[
-                            f"{short_name}"
+                            short_name
                         ]
                         .pct_change()
                         * 100
