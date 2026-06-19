@@ -3316,3 +3316,127 @@ if tab10 is not None:
             except Exception as e:
 
                 st.error(e)
+            
+            st.divider()
+
+            st.subheader(
+                "Fondsallocatie"
+            )
+
+            try:
+
+                latest = (
+                    supabase
+                    .table(
+                        "portfolio_valuations"
+                    )
+                    .select("id")
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .order(
+                        "valuation_date",
+                        desc=True
+                    )
+                    .limit(1)
+                    .execute()
+                )
+
+                if latest.data:
+
+                    valuation_id = (
+                        latest.data[0]["id"]
+                    )
+
+                    positions = (
+                        supabase
+                        .table(
+                            "valuation_positions"
+                        )
+                        .select("*")
+                        .eq(
+                            "valuation_id",
+                            valuation_id
+                        )
+                        .execute()
+                    )
+
+                    if positions.data:
+
+                        alloc_df = pd.DataFrame(
+                            positions.data
+                        )
+
+                        total = (
+                            alloc_df["value"]
+                            .sum()
+                        )
+
+                        alloc_df[
+                            "weight_pct"
+                        ] = (
+                            alloc_df["value"]
+                            / total
+                            * 100
+                        )
+
+                        st.dataframe(
+                            alloc_df[
+                                [
+                                    "fund_id",
+                                    "value",
+                                    "weight_pct"
+                                ]
+                            ],
+                            use_container_width=True
+                        )
+
+            except Exception as e:
+
+                st.error(e)
+
+            st.divider()
+
+            st.subheader(
+                "Datakwaliteit"
+            )
+
+            try:
+
+                col1,col2,col3 = (
+                    st.columns(3)
+                )
+
+                with col1:
+
+                    st.metric(
+                        "Snapshots",
+                        len(
+                            snapshots.data
+                        )
+                    )
+
+                with col2:
+
+                    st.metric(
+                        "Waarderingen",
+                        len(
+                            valuations.data
+                        )
+                    )
+
+                with col3:
+
+                    if valuations.data:
+
+                        st.metric(
+                            "Laatste waardering",
+                            valuations.data[-1][
+                                "valuation_date"
+                            ]
+                        )
+
+            except Exception as e:
+
+                st.error(e)
