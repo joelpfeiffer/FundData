@@ -3833,7 +3833,10 @@ if tab10 is not None:
 
                     matrix_df[
                         f"{short_name}"
-                    ] = values.values
+                    ] = (
+                        pd.Series(values.values)
+                        .round(2)
+                    )
 
                     matrix_df[
                         delta_eur_name
