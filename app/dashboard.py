@@ -2434,6 +2434,17 @@ with tab9:
                                 )
 
                             if valuation_rows:
+                                st.session_state.historical_rows = (
+                                    valuation_rows
+                                )
+
+                                st.session_state.historical_total = (
+                                    total_value
+                                )
+
+                                st.session_state.historical_date = (
+                                    selected_date
+                                )
 
                                 
                                 valuation_df = (
