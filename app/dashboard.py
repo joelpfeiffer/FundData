@@ -3909,8 +3909,36 @@ if tab10 is not None:
                     "Datum"
                 ].dt.date
 
+                def color_delta(val):
+
+                    if pd.isna(val):
+                        return ""
+
+                    if val > 0:
+                        return "color: lightgreen"
+
+                    if val < 0:
+                        return "color: salmon"
+
+                    return ""
+                delta_columns = [
+                    col
+                    for col in matrix_df.columns
+                    if "Δ€" in col
+                    or "Δ%" in col
+                ]
+                styled_df = (
+                    matrix_df
+                    .round(2)
+                    .style
+                    .map(
+                        color_delta,
+                        subset=delta_columns
+                    )
+                )
+                                
                 st.dataframe(
-                    matrix_df.round(2),
+                    styled_df,
                     use_container_width=True,
                     height=700
                 )
