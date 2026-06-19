@@ -3350,7 +3350,9 @@ if tab10 is not None:
                     .table(
                         "portfolio_valuations"
                     )
-                    .select("id")
+                    .select(
+                        "id"
+                    )
                     .eq(
                         "portfolio_id",
                         st.session_state.portfolio_id
@@ -3374,7 +3376,9 @@ if tab10 is not None:
                         .table(
                             "valuation_positions"
                         )
-                        .select("*")
+                        .select(
+                            "*"
+                        )
                         .eq(
                             "valuation_id",
                             valuation_id
@@ -3388,33 +3392,81 @@ if tab10 is not None:
                             positions.data
                         )
 
+                        funds = (
+                            supabase
+                            .table(
+                                "funds"
+                            )
+                            .select(
+                                "id,current_name"
+                            )
+                            .execute()
+                        )
+
+                        funds_df = pd.DataFrame(
+                            funds.data
+                        )
+
+                        alloc_df = alloc_df.merge(
+                            funds_df,
+                            left_on="fund_id",
+                            right_on="id",
+                            how="left"
+                        )
+
                         total = (
-                            alloc_df["value"]
+                            alloc_df[
+                                "value"
+                            ]
                             .sum()
                         )
 
                         alloc_df[
                             "weight_pct"
                         ] = (
-                            alloc_df["value"]
+                            alloc_df[
+                                "value"
+                            ]
                             / total
                             * 100
                         )
 
-                        st.dataframe(
+                        alloc_df = (
                             alloc_df[
                                 [
-                                    "fund_id",
+                                    "current_name",
                                     "value",
                                     "weight_pct"
                                 ]
-                            ],
+                            ]
+                            .rename(
+                                columns={
+                                    "current_name":
+                                        "Fonds",
+
+                                    "value":
+                                        "Waarde",
+
+                                    "weight_pct":
+                                        "Gewicht %"
+                                }
+                            )
+                            .sort_values(
+                                "Waarde",
+                                ascending=False
+                            )
+                        )
+
+                        st.dataframe(
+                            alloc_df,
                             use_container_width=True
                         )
 
             except Exception as e:
 
                 st.error(e)
+
+st.divider()
 
             st.divider()
 
