@@ -3929,23 +3929,26 @@ if tab10 is not None:
                 ]
 
                 matrix_df = matrix_df.round(2)
-
+                pct_cols = [
+                    col
+                    for col in matrix_df.columns
+                    if col.endswith("Δ%")
+                ]
                 styled_df = (
                     matrix_df
                     .style
                     .format(
                         {
                             col: "{:.2f}%"
-                            for col in matrix_df.columns
-                            if "Δ%" in col
+                            for col in pct_cols
                         }
                     )
                     .format(
                         {
                             col: "{:.2f}"
                             for col in matrix_df.columns
-                            if col not in ["Datum"]
-                            and "Δ%" not in col
+                            if col not in pct_cols
+                            and col != "Datum"
                         }
                     )
                     .map(
