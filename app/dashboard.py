@@ -3674,7 +3674,7 @@ if tab10 is not None:
             except Exception as e:
 
                 st.error(e)
-#########################################################
+
             st.divider()
 
             st.subheader(
@@ -3996,7 +3996,8 @@ if tab10 is not None:
             except Exception as e:
 
                 st.error(e)
-  ####################################          
+
+  ####################################           
             st.divider()
 
             st.subheader(
