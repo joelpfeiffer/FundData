@@ -3948,7 +3948,7 @@ if tab10 is not None:
             except Exception as e:
 
                 st.error(e)
-
+#############################
             st.divider()
 
             st.subheader(
@@ -4007,7 +4007,34 @@ if tab10 is not None:
                 summary_df = pd.DataFrame(
                     summary_rows
                 )
+                total_row = pd.DataFrame([
+                    {
+                        "Fonds": "TOTAAL",
+                        "Startwaarde":
+                            summary_df["Startwaarde"].sum(),
 
+                        "Huidige waarde":
+                            summary_df["Huidige waarde"].sum(),
+
+                        "Verschil €":
+                            summary_df["Verschil €"].sum(),
+
+                        "Rendement %":
+                            (
+                                (
+                                    summary_df[
+                                        "Huidige waarde"
+                                    ].sum()
+                                    /
+                                    summary_df[
+                                        "Startwaarde"
+                                    ].sum()
+                                )
+                                - 1
+                            )
+                            * 100
+                    }
+                ])
                 summary_df = (
                     summary_df
                     .sort_values(
