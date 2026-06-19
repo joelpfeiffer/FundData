@@ -750,433 +750,433 @@ with tab8:
                 )
 
 
-    if (
-        st.session_state.admin_view
-        == "funds"
-    ):
-
-        st.subheader("Fondsbeheer")
-
-        st.info(
-            "Fondsen worden automatisch uit prices.csv "
-            "gesynchroniseerd."
-        )
-
-        if st.button("🔄 Synchroniseer fondsen"):
-
-            try:
-
-                fund_names = sorted(
-                    df["fund"]
-                    .dropna()
-                    .unique()
-                    .tolist()
-                )
-
-                toegevoegd = 0
-
-                for fund_name in fund_names:
-
-                    bestaande = (
-                        supabase
-                        .table("funds")
-                        .select("id")
-                        .eq(
-                            "current_name",
-                            fund_name
-                        )
-                        .execute()
+        if (
+            st.session_state.admin_view
+            == "funds"
+        ):
+    
+            st.subheader("Fondsbeheer")
+    
+            st.info(
+                "Fondsen worden automatisch uit prices.csv "
+                "gesynchroniseerd."
+            )
+    
+            if st.button("🔄 Synchroniseer fondsen"):
+    
+                try:
+    
+                    fund_names = sorted(
+                        df["fund"]
+                        .dropna()
+                        .unique()
+                        .tolist()
                     )
-
-                    if not bestaande.data:
-
-                        fund_code = (
-                            fund_name
-                            .upper()
-                            .replace(" ", "_")
-                            .replace("-", "_")
-                        )
-
-                        (
+    
+                    toegevoegd = 0
+    
+                    for fund_name in fund_names:
+    
+                        bestaande = (
                             supabase
                             .table("funds")
+                            .select("id")
+                            .eq(
+                                "current_name",
+                                fund_name
+                            )
+                            .execute()
+                        )
+    
+                        if not bestaande.data:
+    
+                            fund_code = (
+                                fund_name
+                                .upper()
+                                .replace(" ", "_")
+                                .replace("-", "_")
+                            )
+    
+                            (
+                                supabase
+                                .table("funds")
+                                .insert({
+                                    "fund_code": fund_code,
+                                    "current_name": fund_name,
+                                    "is_active": True
+                                })
+                                .execute()
+                            )
+    
+                            toegevoegd += 1
+    
+                    st.success(
+                        f"{toegevoegd} nieuwe fondsen toegevoegd."
+                    )
+    
+                except Exception as e:
+    
+                    st.error(e)
+    
+            # =====================
+            # Fondsen tonen
+            # =====================
+    
+            try:
+    
+                funds = (
+                    supabase
+                    .table("funds")
+                    .select("*")
+                    .order("current_name")
+                    .execute()
+                )
+    
+                st.subheader("Geregistreerde fondsen")
+    
+                if funds.data:
+    
+                    st.dataframe(
+                        funds.data,
+                        use_container_width=True
+                    )
+    
+                else:
+    
+                    st.info(
+                        "Nog geen fondsen geregistreerd."
+                    )
+    
+            except Exception as e:
+    
+                st.error(e)
+    
+            # =====================
+            # Aliasbeheer
+            # =====================
+    
+            st.divider()
+    
+            st.subheader("Aliasbeheer")
+    
+            try:
+    
+                funds = (
+                    supabase
+                    .table("funds")
+                    .select("*")
+                    .eq("is_active", True)
+                    .order("current_name")
+                    .execute()
+                )
+    
+                fund_names = [
+                    f["current_name"]
+                    for f in funds.data
+                ]
+    
+                alias_name = st.selectbox(
+                    "Oude naam (alias)",
+                    options=fund_names,
+                    key="alias_fund"
+                )
+    
+                canonical_name = st.selectbox(
+                    "Huidige naam (hoofdfonds)",
+                    options=fund_names,
+                    key="canonical_fund"
+                )
+    
+                if st.button("Alias koppelen"):
+    
+                    if alias_name == canonical_name:
+    
+                        st.warning(
+                            "Alias en hoofdfonds mogen niet gelijk zijn."
+                        )
+    
+                    else:
+    
+                        canonical_fund = next(
+                            f for f in funds.data
+                            if f["current_name"] == canonical_name
+                        )
+    
+                        (
+                            supabase
+                            .table("fund_aliases")
                             .insert({
-                                "fund_code": fund_code,
-                                "current_name": fund_name,
-                                "is_active": True
+                                "fund_id": canonical_fund["id"],
+                                "fund_name": alias_name
                             })
                             .execute()
                         )
-
-                        toegevoegd += 1
-
-                st.success(
-                    f"{toegevoegd} nieuwe fondsen toegevoegd."
-                )
-
+    
+                        st.success(
+                            f"{alias_name} gekoppeld aan {canonical_name}"
+                        )
+    
             except Exception as e:
-
+    
                 st.error(e)
-
-        # =====================
-        # Fondsen tonen
-        # =====================
-
-        try:
-
-            funds = (
-                supabase
-                .table("funds")
-                .select("*")
-                .order("current_name")
-                .execute()
-            )
-
-            st.subheader("Geregistreerde fondsen")
-
-            if funds.data:
-
-                st.dataframe(
-                    funds.data,
-                    use_container_width=True
-                )
-
-            else:
-
-                st.info(
-                    "Nog geen fondsen geregistreerd."
-                )
-
-        except Exception as e:
-
-            st.error(e)
-
-        # =====================
-        # Aliasbeheer
-        # =====================
-
-        st.divider()
-
-        st.subheader("Aliasbeheer")
-
-        try:
-
-            funds = (
-                supabase
-                .table("funds")
-                .select("*")
-                .eq("is_active", True)
-                .order("current_name")
-                .execute()
-            )
-
-            fund_names = [
-                f["current_name"]
-                for f in funds.data
-            ]
-
-            alias_name = st.selectbox(
-                "Oude naam (alias)",
-                options=fund_names,
-                key="alias_fund"
-            )
-
-            canonical_name = st.selectbox(
-                "Huidige naam (hoofdfonds)",
-                options=fund_names,
-                key="canonical_fund"
-            )
-
-            if st.button("Alias koppelen"):
-
-                if alias_name == canonical_name:
-
-                    st.warning(
-                        "Alias en hoofdfonds mogen niet gelijk zijn."
-                    )
-
-                else:
-
-                    canonical_fund = next(
-                        f for f in funds.data
-                        if f["current_name"] == canonical_name
-                    )
-
-                    (
-                        supabase
-                        .table("fund_aliases")
-                        .insert({
-                            "fund_id": canonical_fund["id"],
-                            "fund_name": alias_name
-                        })
-                        .execute()
-                    )
-
-                    st.success(
-                        f"{alias_name} gekoppeld aan {canonical_name}"
-                    )
-
-        except Exception as e:
-
-            st.error(e)
-
-        # =====================
-        # Alias overzicht
-        # =====================
-
-        try:
-
-            aliases = (
-                supabase
-                .table("fund_aliases")
-                .select("*")
-                .execute()
-            )
-
-            st.subheader("Bestaande alias koppelingen")
-
-            if aliases.data:
-
-                st.dataframe(
-                    aliases.data,
-                    use_container_width=True
-                )
-
-            else:
-
-                st.info(
-                    "Nog geen alias koppelingen aanwezig."
-                )
-
-        except Exception as e:
-
-            st.error(e)
-
-
-    # =====================
-    # Controle
-    # =====================
-
-
-            st.subheader("Controle")
-
-        try:
-
-            fund_count = (
-                supabase
-                .table("funds")
-                .select(
-                    "id",
-                    count="exact"
-                )
-                .execute()
-            )
-
-            alias_count = (
-                supabase
-                .table("fund_aliases")
-                .select(
-                    "id",
-                    count="exact"
-                )
-                .execute()
-            )
-
-            col1, col2 = st.columns(2)
-
-            with col1:
-                st.metric(
-                    "Aantal fondsen",
-                    fund_count.count
-                )
-
-            with col2:
-                st.metric(
-                    "Aantal aliases",
-                    alias_count.count
-                )
-
-        except Exception as e:
-
-            st.error(e)
-
-    elif (
-        st.session_state.admin_view
-        == "users"
-        ):
-
-        st.subheader(
-            "Userbeheer"
-        )
-
-        profiles = (
-            supabase
-            .table("profiles")
-            .select("*")
-            .order("display_name")
-            .execute()
-        )
-        import pandas as pd
-
-        user_df = pd.DataFrame(
-            profiles.data
-        )
-
-        user_df = user_df.rename(
-            columns={
-                "display_name": "Naam",
-                "role": "Rol",
-                "is_active": "Actief",
-                "last_login": "Laatste login"
-            }
-        )
-
-        st.dataframe(
-            user_df[
-                [
-                    "Naam",
-                    "Rol",
-                    "Actief",
-                    "Laatste login"
-                ]
-            ],
-            use_container_width=True
-        )
-        user_names = [
-            p["display_name"]
-            for p in profiles.data
-        ]
-
-        selected_user = st.selectbox(
-            "Gebruiker",
-            user_names
-        )
-        selected_profile = next(
-            p for p in profiles.data
-            if p["display_name"] == selected_user
-        )
-
-        st.write(
-            f"Rol: {selected_profile['role']}"
-        )
-
-        st.write(
-            f"Actief: {selected_profile['is_active']}"
-        )
-
-        if selected_profile["role"] == "admin":
-
-            st.warning(
-                "Admin accounts kunnen niet geblokkeerd worden."
-            )
-
-        else:
-
-            if selected_profile["is_active"]:
-
-                if st.button(
-                    "Gebruiker blokkeren"
-                ):
-
-                    (
-                        supabase
-                        .table("profiles")
-                        .update({
-                            "is_active": False
-                        })
-                        .eq(
-                            "id",
-                            selected_profile["id"]
-                        )
-                        .execute()
-                    )
-
-                    st.success(
-                        "Gebruiker geblokkeerd"
-                    )
-
-                    st.rerun()
-
-            else:
-
-                if st.button(
-                    "Gebruiker deblokkeren"
-                ):
-
-                    (
-                        supabase
-                        .table("profiles")
-                        .update({
-                            "is_active": True
-                        })
-                        .eq(
-                            "id",
-                            selected_profile["id"]
-                        )
-                        .execute()
-                    )
-
-                    st.success(
-                        "Gebruiker geactiveerd"
-                    )
-
-                    st.rerun()
-
-        st.divider()
-
-        st.subheader(
-            "Gebruiker uitnodigen"
-        )
-
-        with st.form(
-            "invite_user"
-        ):
-
-            invite_email = st.text_input(
-                "E-mail"
-            )
-
-            invite_name = st.text_input(
-                "Naam"
-            )
-
-            invite_role = st.selectbox(
-                "Rol",
-                [
-                    "user",
-                    "admin"
-                ]
-            )
-
-            submit_invite = st.form_submit_button(
-                "Uitnodigen"
-            )
-
-        if submit_invite:
-
+    
+            # =====================
+            # Alias overzicht
+            # =====================
+    
             try:
-
-                supabase_admin.auth.admin.invite_user_by_email(
-                    invite_email,
-                    {
-                        "data": {
-                            "display_name":
-                                invite_name,
-
-                            "role":
-                                invite_role
-                        }
-                    }
+    
+                aliases = (
+                    supabase
+                    .table("fund_aliases")
+                    .select("*")
+                    .execute()
                 )
-
-                st.success(
-                    f"Uitnodiging verstuurd naar "
-                    f"{invite_email}"
-                )
-
+    
+                st.subheader("Bestaande alias koppelingen")
+    
+                if aliases.data:
+    
+                    st.dataframe(
+                        aliases.data,
+                        use_container_width=True
+                    )
+    
+                else:
+    
+                    st.info(
+                        "Nog geen alias koppelingen aanwezig."
+                    )
+    
             except Exception as e:
-
+    
                 st.error(e)
+    
+    
+        # =====================
+        # Controle
+        # =====================
+    
+    
+                st.subheader("Controle")
+    
+            try:
+    
+                fund_count = (
+                    supabase
+                    .table("funds")
+                    .select(
+                        "id",
+                        count="exact"
+                    )
+                    .execute()
+                )
+    
+                alias_count = (
+                    supabase
+                    .table("fund_aliases")
+                    .select(
+                        "id",
+                        count="exact"
+                    )
+                    .execute()
+                )
+    
+                col1, col2 = st.columns(2)
+    
+                with col1:
+                    st.metric(
+                        "Aantal fondsen",
+                        fund_count.count
+                    )
+    
+                with col2:
+                    st.metric(
+                        "Aantal aliases",
+                        alias_count.count
+                    )
+    
+            except Exception as e:
+    
+                st.error(e)
+    
+        elif (
+            st.session_state.admin_view
+            == "users"
+            ):
+    
+            st.subheader(
+                "Userbeheer"
+            )
+    
+            profiles = (
+                supabase
+                .table("profiles")
+                .select("*")
+                .order("display_name")
+                .execute()
+            )
+            import pandas as pd
+    
+            user_df = pd.DataFrame(
+                profiles.data
+            )
+    
+            user_df = user_df.rename(
+                columns={
+                    "display_name": "Naam",
+                    "role": "Rol",
+                    "is_active": "Actief",
+                    "last_login": "Laatste login"
+                }
+            )
+    
+            st.dataframe(
+                user_df[
+                    [
+                        "Naam",
+                        "Rol",
+                        "Actief",
+                        "Laatste login"
+                    ]
+                ],
+                use_container_width=True
+            )
+            user_names = [
+                p["display_name"]
+                for p in profiles.data
+            ]
+    
+            selected_user = st.selectbox(
+                "Gebruiker",
+                user_names
+            )
+            selected_profile = next(
+                p for p in profiles.data
+                if p["display_name"] == selected_user
+            )
+    
+            st.write(
+                f"Rol: {selected_profile['role']}"
+            )
+    
+            st.write(
+                f"Actief: {selected_profile['is_active']}"
+            )
+    
+            if selected_profile["role"] == "admin":
+    
+                st.warning(
+                    "Admin accounts kunnen niet geblokkeerd worden."
+                )
+    
+            else:
+    
+                if selected_profile["is_active"]:
+    
+                    if st.button(
+                        "Gebruiker blokkeren"
+                    ):
+    
+                        (
+                            supabase
+                            .table("profiles")
+                            .update({
+                                "is_active": False
+                            })
+                            .eq(
+                                "id",
+                                selected_profile["id"]
+                            )
+                            .execute()
+                        )
+    
+                        st.success(
+                            "Gebruiker geblokkeerd"
+                        )
+    
+                        st.rerun()
+    
+                else:
+    
+                    if st.button(
+                        "Gebruiker deblokkeren"
+                    ):
+    
+                        (
+                            supabase
+                            .table("profiles")
+                            .update({
+                                "is_active": True
+                            })
+                            .eq(
+                                "id",
+                                selected_profile["id"]
+                            )
+                            .execute()
+                        )
+    
+                        st.success(
+                            "Gebruiker geactiveerd"
+                        )
+    
+                        st.rerun()
+    
+            st.divider()
+    
+            st.subheader(
+                "Gebruiker uitnodigen"
+            )
+    
+            with st.form(
+                "invite_user"
+            ):
+    
+                invite_email = st.text_input(
+                    "E-mail"
+                )
+    
+                invite_name = st.text_input(
+                    "Naam"
+                )
+    
+                invite_role = st.selectbox(
+                    "Rol",
+                    [
+                        "user",
+                        "admin"
+                    ]
+                )
+    
+                submit_invite = st.form_submit_button(
+                    "Uitnodigen"
+                )
+    
+            if submit_invite:
+    
+                try:
+    
+                    supabase_admin.auth.admin.invite_user_by_email(
+                        invite_email,
+                        {
+                            "data": {
+                                "display_name":
+                                    invite_name,
+    
+                                "role":
+                                    invite_role
+                            }
+                        }
+                    )
+    
+                    st.success(
+                        f"Uitnodiging verstuurd naar "
+                        f"{invite_email}"
+                    )
+    
+                except Exception as e:
+    
+                    st.error(e)
 
 # ==================
 # Mijn Portefeuille
