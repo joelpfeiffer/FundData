@@ -3052,7 +3052,16 @@ if tab9 is not None:
                                     right_on="id"
                                 )
                             )
+                            st.write(
+                            #######################
+                                "merged rows:",
+                                len(merged)
+                            )
 
+                            st.dataframe(
+                                merged.head(20)
+                            )
+                            ######################
                             merged[
                                 "valuation_date"
                             ] = pd.to_datetime(
