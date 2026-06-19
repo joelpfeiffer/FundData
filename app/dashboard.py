@@ -2821,6 +2821,174 @@ if tab9 is not None:
 
                         st.error(e)
 
+                    st.divider()
+
+                    st.subheader(
+                        "Historische waarde direct invoeren"
+                    )
+
+                    manual_date = st.date_input(
+                        "Waarderingsdatum",
+                        key="manual_valuation_date"
+                    )
+
+                    fund_values = {}
+
+                    st.markdown(
+                        "Voer per fonds de totale waarde in."
+                    )
+
+                    for fund_name in selected:
+
+                        fund_values[fund_name] = st.number_input(
+                            fund_name,
+                            min_value=0.0,
+                            value=0.0,
+                            step=100.0,
+                            format="%.2f",
+                            key=f"manual_value_{fund_name}"
+                        )
+
+                    total_value = sum(
+                        fund_values.values()
+                    )
+
+                    st.metric(
+                        "Totale portefeuillewaarde",
+                        f"€ {total_value:,.2f}"
+                    )
+
+                    if st.button(
+                        "Historische waarde opslaan"
+                    ):
+
+                        try:
+
+                            existing = (
+                                supabase
+                                .table(
+                                    "portfolio_valuations"
+                                )
+                                .select("id")
+                                .eq(
+                                    "portfolio_id",
+                                    st.session_state.portfolio_id
+                                )
+                                .eq(
+                                    "valuation_date",
+                                    str(manual_date)
+                                )
+                                .execute()
+                            )
+
+                            if existing.data:
+
+                                st.warning(
+                                    "Voor deze datum bestaat al een waardering."
+                                )
+
+                            else:
+
+                                valuation_result = (
+                                    supabase
+                                    .table(
+                                        "portfolio_valuations"
+                                    )
+                                    .insert({
+                                        "portfolio_id":
+                                            st.session_state.portfolio_id,
+
+                                        "valuation_date":
+                                            str(manual_date),
+
+                                        "price_date":
+                                            str(manual_date),
+
+                                        "total_value":
+                                            float(total_value)
+                                    })
+                                    .execute()
+                                )
+
+                                valuation_id = (
+                                    valuation_result.data[0]["id"]
+                                )
+
+                                funds_lookup = (
+                                    supabase
+                                    .table(
+                                        "funds"
+                                    )
+                                    .select(
+                                        "id,current_name"
+                                    )
+                                    .execute()
+                                )
+
+                                fund_map = {
+                                    row["current_name"]: row["id"]
+                                    for row in funds_lookup.data
+                                }
+
+                                for fund_name, value in fund_values.items():
+
+                                    if value <= 0:
+
+                                        continue
+
+                                    if fund_name not in fund_map:
+
+                                        continue
+
+                                    (
+                                        supabase
+                                        .table(
+                                            "valuation_positions"
+                                        )
+                                        .insert({
+                                            "valuation_id":
+                                                valuation_id,
+
+                                            "fund_id":
+                                                fund_map[fund_name],
+
+                                            "units":
+                                                0,
+
+                                            "price":
+                                                0,
+
+                                            "value":
+                                                float(value),
+
+                                            "price_date":
+                                                str(manual_date),
+
+                                            "version":
+                                                1,
+
+                                            "is_active":
+                                                True,
+
+                                            "created_by":
+                                                st.session_state.get(
+                                                    "username",
+                                                    "system"
+                                                )
+                                        })
+                                        .execute()
+                                    )
+
+                                st.success(
+                                    "Historische waardering opgeslagen."
+                                )
+
+                                st.rerun()
+
+                        except Exception as e:
+
+                            st.error(e)
+
                     
 # =====================
 # Analyse
