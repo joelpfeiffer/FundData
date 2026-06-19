@@ -3937,8 +3937,19 @@ if tab10 is not None:
                     matrix_df
                     .style
                     .format(
-                        "{:.2f}",
-                        subset=numeric_cols
+                        {
+                            col: "{:.2f}%"
+                            for col in matrix_df.columns
+                            if "Δ%" in col
+                        }
+                    )
+                    .format(
+                        {
+                            col: "{:.2f}"
+                            for col in matrix_df.columns
+                            if col not in ["Datum"]
+                            and "Δ%" not in col
+                        }
                     )
                     .map(
                         color_delta,
