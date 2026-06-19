@@ -4035,6 +4035,21 @@ if tab10 is not None:
                             * 100
                     }
                 ])
+
+                summary_df = (
+                    summary_df
+                    .sort_values(
+                        "Rendement %",
+                        ascending=False
+                    )
+                )
+                summary_df = pd.concat(
+                    [
+                        summary_df,
+                        total_row
+                    ],
+                    ignore_index=True
+                )
                 summary_df = (
                     summary_df
                     .sort_values(
