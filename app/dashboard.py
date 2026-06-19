@@ -3158,37 +3158,139 @@ if tab10 is not None:
 #blok 2
             st.divider()
 
-            st.subheader(
-                "Vermogensontwikkeling"
-            )
+            col1, col2 = st.columns([1, 2])
 
-            try:
+            with col1:
 
-                if valuations.data:
+                st.subheader(
+                    "Vermogensontwikkeling"
+                )
 
-                    trend_df = pd.DataFrame(
-                        valuations.data
-                    )
+                try:
 
-                    trend_df[
-                        "valuation_date"
-                    ] = pd.to_datetime(
+                    if valuations.data:
+
+                        trend_df = pd.DataFrame(
+                            valuations.data
+                        )
+
                         trend_df[
                             "valuation_date"
+                        ] = pd.to_datetime(
+                            trend_df[
+                                "valuation_date"
+                            ]
+                        )
+
+                        st.line_chart(
+                            trend_df.set_index(
+                                "valuation_date"
+                            )[
+                                "total_value"
+                            ]
+                        )
+
+                except Exception as e:
+
+                    st.error(e)
+
+            with col2:
+
+                st.subheader(
+                    "Fondstrends"
+                )
+
+                try:
+
+                    valuations_funds = (
+                        supabase
+                        .table(
+                            "portfolio_valuations"
+                        )
+                        .select(
+                            "id,valuation_date"
+                        )
+                        .eq(
+                            "portfolio_id",
+                            st.session_state.portfolio_id
+                        )
+                        .order(
+                            "valuation_date"
+                        )
+                        .execute()
+                    )
+
+                    valuation_df = pd.DataFrame(
+                        valuations_funds.data
+                    )
+
+                    valuation_df[
+                        "valuation_date"
+                    ] = pd.to_datetime(
+                        valuation_df[
+                            "valuation_date"
                         ]
+                    )
+
+                    positions = (
+                        supabase
+                        .table(
+                            "valuation_positions"
+                        )
+                        .select("*")
+                        .execute()
+                    )
+
+                    pos_df = pd.DataFrame(
+                        positions.data
+                    )
+
+                    funds = (
+                        supabase
+                        .table(
+                            "funds"
+                        )
+                        .select(
+                            "id,current_name"
+                        )
+                        .execute()
+                    )
+
+                    funds_df = pd.DataFrame(
+                        funds.data
+                    )
+
+                    merged = (
+                        pos_df
+                        .merge(
+                            valuation_df,
+                            left_on="valuation_id",
+                            right_on="id"
+                        )
+                        .merge(
+                            funds_df,
+                            left_on="fund_id",
+                            right_on="id"
+                        )
+                    )
+
+                    chart_df = (
+                        merged
+                        .pivot_table(
+                            index="valuation_date",
+                            columns="current_name",
+                            values="value"
+                        )
+                        .sort_index()
                     )
 
                     st.line_chart(
-                        trend_df.set_index(
-                            "valuation_date"
-                        )[
-                            "total_value"
-                        ]
+                        chart_df
                     )
 
-            except Exception as e:
+                except Exception as e:
 
-                st.error(e)
+                    st.error(e)
 #blok 3
             st.divider()
 
