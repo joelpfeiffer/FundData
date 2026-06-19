@@ -246,6 +246,32 @@ else:
 
         st.rerun()
 
+        if st.sidebar.button(
+            "Wachtwoord vergeten?"
+        ):
+
+            if not email:
+
+                st.warning(
+                    "Vul eerst een e-mailadres in."
+                )
+
+            else:
+
+                try:
+
+                    supabase.auth.reset_password_email(
+                        email
+                    )
+
+                    st.success(
+                        "Resetmail verzonden."
+                    )
+
+                except Exception as e:
+
+                    st.error(e)
+
 # =========================
 # FILTER DATA
 # =========================
