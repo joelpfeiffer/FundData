@@ -2593,7 +2593,6 @@ with tab9:
                                         st.error(e)
 
 
-###
                             else:
 
                                 st.warning(
@@ -2604,3 +2603,154 @@ with tab9:
                 except Exception as e:
 
                     st.error(e)
+
+# =====================
+# Trendoverzicht
+# =====================
+
+st.divider()
+
+st.subheader(
+    "Trendoverzicht"
+)
+
+try:
+
+    valuations = (
+        supabase
+        .table(
+            "portfolio_valuations"
+        )
+        .select(
+            "valuation_date,total_value"
+        )
+        .eq(
+            "portfolio_id",
+            st.session_state.portfolio_id
+        )
+        .order(
+            "valuation_date"
+        )
+        .execute()
+    )
+
+    if not valuations.data:
+
+        st.info(
+            "Nog geen waarderingen aanwezig."
+        )
+
+    else:
+
+        trend_df = pd.DataFrame(
+            valuations.data
+        )
+
+        trend_df[
+            "valuation_date"
+        ] = pd.to_datetime(
+            trend_df[
+                "valuation_date"
+            ]
+        )
+
+        trend_df = (
+            trend_df
+            .sort_values(
+                "valuation_date"
+            )
+            .reset_index(
+                drop=True
+            )
+        )
+
+        trend_df[
+            "change_eur"
+        ] = (
+            trend_df[
+                "total_value"
+            ]
+            .diff()
+        )
+
+        trend_df[
+            "change_pct"
+        ] = (
+            trend_df[
+                "total_value"
+            ]
+            .pct_change()
+            * 100
+        )
+
+        display_df = (
+            trend_df.copy()
+        )
+
+        display_df[
+            "valuation_date"
+        ] = (
+            display_df[
+                "valuation_date"
+            ]
+            .dt.date
+        )
+
+        display_df = (
+            display_df.rename(
+                columns={
+                    "valuation_date":
+                        "Datum",
+                    "total_value":
+                        "Waarde",
+                    "change_eur":
+                        "Δ €",
+                    "change_pct":
+                        "Δ %"
+                }
+            )
+        )
+
+        st.dataframe(
+            display_df,
+            use_container_width=True
+        )
+
+        st.line_chart(
+            trend_df.set_index(
+                "valuation_date"
+            )[
+                "total_value"
+            ]
+        )
+
+        col1, col2, col3 = (
+            st.columns(3)
+        )
+
+        with col1:
+
+            st.metric(
+                "Aantal waarderingen",
+                len(
+                    trend_df
+                )
+            )
+
+        with col2:
+
+            st.metric(
+                "Laagste waarde",
+                f"€{trend_df['total_value'].min():,.0f}"
+            )
+
+        with col3:
+
+            st.metric(
+                "Hoogste waarde",
+                f"€{trend_df['total_value'].max():,.0f}"
+            )
+
+except Exception as e:
+
+    st.error(e)
