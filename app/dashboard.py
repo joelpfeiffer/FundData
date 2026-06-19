@@ -3929,8 +3929,6 @@ if tab10 is not None:
 
                 matrix_df = matrix_df.round(2)
 
-                matrix_df = matrix_df.fillna("")
-
                 styled_df = (
                     matrix_df
                     .style
