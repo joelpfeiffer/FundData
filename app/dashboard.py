@@ -3928,53 +3928,24 @@ if tab10 is not None:
                 ]
 
                 matrix_df = matrix_df.round(2)
-                
-                pct_cols = [
-                    col
-                    for col in matrix_df.columns
-                    if col.endswith("Δ%")
-                ]
-                ###############
-                st.write(
-                    matrix_df[
-                        [
-                            col
-                            for col in matrix_df.columns
-                            if "Δ%" in col
-                        ]
-                    ].head()
-                )
-                ################
+
+                matrix_df = matrix_df.fillna("")
+
                 styled_df = (
                     matrix_df
                     .style
-                    .format(
-                        {
-                            col: "{:.2f}%"
-                            for col in pct_cols
-                        }
-                    )
-                    .format(
-                        {
-                            col: "{:.2f}"
-                            for col in matrix_df.columns
-                            if col not in pct_cols
-                            and col != "Datum"
-                        }
-                    )
                     .map(
                         color_delta,
                         subset=delta_columns
                     )
                 )
 
-
-                #st.dataframe(
-                #    styled_df,
-                #    use_container_width=True,
-                #    height=700
-                #)
-                st.write(styled_df)
+                st.dataframe(
+                    styled_df,
+                    use_container_width=True,
+                    height=700
+                )
+            
             except Exception as e:
 
                 st.error(e)
