@@ -2331,6 +2331,27 @@ with tab9:
                                     ]
                                 )
 
+                                aliases = (
+                                    supabase
+                                    .table("fund_aliases")
+                                    .select("fund_name")
+                                    .eq(
+                                        "fund_id",
+                                        position["fund_id"]
+                                    )
+                                    .execute()
+                                )
+
+                                fund_names = [
+                                    fund_name
+                                ]
+
+                                for alias in aliases.data:
+
+                                    fund_names.append(
+                                        alias["fund_name"]
+                                    )
+
                                 units = (
                                     position["units"]
                                 )
@@ -2339,7 +2360,7 @@ with tab9:
                                     df[
                                         (
                                             df["fund"]
-                                            == fund_name
+                                            .isin(fund_names)
                                         )
                                         &
                                         (
@@ -2353,6 +2374,25 @@ with tab9:
                                         "date"
                                     )
                                 )
+
+                              #  price_rows = (
+                               #     df[
+                               #         (
+                               #             df["fund"]
+                               #             == fund_name
+                               #         )
+                               #         &
+                               #         (
+                               #             pd.to_datetime(
+                               #                 df["date"]
+                                #            ).dt.date
+                                #            <= selected_date
+                               #         )
+                               #     ]
+                               #     .sort_values(
+                               #         "date"
+                                #    )
+                                #)
 
                                 if price_rows.empty:
 
