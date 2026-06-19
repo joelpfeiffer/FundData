@@ -3826,13 +3826,25 @@ if tab10 is not None:
                             ""
                         )
                     )
+                    initials = "".join(
+                        word[0].upper()
+                        for word in short_name.split()
+                    )
+
+                    delta_eur_name = (
+                        f"{initials} Δ€"
+                    )
+
+                    delta_pct_name = (
+                        f"{initials} Δ%"
+                    )
 
                     matrix_df[
                         f"{short_name}"
                     ] = values.values
 
                     matrix_df[
-                        f"{short_name} Δ€"
+                        delta_eur_name
                     ] = (
                         matrix_df[
                             short_name
@@ -3841,7 +3853,7 @@ if tab10 is not None:
                     )
 
                     matrix_df[
-                        f"{short_name} Δ%"
+                        delta_pct_name
                     ] = (
                         matrix_df[
                             short_name
