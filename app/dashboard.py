@@ -3929,10 +3929,17 @@ if tab10 is not None:
                 ]
 
                 matrix_df = matrix_df.round(2)
+                numeric_cols = matrix_df.select_dtypes(
+                    include="number"
+                ).columns
 
                 styled_df = (
                     matrix_df
                     .style
+                    .format(
+                        "{:.2f}",
+                        subset=numeric_cols
+                    )
                     .map(
                         color_delta,
                         subset=delta_columns
