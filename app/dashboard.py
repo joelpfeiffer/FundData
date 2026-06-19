@@ -2003,6 +2003,30 @@ with tab9:
                 snapshot_id = (
                     latest_snapshot.data[0]["id"]
                 )
+
+                snapshot_date = pd.to_datetime(
+                    latest_snapshot.data[0]["snapshot_date"]
+                )
+
+                price_date = pd.to_datetime(
+                    latest_price_date
+                )
+
+                if snapshot_date > price_date:
+
+                    st.error(
+                        f"Snapshotdatum "
+                        f"{snapshot_date.date()} "
+                        f"is nieuwer dan koersdatum "
+                        f"{price_date.date()}."
+                    )
+
+                    st.warning(
+                        "Deze waardering kan niet worden opgeslagen."
+                    )
+
+                    st.stop()
+
                 positions = (
                     supabase
                     .table("snapshot_positions")
