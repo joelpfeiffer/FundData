@@ -9,7 +9,10 @@ from datetime import datetime
 st.set_page_config(layout="wide")
 
 import streamlit as st
-from supabase_client import supabase
+from supabase_client import (
+    supabase,
+    supabase_admin
+)
 
 if "portfolio_view" not in st.session_state:
                 st.session_state.portfolio_view = "week"
@@ -1118,6 +1121,9 @@ with tab8:
 
             submit_invite = st.form_submit_button(
                 "Uitnodigen"
+            )
+            st.write(
+                "Admin client geladen"
             )
 
 # ==================
