@@ -3770,6 +3770,7 @@ if tab10 is not None:
                         "valuation_date"
                     ].unique()
                 )
+                ##########################
                 st.write(
                     "Aantal fondsen:",
                     len(
@@ -3778,7 +3779,10 @@ if tab10 is not None:
                         ].unique()
                     )
                 )
-
+                st.write(
+                    matrix_df.columns.tolist()
+                )
+##############################################
                 st.write(
                     sorted(
                         merged[
