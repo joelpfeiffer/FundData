@@ -3825,14 +3825,6 @@ if tab10 is not None:
                             "Zwitserleven ",
                             ""
                         )
-                        .replace(
-                            "Index ",
-                            ""
-                        )
-                        .replace(
-                            "Aandelenfonds ",
-                            ""
-                        )
                     )
 
                     matrix_df[
