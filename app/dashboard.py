@@ -14,53 +14,7 @@ from supabase_client import (
     supabase_admin
 )
 
-try:
 
-    session = (
-        supabase
-        .auth
-        .get_session()
-    )
-
-    if (
-        session
-        and session.session
-    ):
-
-        st.divider()
-
-        st.subheader(
-            "Nieuw wachtwoord instellen"
-        )
-
-        new_password = (
-            st.text_input(
-                "Nieuw wachtwoord",
-                type="password",
-                key="reset_pw"
-            )
-        )
-
-        if st.button(
-            "Wachtwoord opslaan"
-        ):
-
-            supabase.auth.update_user(
-                {
-                    "password":
-                        new_password
-                }
-            )
-
-            st.success(
-                "Wachtwoord bijgewerkt."
-            )
-
-except Exception as e:
-
-    st.write(
-        f"Reset debug: {e}"
-    )
 
 if "portfolio_view" not in st.session_state:
                 st.session_state.portfolio_view = "week"
