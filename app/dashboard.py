@@ -3890,7 +3890,7 @@ if tab10 is not None:
                         valuation_df[
                             valuation_df[
                                 "valuation_date"
-                            ].dt.date
+                            ]
                             ==
                             pd.to_datetime(
                                 valuation_date
