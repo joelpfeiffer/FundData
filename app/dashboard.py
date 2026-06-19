@@ -3090,9 +3090,20 @@ if tab10 is not None:
             )
 
         else:
-            st.subheader(
-                "Dashboard"
-            )
+
+            if not st.session_state.get(
+                "portfolio_id"
+            ):
+
+                st.info(
+                    "Selecteer eerst een portefeuille in 'Mijn Portefeuille'."
+                )
+
+                st.stop()
+                
+                st.subheader(
+                    "Dashboard"
+                )
 
             try:
 
