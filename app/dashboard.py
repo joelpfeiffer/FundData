@@ -3399,6 +3399,331 @@ if tab10 is not None:
             st.divider()
 
             st.subheader(
+                "Fondstrends"
+            )
+
+            try:
+
+                valuations = (
+                    supabase
+                    .table(
+                        "portfolio_valuations"
+                    )
+                    .select(
+                        "id,valuation_date"
+                    )
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .order(
+                        "valuation_date"
+                    )
+                    .execute()
+                )
+
+                valuation_df = pd.DataFrame(
+                    valuations.data
+                )
+
+                positions = (
+                    supabase
+                    .table(
+                        "valuation_positions"
+                    )
+                    .select("*")
+                    .execute()
+                )
+
+                pos_df = pd.DataFrame(
+                    positions.data
+                )
+
+                funds = (
+                    supabase
+                    .table("funds")
+                    .select(
+                        "id,current_name"
+                    )
+                    .execute()
+                )
+
+                funds_df = pd.DataFrame(
+                    funds.data
+                )
+
+                merged = (
+                    pos_df
+                    .merge(
+                        valuation_df,
+                        left_on="valuation_id",
+                        right_on="id"
+                    )
+                    .merge(
+                        funds_df,
+                        left_on="fund_id",
+                        right_on="id"
+                    )
+                )
+
+                chart_df = (
+                    merged
+                    .pivot_table(
+                        index="valuation_date",
+                        columns="current_name",
+                        values="value"
+                    )
+                    .sort_index()
+                )
+
+                st.line_chart(
+                    chart_df
+                )
+
+            except Exception as e:
+
+                st.error(e)
+
+            st.divider()
+
+            st.subheader(
+                "Groei per fonds"
+            )
+
+            try:
+
+                growth_rows = []
+
+                for fund_name in chart_df.columns:
+
+                    series = (
+                        chart_df[
+                            fund_name
+                        ]
+                        .dropna()
+                    )
+
+                    if len(series) < 2:
+
+                        continue
+
+                    start_value = (
+                        series.iloc[0]
+                    )
+
+                    end_value = (
+                        series.iloc[-1]
+                    )
+
+                    growth_pct = (
+                        (
+                            end_value
+                            - start_value
+                        )
+                        / start_value
+                        * 100
+                    )
+
+                    growth_rows.append(
+                        {
+                            "Fonds":
+                                fund_name,
+
+                            "Startwaarde":
+                                round(
+                                    start_value,
+                                    2
+                                ),
+
+                            "Laatste waarde":
+                                round(
+                                    end_value,
+                                    2
+                                ),
+
+                            "Groei %":
+                                round(
+                                    growth_pct,
+                                    2
+                                )
+                        }
+                    )
+
+                growth_df = (
+                    pd.DataFrame(
+                        growth_rows
+                    )
+                    .sort_values(
+                        "Groei %",
+                        ascending=False
+                    )
+                )
+
+                st.dataframe(
+                    growth_df,
+                    use_container_width=True
+                )
+
+            except Exception as e:
+
+                st.error(e)
+
+            st.divider()
+
+            st.subheader(
+                "Top stijgers & dalers"
+            )
+
+            try:
+
+                col1,col2 = st.columns(2)
+
+                with col1:
+
+                    st.markdown(
+                        "### Top stijgers"
+                    )
+
+                    st.dataframe(
+                        growth_df.head(10),
+                        use_container_width=True
+                    )
+
+                with col2:
+
+                    st.markdown(
+                        "### Top dalers"
+                    )
+
+                    st.dataframe(
+                        growth_df.tail(10),
+                        use_container_width=True
+                    )
+
+            except Exception as e:
+
+                st.error(e)
+
+            st.divider()
+
+            st.subheader(
+                "Allocatie per fonds"
+            )
+
+            try:
+
+                latest_date = (
+                    merged[
+                        "valuation_date"
+                    ]
+                    .max()
+                )
+
+                latest_df = (
+                    merged[
+                        merged[
+                            "valuation_date"
+                        ]
+                        == latest_date
+                    ]
+                    .copy()
+                )
+
+                total_value = (
+                    latest_df[
+                        "value"
+                    ]
+                    .sum()
+                )
+
+                latest_df[
+                    "Allocatie %"
+                ] = (
+                    latest_df[
+                        "value"
+                    ]
+                    / total_value
+                    * 100
+                )
+
+                alloc_table = (
+                    latest_df[
+                        [
+                            "current_name",
+                            "value",
+                            "Allocatie %"
+                        ]
+                    ]
+                    .sort_values(
+                        "Allocatie %",
+                        ascending=False
+                    )
+                )
+
+                st.dataframe(
+                    alloc_table,
+                    use_container_width=True
+                )
+
+            except Exception as e:
+
+                st.error(e)
+
+            st.divider()
+
+            st.subheader(
+                "Concentratierisico"
+            )
+
+            try:
+
+                top3 = (
+                    alloc_table[
+                        "Allocatie %"
+                    ]
+                    .head(3)
+                    .sum()
+                )
+
+                top5 = (
+                    alloc_table[
+                        "Allocatie %"
+                    ]
+                    .head(5)
+                    .sum()
+                )
+
+                col1,col2 = st.columns(2)
+
+                with col1:
+
+                    st.metric(
+                        "Top 3 fondsen",
+                        f"{top3:.1f}%"
+                    )
+
+                with col2:
+
+                    st.metric(
+                        "Top 5 fondsen",
+                        f"{top5:.1f}%"
+                    )
+
+                if top3 > 70:
+
+                    st.warning(
+                        "Portefeuille is sterk geconcentreerd."
+                    )
+
+            except Exception as e:
+
+                st.error(e)
+
+            
+  ####################################          
+            st.divider()
+
+            st.subheader(
                 "Datakwaliteit"
             )
 
@@ -3440,3 +3765,5 @@ if tab10 is not None:
             except Exception as e:
 
                 st.error(e)
+
+            
