@@ -5305,13 +5305,6 @@ if tab11 is not None:
                         .dropna()
                         .iloc[-1]
                     )
-                    
-                    
-
-                    st.write(
-                        "historical_return",
-                        historical_return
-                    )
 
                     show_historical = st.checkbox(
                         f"Toon historisch rendement "
