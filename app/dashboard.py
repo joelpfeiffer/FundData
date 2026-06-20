@@ -5422,7 +5422,6 @@ if tab11 is not None:
                         "Best Case": best_rate
                     }
 
-                     * 100
 
                     if show_historical:
 
