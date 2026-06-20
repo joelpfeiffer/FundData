@@ -3538,7 +3538,9 @@ if tab10 is not None:
                 #        "valuation_date"
                 #    ]
                 #)
-
+                st.write(
+                    merged.columns.tolist()
+                )
                 merged["price_date"] = pd.to_datetime(
                     merged["price_date"]
                 )
