@@ -1550,13 +1550,13 @@ if tab9 is not None:
 
                 with col5:
 
-                    if st.button("Historical data invoer"):
+                    if st.button("📚 Historical data invoer"):
 
                         st.session_state.portfolio_view = "historical"
 
                 with col6:
 
-                    if st.button("alle data"):
+                    if st.button("🗄️ Alle data"):
 
                         st.session_state.portfolio_view = "all_data"
 
@@ -3759,7 +3759,7 @@ if tab9 is not None:
                                             )
 
                                             st.rerun()
-                                            
+
                     except Exception as e:
 
                         st.error(e)
