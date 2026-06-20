@@ -2430,20 +2430,10 @@ if tab9 is not None:
 
                 if st.session_state.portfolio_view == "historical":
                 
-                    # =====================
-                    # historische invoer
-                    # =====================
-
                     st.subheader("Historische invoer")
                     # =====================
                     # Historische invoer
                     # =====================
-
-                    st.divider()
-
-                    st.subheader(
-                        "Historische invoer"
-                    )
 
                     try:
 
