@@ -2083,6 +2083,20 @@ if tab9 is not None:
                             "Toon alle versies",
                             value=False
                         )
+                        portfolio_check = (
+                            supabase
+                            .table("portfolios")
+                            .select("*")
+                            .eq(
+                                "id",
+                                st.session_state.portfolio_id
+                            )
+                            .execute()
+                        )
+
+                        st.write(
+                            portfolio_check.data
+                        )
 
                         snapshots_query = (
                             supabase
