@@ -2426,6 +2426,15 @@ if tab9 is not None:
                         f"{latest_snapshot.data[0]['snapshot_date']}"
                     )
 
+                    
+
+                if st.session_state.portfolio_view == "historical":
+                
+                    # =====================
+                    # historische invoer
+                    # =====================
+
+                    st.subheader("Historische invoer")
                     # =====================
                     # Historische invoer
                     # =====================
@@ -2983,15 +2992,6 @@ if tab9 is not None:
                         except Exception as e:
 
                             st.error(e)
-
-                if st.session_state.portfolio_view == "historical":
-                
-                    # =====================
-                    # historische invoer
-                    # =====================
-
-                    st.subheader("Historische invoer")
-
 
                 if st.session_state.portfolio_view == "all_data":
                 
