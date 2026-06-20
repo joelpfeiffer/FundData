@@ -3545,7 +3545,7 @@ if tab10 is not None:
                     "Datum"
                 ] = sorted(
                     merged[
-                        "valuation_date"
+                        "price_date"
                     ].unique()
                 )
 
