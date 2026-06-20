@@ -3582,6 +3582,10 @@ if tab10 is not None:
 
                     values = (
                         fund_history
+                        .drop_duplicates(
+                            subset=["price_date_x"],
+                            keep="last"
+                        )
                         .set_index(
                             "price_date_x"
                         )[
