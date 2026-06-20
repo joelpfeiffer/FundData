@@ -333,6 +333,7 @@ tab_names = [
 
 if is_admin:
     tab_names.append("Admin")
+    tab_names.append("Test page")
 
 if is_logged_in:
     tab_names.append("Mijn Portefeuille")
@@ -351,12 +352,14 @@ tab7 = tabs[6]
 tab8 = None
 tab9 = None
 tab10 = None
+tab11 = None
 
 if is_admin and is_logged_in:
 
     tab8 = tabs[7]
     tab9 = tabs[8]
     tab10 = tabs[9]
+    tab11 = tabs[10]
 
 elif is_admin:
 
@@ -4232,5 +4235,1271 @@ if tab10 is not None:
             except Exception as e:
 
                 st.error(e)
+
+# =====================
+# Test page
+# =====================
+
+if tab11 is not None:
+
+    with tab11:
+
+        if not st.session_state.get(
+            "logged_in",
+            False
+        ):
+
+            st.warning(
+                "Log eerst in."
+            )
+
+        else:
+
+            if not st.session_state.get(
+                "portfolio_id"
+            ):
+
+                st.info(
+                    "Selecteer eerst een portefeuille in 'Mijn Portefeuille'."
+                )
+
+                st.stop()
+                
+                st.subheader(
+                    "Dashboard"
+                )
+
+            try:
+
+                valuations = (
+                    supabase
+                    .table(
+                        "portfolio_valuations"
+                    )
+                    .select("*")
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .order(
+                        "valuation_date"
+                    )
+                    .execute()
+                )
+
+                snapshots = (
+                    supabase
+                    .table(
+                        "monthly_snapshots"
+                    )
+                    .select("*")
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .eq(
+                        "is_active",
+                        True
+                    )
+                    .execute()
+                )
+
+                baseline = (
+                    supabase
+                    .table(
+                        "year_baselines"
+                    )
+                    .select("*")
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .order(
+                        "year",
+                        desc=True
+                    )
+                    .limit(1)
+                    .execute()
+                )
+
+                if valuations.data:
+
+                    current_value = (
+                        valuations
+                        .data[-1]
+                        ["total_value"]
+                    )
+
+                    start_value = (
+                        baseline.data[0]["start_value"]
+                        if baseline.data
+                        else 0
+                    )
+
+                    total_personal = sum(
+                        s["personal_contribution"]
+                        or 0
+                        for s in snapshots.data
+                    )
+
+                    total_employer = sum(
+                        s["employer_contribution"]
+                        or 0
+                        for s in snapshots.data
+                    )
+
+                    total_bonus = sum(
+                        s["bonus_total"]
+                        or 0
+                        for s in snapshots.data
+                    )
+
+                    total_cost = sum(
+                        s["costs_total"]
+                        or 0
+                        for s in snapshots.data
+                    )
+
+                    result = (
+                        current_value
+                        - start_value
+                        - total_personal
+                        - total_employer
+                        - total_bonus
+                        + total_cost
+                    )
+
+                    col1,col2,col3,col4 = (
+                        st.columns(4)
+                    )
+
+                    with col1:
+                        st.metric(
+                            "Waarde",
+                            f"€{current_value:,.0f}"
+                        )
+
+                    with col2:
+                        st.metric(
+                            "Begin jaar",
+                            f"€{start_value:,.0f}"
+                        )
+
+                    with col3:
+                        st.metric(
+                            "Inleg",
+                            f"€{total_personal + total_employer:,.0f}"
+                        )
+
+                    with col4:
+                        st.metric(
+                            "Resultaat",
+                            f"€{result:,.0f}"
+                        )
+
+            except Exception as e:
+
+                st.error(e)
+
+#blok 2
+            st.divider()
+
+            col1, col2 = st.columns([1, 2])
+
+            with col1:
+
+                st.subheader(
+                    "Vermogensontwikkeling"
+                )
+
+                try:
+
+                    if valuations.data:
+
+                        trend_df = pd.DataFrame(
+                            valuations.data
+                        )
+
+                        trend_df[
+                            "valuation_date"
+                        ] = pd.to_datetime(
+                            trend_df[
+                                "valuation_date"
+                            ]
+                        )
+
+                        st.line_chart(
+                            trend_df.set_index(
+                                "valuation_date"
+                            )[
+                                "total_value"
+                            ]
+                        )
+
+                except Exception as e:
+
+                    st.error(e)
+
+            with col2:
+
+                st.subheader(
+                    "Fondstrends"
+                )
+
+                try:
+
+                    valuations_funds = (
+                        supabase
+                        .table(
+                            "portfolio_valuations"
+                        )
+                        .select(
+                            "id,valuation_date"
+                        )
+                        .eq(
+                            "portfolio_id",
+                            st.session_state.portfolio_id
+                        )
+                        .order(
+                            "valuation_date"
+                        )
+                        .execute()
+                    )
+
+                    valuation_df = pd.DataFrame(
+                        valuations_funds.data
+                    )
+
+                    valuation_df[
+                        "valuation_date"
+                    ] = pd.to_datetime(
+                        valuation_df[
+                            "valuation_date"
+                        ]
+                    )
+
+                    positions = (
+                        supabase
+                        .table(
+                            "valuation_positions"
+                        )
+                        .select("*")
+                        .execute()
+                    )
+
+                    pos_df = pd.DataFrame(
+                        positions.data
+                    )
+
+                    funds = (
+                        supabase
+                        .table(
+                            "funds"
+                        )
+                        .select(
+                            "id,current_name"
+                        )
+                        .execute()
+                    )
+
+                    funds_df = pd.DataFrame(
+                        funds.data
+                    )
+
+                    merged = (
+                        pos_df
+                        .merge(
+                            valuation_df,
+                            left_on="valuation_id",
+                            right_on="id"
+                        )
+                        .merge(
+                            funds_df,
+                            left_on="fund_id",
+                            right_on="id"
+                        )
+                    )
+
+                    chart_df = (
+                        merged
+                        .pivot_table(
+                            index="valuation_date",
+                            columns="current_name",
+                            values="value"
+                        )
+                        .sort_index()
+                    )
+
+                    st.line_chart(
+                        chart_df
+                    )
+
+                except Exception as e:
+
+                    st.error(e)
+#blok 3
+            st.divider()
+
+            st.subheader(
+                "Cashflow"
+            )
+
+            try:
+
+                if snapshots.data:
+
+                    cash_df = pd.DataFrame(
+                        snapshots.data
+                    )
+
+                    cash_df[
+                        "snapshot_date"
+                    ] = pd.to_datetime(
+                        cash_df[
+                            "snapshot_date"
+                        ]
+                    )
+
+                    cash_df = (
+                        cash_df.sort_values(
+                            "snapshot_date"
+                        )
+                    )
+
+                    st.dataframe(
+                        cash_df[
+                            [
+                                "snapshot_date",
+                                "personal_contribution",
+                                "employer_contribution",
+                                "bonus_total",
+                                "costs_total"
+                            ]
+                        ],
+                        use_container_width=True
+                    )
+
+            except Exception as e:
+
+                st.error(e)
+            
+            st.divider()
+
+            st.subheader(
+                "Fondsallocatie"
+            )
+
+            try:
+
+                latest = (
+                    supabase
+                    .table(
+                        "portfolio_valuations"
+                    )
+                    .select(
+                        "id"
+                    )
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .order(
+                        "valuation_date",
+                        desc=True
+                    )
+                    .limit(1)
+                    .execute()
+                )
+
+                if latest.data:
+
+                    valuation_id = (
+                        latest.data[0]["id"]
+                    )
+
+                    positions = (
+                        supabase
+                        .table(
+                            "valuation_positions"
+                        )
+                        .select(
+                            "*"
+                        )
+                        .eq(
+                            "valuation_id",
+                            valuation_id
+                        )
+                        .execute()
+                    )
+
+                    if positions.data:
+
+                        alloc_df = pd.DataFrame(
+                            positions.data
+                        )
+
+                        funds = (
+                            supabase
+                            .table(
+                                "funds"
+                            )
+                            .select(
+                                "id,current_name"
+                            )
+                            .execute()
+                        )
+
+                        funds_df = pd.DataFrame(
+                            funds.data
+                        )
+
+                        alloc_df = alloc_df.merge(
+                            funds_df,
+                            left_on="fund_id",
+                            right_on="id",
+                            how="left"
+                        )
+
+                        total = (
+                            alloc_df[
+                                "value"
+                            ]
+                            .sum()
+                        )
+
+                        alloc_df[
+                            "weight_pct"
+                        ] = (
+                            alloc_df[
+                                "value"
+                            ]
+                            / total
+                            * 100
+                        )
+
+                        alloc_df = (
+                            alloc_df[
+                                [
+                                    "current_name",
+                                    "value",
+                                    "weight_pct"
+                                ]
+                            ]
+                            .rename(
+                                columns={
+                                    "current_name":
+                                        "Fonds",
+
+                                    "value":
+                                        "Waarde",
+
+                                    "weight_pct":
+                                        "Gewicht %"
+                                }
+                            )
+                            .sort_values(
+                                "Waarde",
+                                ascending=False
+                            )
+                        )
+
+                        st.dataframe(
+                            alloc_df,
+                            use_container_width=True
+                        )
+
+            except Exception as e:
+
+                st.error(e)
+
+            
+            st.divider()
+
+            st.subheader(
+                "Performance Matrix"
+            )
+
+            try:
+
+                valuations = (
+                    supabase
+                    .table(
+                        "portfolio_valuations"
+                    )
+                    .select(
+                        "id,valuation_date,total_value,price_date,total_value"
+                    )
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .order(
+                        "price_date"
+                    )
+                    .execute()
+                )
+
+                positions = (
+                    supabase
+                    .table(
+                        "valuation_positions"
+                    )
+                    .select(
+                        "valuation_id,fund_id,value,price_date"
+                    )
+                    .eq(
+                        "is_active",
+                        True
+                    )
+                    .execute()
+                )
+
+                funds = (
+                    supabase
+                    .table(
+                        "funds"
+                    )
+                    .select(
+                        "id,current_name"
+                    )
+                    .execute()
+                )
+
+                valuation_df = pd.DataFrame(
+                    valuations.data
+                )
+
+                pos_df = pd.DataFrame(
+                    positions.data
+                )
+
+                funds_df = pd.DataFrame(
+                    funds.data
+                )
+
+                valuation_df[
+                    "price_date"
+                ] = pd.to_datetime(
+                    valuation_df[
+                        "price_date"
+                    ]
+                )
+
+                merged = (
+                    pos_df
+                    .merge(
+                        valuation_df,
+                        left_on="valuation_id",
+                        right_on="id"
+                    )
+                    .merge(
+                        funds_df,
+                        left_on="fund_id",
+                        right_on="id"
+                    )
+                )
+
+                merged[
+                    "valuation_date"
+                ] = pd.to_datetime(
+                    merged[
+                        "valuation_date"
+                    ]
+                )
+                #st.write(
+                #    merged.columns.tolist()
+                #)
+                merged["price_date_x"] = pd.to_datetime(
+                    merged["price_date_x"]
+                )
+
+                matrix_df = pd.DataFrame()
+
+                matrix_df[
+                    "Datum"
+                ] = sorted(
+                    merged[
+                        "price_date_x"
+                    ].unique()
+                )
+
+                #st.write(
+                #    sorted(
+                #        merged[
+                #            "current_name"
+                #        ].unique()
+                #    )
+                #)
+                for fund_name in sorted(
+                    merged[
+                        "current_name"
+                    ].unique()
+                ):
+
+                    fund_history = (
+                        merged[
+                            merged[
+                                "current_name"
+                            ]
+                            == fund_name
+                        ]
+                        .sort_values(
+                            "price_date_x"
+                        )
+                    )
+
+                    values = (
+                        fund_history
+                        .drop_duplicates(
+                            subset=["price_date_x"],
+                            keep="last"
+                        )
+                        .set_index(
+                            "price_date_x"
+                        )[
+                            "value"
+                        ]
+                    )
+
+                    values = values.reindex(
+                        matrix_df[
+                            "Datum"
+                        ]
+                    )
+
+                    short_name = (
+                        fund_name
+                        .replace(
+                            "Zwitserleven ",
+                            ""
+                        )
+                    )
+                    initials = "".join(
+                        word[0].upper()
+                        for word in short_name.split()
+                    )
+
+                    delta_eur_name = (
+                        f"{initials} Δ€"
+                    )
+
+                    delta_pct_name = (
+                        f"{initials} Δ%"
+                    )
+
+                    matrix_df[
+                        f"{short_name}"
+                    ] = (
+                        pd.Series(values.values)
+                        .round(2)
+                    )
+
+                    matrix_df[
+                        delta_eur_name
+                    ] = (
+                        matrix_df[
+                            short_name
+                        ]
+                        .diff()
+                        .round(2)
+                    )
+
+                    matrix_df[
+                        delta_pct_name
+                    ] = (
+                        matrix_df[
+                            short_name
+                        ]
+                        .pct_change()
+                        .mul(100)
+                        .round(2)
+                    )
+
+                totals = (
+                    valuation_df
+                    .sort_values(
+                        "valuation_date"
+                    )
+                    .drop_duplicates(
+                        subset=["price_date"],
+                        keep="last"
+                    )
+                )
+
+                totals["price_date"] = pd.to_datetime(
+                    totals["price_date"]
+                )
+
+                totals = (
+                    totals
+                    .set_index(
+                        "price_date"
+                    )[
+                        "total_value"
+                    ]
+                )
+
+                totals = totals.reindex(
+                    pd.to_datetime(
+                        matrix_df["Datum"]
+                    )
+                )
+
+                matrix_df[
+                    "Totaal"
+                ] = totals.values
+
+                matrix_df[
+                    "Totaal Δ€"
+                ] = (
+                    matrix_df[
+                        "Totaal"
+                    ]
+                    .diff()
+                    .round(2)
+                )
+
+                matrix_df[
+                    "Totaal Δ%"
+                ] = (
+                    matrix_df[
+                        "Totaal"
+                    ]
+                    .pct_change()
+                    .mul(100)
+                    .round(2)
+                )
+
+                matrix_df[
+                    "Datum"
+                ] = matrix_df[
+                    "Datum"
+                ].dt.date
+
+                def color_delta(val):
+
+                    if pd.isna(val):
+                        return ""
+
+                    if val > 0:
+                        return "color: lightgreen"
+
+                    if val < 0:
+                        return "color: salmon"
+
+                    return ""
+                delta_columns = [
+                    col
+                    for col in matrix_df.columns
+                    if "Δ€" in col
+                    or "Δ%" in col
+                ]
+
+                matrix_df = matrix_df.round(2)
+
+                styled_df = (
+                    matrix_df
+                    .style
+                    .format(precision=2)
+                    .map(
+                        color_delta,
+                        subset=delta_columns
+                    )
+                )
+
+                st.dataframe(
+                    styled_df,
+                    use_container_width=True,
+                    height=600
+                )
+            
+            except Exception as e:
+
+                st.error(e)
+#############################
+            st.divider()
+
+            st.subheader(
+                "Resultaat sinds eerste waardering"
+            )
+
+            try:
+
+                summary_rows = []
+
+                fund_columns = [
+                    col
+                    for col in matrix_df.columns
+                    if (
+                        col != "Datum"
+                        and "Δ" not in col
+                        and col != "Totaal"
+                    )
+                ]
+
+                for fund in fund_columns:
+
+                    start_value = (
+                        matrix_df[fund]
+                        .dropna()
+                        .iloc[0]
+                    )
+
+                    current_value = (
+                        matrix_df[fund]
+                        .dropna()
+                        .iloc[-1]
+                    )
+
+                    profit = (
+                        current_value
+                        - start_value
+                    )
+
+                    return_pct = (
+                        (
+                            current_value
+                            / start_value
+                        )
+                        - 1
+                    ) * 100
+
+                    summary_rows.append({
+                        "Fonds": fund,
+                        "Startwaarde": start_value,
+                        "Huidige waarde": current_value,
+                        "Verschil €": profit,
+                        "Rendement %": return_pct
+                    })
+
+                summary_df = pd.DataFrame(
+                    summary_rows
+                )
+                baseline = (
+                    supabase
+                    .table(
+                        "year_baselines"
+                    )
+                    .select(
+                        "start_value"
+                    )
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .eq(
+                        "year",
+                        datetime.now().year
+                    )
+                    .execute()
+                )
+                baseline_value = (
+                    baseline.data[0]["start_value"]
+                    if baseline.data
+                    else summary_df["Startwaarde"].sum()
+                )
+                total_row = pd.DataFrame([
+                    {
+                        "Fonds": "TOTAAL",
+
+                        "Startwaarde":
+                            baseline_value,
+
+                        "Huidige waarde":
+                            summary_df[
+                                "Huidige waarde"
+                            ].sum(),
+
+                        "Verschil €":
+                            (
+                                summary_df[
+                                    "Huidige waarde"
+                                ].sum()
+                                - baseline_value
+                            ),
+
+                        "Rendement %":
+                            (
+                                (
+                                    summary_df[
+                                        "Huidige waarde"
+                                    ].sum()
+                                    /
+                                    baseline_value
+                                )
+                                - 1
+                            )
+                            * 100
+                    }
+                ])
+
+                summary_df = (
+                    summary_df
+                    .sort_values(
+                        "Rendement %",
+                        ascending=False
+                    )
+                )
+                summary_df = pd.concat(
+                    [
+                        summary_df,
+                        total_row
+                    ],
+                    ignore_index=True
+                )
+                summary_df = (
+                    summary_df
+                    .sort_values(
+                        "Rendement %",
+                        ascending=False
+                    )
+                )
+
+                def color_summary(val):
+
+                    if val > 0:
+                        return "color: lightgreen"
+
+                    if val < 0:
+                        return "color: salmon"
+
+                    return ""
+
+                styled_summary = (
+                    summary_df
+                    .style
+                    .format(
+                        precision=2
+                    )
+                    .map(
+                        color_summary,
+                        subset=[
+                            "Verschil €",
+                            "Rendement %"
+                        ]
+                    )
+                )
+
+                st.dataframe(
+                    styled_summary,
+                    use_container_width=True
+                )
+
+            except Exception as e:
+
+                st.error(e)
+
+            st.divider()
+
+            st.subheader(
+                "Portfolio Prognose"
+            )
+
+            try:
+
+                valuations = (
+                    supabase
+                    .table(
+                        "portfolio_valuations"
+                    )
+                    .select("*")
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .order(
+                        "valuation_date"
+                    )
+                    .execute()
+                )
+
+                snapshots = (
+                    supabase
+                    .table(
+                        "monthly_snapshots"
+                    )
+                    .select("*")
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .eq(
+                        "is_active",
+                        True
+                    )
+                    .order(
+                        "snapshot_date",
+                        desc=True
+                    )
+                    .limit(1)
+                    .execute()
+                )
+
+                if valuations.data and snapshots.data:
+
+                    valuation_df = pd.DataFrame(
+                        valuations.data
+                    )
+
+                    current_value = float(
+                        valuation_df[
+                            "total_value"
+                        ].iloc[-1]
+                    )
+
+                    latest_snapshot = (
+                        snapshots.data[0]
+                    )
+
+                    annual_contribution = (
+                        (
+                            float(
+                                latest_snapshot.get(
+                                    "personal_contribution",
+                                    0
+                                )
+                            )
+                            +
+                            float(
+                                latest_snapshot.get(
+                                    "employer_contribution",
+                                    0
+                                )
+                            )
+                            +
+                            float(
+                                latest_snapshot.get(
+                                    "bonus_total",
+                                    0
+                                )
+                            )
+                            -
+                            float(
+                                latest_snapshot.get(
+                                    "costs_total",
+                                    0
+                                )
+                            )
+                        )
+                        * 12
+                    )
+
+                    years = st.slider(
+                        "Jaren vooruit",
+                        1,
+                        40,
+                        20
+                    )
+
+                    col1, col2, col3 = st.columns(3)
+
+                    with col1:
+
+                        worst_rate = (
+                            st.number_input(
+                                "Worst Case (%)",
+                                value=3.0,
+                                step=0.5
+                            )
+                            / 100
+                        )
+
+                    with col2:
+
+                        base_rate = (
+                            st.number_input(
+                                "Base Case (%)",
+                                value=7.0,
+                                step=0.5
+                            )
+                            / 100
+                        )
+
+                    with col3:
+
+                        best_rate = (
+                            st.number_input(
+                                "Best Case (%)",
+                                value=10.0,
+                                step=0.5
+                            )
+                            / 100
+                        )
+
+                    scenarios = {
+                        "Worst Case":
+                            worst_rate,
+                        "Base Case":
+                            base_rate,
+                        "Best Case":
+                            best_rate
+                    }
+
+                    current_year = (
+                        datetime.now()
+                        .year
+                    )
+
+                    rows = []
+
+                    for (
+                        scenario,
+                        rate
+                    ) in scenarios.items():
+
+                        value = (
+                            current_value
+                        )
+
+                        for year in range(
+                            years + 1
+                        ):
+
+                            rows.append(
+                                {
+                                    "Jaar":
+                                        current_year
+                                        + year,
+
+                                    "Waarde":
+                                        value,
+
+                                    "Scenario":
+                                        scenario
+                                }
+                            )
+
+                            value = (
+                                value
+                                * (
+                                    1 + rate
+                                )
+                            ) + (
+                                annual_contribution
+                            )
+
+                    projection_df = (
+                        pd.DataFrame(
+                            rows
+                        )
+                    )
+
+                    fig = px.line(
+                        projection_df,
+                        x="Jaar",
+                        y="Waarde",
+                        color="Scenario",
+                        markers=True
+                    )
+
+                    fig.update_layout(
+                        title=(
+                            "Verwachte "
+                            "Portefeuillewaarde"
+                        ),
+                        xaxis_title="Jaar",
+                        yaxis_title="Waarde (€)",
+                        hovermode="x unified",
+                        height=600
+                    )
+
+                    st.plotly_chart(
+                        fig,
+                        use_container_width=True
+                    )
+
+                    final_values = (
+                        projection_df
+                        .groupby(
+                            "Scenario"
+                        )
+                        ["Waarde"]
+                        .last()
+                    )
+
+                    c1, c2, c3 = (
+                        st.columns(3)
+                    )
+                    with c1:
+
+                        st.metric(
+                            "Worst Case",
+                            f"€ {final_values['Worst Case']:,.2f}"
+                            .replace(",", "X")
+                            .replace(".", ",")
+                            .replace("X", ".")
+                        )
+
+                    with c2:
+
+                        st.metric(
+                            "Base Case",
+                            f"€ {final_values['Base Case']:,.2f}"
+                            .replace(",", "X")
+                            .replace(".", ",")
+                            .replace("X", ".")
+                        )
+
+                    with c3:
+
+                        st.metric(
+                            "Best Case",
+                            f"€ {final_values['Best Case']:,.2f}"
+                            .replace(",", "X")
+                            .replace(".", ",")
+                            .replace("X", ".")
+                        )
+
+            except Exception as e:
+
+                st.error(e)
+
+
+  ####################################           
+            st.divider()
+
+            st.subheader(
+                "Datakwaliteit"
+            )
+
+            try:
+
+                col1,col2,col3 = (
+                    st.columns(3)
+                )
+
+                with col1:
+
+                    st.metric(
+                        "Snapshots",
+                        len(
+                            snapshots.data
+                        )
+                    )
+
+                with col2:
+
+                    st.metric(
+                        "Waarderingen",
+                        len(
+                            valuations.data
+                        )
+                    )
+
+                with col3:
+
+                    if valuations.data:
+
+                        st.metric(
+                            "Laatste waardering",
+                            valuations.data[-1][
+                                "valuation_date"
+                            ]
+                        )
+
+            except Exception as e:
+
+                st.error(e)
+
 
             
