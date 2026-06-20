@@ -3466,7 +3466,7 @@ if tab10 is not None:
                         st.session_state.portfolio_id
                     )
                     .order(
-                        "valuation_date"
+                        "price_date"
                     )
                     .execute()
                 )
@@ -3510,10 +3510,10 @@ if tab10 is not None:
                 )
 
                 valuation_df[
-                    "valuation_date"
+                    "price_date"
                 ] = pd.to_datetime(
                     valuation_df[
-                        "valuation_date"
+                        "price_date"
                     ]
                 )
 
@@ -3574,7 +3574,7 @@ if tab10 is not None:
                             == fund_name
                         ]
                         .sort_values(
-                            "valuation_date"
+                            "price_date"
                         )
                     )
 
