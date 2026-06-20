@@ -5303,7 +5303,7 @@ if tab11 is not None:
                                 "Worst Case (%)",
                                 value=3.0,
                                 step=0.5,
-                                key="test_worst_case"
+                                key="test_worst_case_worst"
                             )
                             / 100
                         )
@@ -5315,7 +5315,7 @@ if tab11 is not None:
                                 "Base Case (%)",
                                 value=7.0,
                                 step=0.5,
-                                key="test_worst_case"
+                                key="test_worst_case_base"
                             )
                             / 100
                         )
@@ -5327,7 +5327,7 @@ if tab11 is not None:
                                 "Best Case (%)",
                                 value=10.0,
                                 step=0.5,
-                                key="test_worst_case"
+                                key="test_worst_case_best"
                             )
                             / 100
                         )
