@@ -3038,12 +3038,13 @@ if tab9 is not None:
                             f"{selected_portfolio_name}"
                         )
 
-                        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+                        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
                             "Portfolio Funds",
                             "Monthly Snapshots",
                             "Snapshot Positions",
                             "Portfolio Valuations",
-                            "Valuation Positions"
+                            "Valuation Positions",
+                            "Year Baselines"
                         ])
 
                         # ==========================
@@ -3648,6 +3649,117 @@ if tab9 is not None:
                                             )
 
                                             st.rerun()
+
+                            # ==========================
+                            # Year Baselines
+                            # ==========================
+
+                            with tab6:
+
+                                rows = (
+                                    supabase
+                                    .table("year_baselines")
+                                    .select("*")
+                                    .eq(
+                                        "portfolio_id",
+                                        selected_portfolio_id
+                                    )
+                                    .order(
+                                        "year",
+                                        desc=True
+                                    )
+                                    .execute()
+                                )
+
+                                if not rows.data:
+
+                                    st.info(
+                                        "Geen year baselines gevonden"
+                                    )
+
+                                else:
+
+                                    baselines_df = pd.DataFrame(
+                                        rows.data
+                                    )
+
+                                    baselines_df[
+                                        "Verwijderen"
+                                    ] = False
+
+                                    edited_df = st.data_editor(
+                                        baselines_df,
+                                        use_container_width=True,
+                                        hide_index=True,
+                                        disabled=[
+                                            col
+                                            for col in baselines_df.columns
+                                            if col != "Verwijderen"
+                                        ]
+                                    )
+
+                                    delete_ids = (
+                                        edited_df[
+                                            edited_df["Verwijderen"]
+                                        ]["id"]
+                                        .tolist()
+                                    )
+
+                                    if delete_ids:
+
+                                        st.warning(
+                                            f"{len(delete_ids)} baseline(s) geselecteerd"
+                                        )
+
+                                    confirm_delete = st.checkbox(
+                                        "Ik weet zeker dat ik deze year baselines wil verwijderen",
+                                        key="confirm_delete_year_baselines"
+                                    )
+
+                                    if (
+                                        len(delete_ids) > 0
+                                        and confirm_delete
+                                    ):
+
+                                        if st.button(
+                                            "Verwijder geselecteerde year baselines",
+                                            type="primary",
+                                            key="delete_year_baselines_button"
+                                        ):
+
+                                            deleted = 0
+
+                                            for baseline_id in delete_ids:
+
+                                                try:
+
+                                                    (
+                                                        supabase
+                                                        .table(
+                                                            "year_baselines"
+                                                        )
+                                                        .delete()
+                                                        .eq(
+                                                            "id",
+                                                            baseline_id
+                                                        )
+                                                        .execute()
+                                                    )
+
+                                                    deleted += 1
+
+                                                except Exception as e:
+
+                                                    st.error(
+                                                        f"Fout bij baseline {baseline_id}: {e}"
+                                                    )
+
+                                            st.success(
+                                                f"{deleted} year baseline(s) verwijderd"
+                                            )
+
+                                            st.rerun()
+                                            
                     except Exception as e:
 
                         st.error(e)
