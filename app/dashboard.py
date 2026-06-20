@@ -3477,7 +3477,7 @@ if tab10 is not None:
                         "valuation_positions"
                     )
                     .select(
-                        "valuation_id,fund_id,value"
+                        "valuation_id,fund_id,value,price_date"
                     )
                     .eq(
                         "is_active",
