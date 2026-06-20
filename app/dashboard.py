@@ -1365,6 +1365,10 @@ if tab9 is not None:
                     supabase
                     .table("portfolios")
                     .select("*")
+                    .eq(
+                        "user_id",
+                        st.session_state.user_id
+                    )
                     .execute()
                 )
 
