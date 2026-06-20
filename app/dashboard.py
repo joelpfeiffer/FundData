@@ -3459,7 +3459,7 @@ if tab10 is not None:
                         "portfolio_valuations"
                     )
                     .select(
-                        "id,valuation_date,total_value"
+                        "id,valuation_date,total_value,price_date"
                     )
                     .eq(
                         "portfolio_id",
