@@ -3538,9 +3538,9 @@ if tab10 is not None:
                         "valuation_date"
                     ]
                 )
-                st.write(
-                    merged.columns.tolist()
-                )
+                #st.write(
+                #    merged.columns.tolist()
+                #)
                 merged["price_date_x"] = pd.to_datetime(
                     merged["price_date_x"]
                 )
@@ -3646,8 +3646,20 @@ if tab10 is not None:
                 totals = (
                     valuation_df
                     .sort_values(
-                        "price_date"
+                        "valuation_date"
                     )
+                    .drop_duplicates(
+                        subset=["price_date"],
+                        keep="last"
+                    )
+                )
+
+                totals["price_date"] = pd.to_datetime(
+                    totals["price_date"]
+                )
+
+                totals = (
+                    totals
                     .set_index(
                         "price_date"
                     )[
@@ -3656,9 +3668,9 @@ if tab10 is not None:
                 )
 
                 totals = totals.reindex(
-                    matrix_df[
-                        "Datum"
-                    ]
+                    pd.to_datetime(
+                        matrix_df["Datum"]
+                    )
                 )
 
                 matrix_df[
