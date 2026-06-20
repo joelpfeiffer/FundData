@@ -3163,13 +3163,109 @@ if tab9 is not None:
                                 .execute()
                             )
 
-                            st.dataframe(
-                                pd.DataFrame(
+                            if not rows.data:
+
+                                st.info(
+                                    "Geen snapshots gevonden"
+                                )
+
+                            else:
+
+                                snapshots_df = pd.DataFrame(
                                     rows.data
-                                ),
-                                use_container_width=True,
-                                height=400
-                            )
+                                )
+
+                                snapshots_df[
+                                    "Verwijderen"
+                                ] = False
+
+                                edited_df = st.data_editor(
+                                    snapshots_df,
+                                    use_container_width=True,
+                                    hide_index=True,
+                                    disabled=[
+                                        col
+                                        for col in snapshots_df.columns
+                                        if col != "Verwijderen"
+                                    ]
+                                )
+
+                                delete_ids = (
+                                    edited_df[
+                                        edited_df["Verwijderen"]
+                                    ]["id"]
+                                    .tolist()
+                                )
+
+                                st.info(
+                                    f"{len(delete_ids)} snapshot(s) geselecteerd"
+                                )
+
+                                confirm_delete = st.checkbox(
+                                    "Ik weet zeker dat ik deze snapshots wil verwijderen",
+                                    key="confirm_delete_snapshots"
+                                )
+
+                                if (
+                                    len(delete_ids) > 0
+                                    and confirm_delete
+                                ):
+
+                                    if st.button(
+                                        "Verwijder geselecteerde snapshots",
+                                        type="primary",
+                                        key="delete_snapshots_button"
+                                    ):
+
+                                        deleted = 0
+
+                                        for snapshot_id in delete_ids:
+
+                                            try:
+
+                                                # Eerst child records verwijderen
+
+                                                (
+                                                    supabase
+                                                    .table(
+                                                        "snapshot_positions"
+                                                    )
+                                                    .delete()
+                                                    .eq(
+                                                        "snapshot_id",
+                                                        snapshot_id
+                                                    )
+                                                    .execute()
+                                                )
+
+                                                # Daarna snapshot verwijderen
+
+                                                (
+                                                    supabase
+                                                    .table(
+                                                        "monthly_snapshots"
+                                                    )
+                                                    .delete()
+                                                    .eq(
+                                                        "id",
+                                                        snapshot_id
+                                                    )
+                                                    .execute()
+                                                )
+
+                                                deleted += 1
+
+                                            except Exception as e:
+
+                                                st.error(
+                                                    f"Fout bij snapshot {snapshot_id}: {e}"
+                                                )
+
+                                        st.success(
+                                            f"{deleted} snapshot(s) verwijderd"
+                                        )
+
+                                        st.rerun()
 
                         # ==========================
                         # Snapshot Positions
