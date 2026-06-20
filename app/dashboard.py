@@ -3899,6 +3899,263 @@ if tab10 is not None:
 
                 st.error(e)
 
+            st.divider()
+
+            st.subheader(
+                "Portfolio Prognose"
+            )
+
+            try:
+
+                valuations = (
+                    supabase
+                    .table(
+                        "portfolio_valuations"
+                    )
+                    .select("*")
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .order(
+                        "valuation_date"
+                    )
+                    .execute()
+                )
+
+                snapshots = (
+                    supabase
+                    .table(
+                        "monthly_snapshots"
+                    )
+                    .select("*")
+                    .eq(
+                        "portfolio_id",
+                        st.session_state.portfolio_id
+                    )
+                    .eq(
+                        "is_active",
+                        True
+                    )
+                    .order(
+                        "snapshot_date",
+                        desc=True
+                    )
+                    .limit(1)
+                    .execute()
+                )
+
+                if valuations.data and snapshots.data:
+
+                    valuation_df = pd.DataFrame(
+                        valuations.data
+                    )
+
+                    current_value = float(
+                        valuation_df[
+                            "total_value"
+                        ].iloc[-1]
+                    )
+
+                    latest_snapshot = (
+                        snapshots.data[0]
+                    )
+
+                    annual_contribution = (
+                        (
+                            float(
+                                latest_snapshot.get(
+                                    "personal_contribution",
+                                    0
+                                )
+                            )
+                            +
+                            float(
+                                latest_snapshot.get(
+                                    "employer_contribution",
+                                    0
+                                )
+                            )
+                            +
+                            float(
+                                latest_snapshot.get(
+                                    "bonus_total",
+                                    0
+                                )
+                            )
+                            -
+                            float(
+                                latest_snapshot.get(
+                                    "costs_total",
+                                    0
+                                )
+                            )
+                        )
+                        * 12
+                    )
+
+                    years = st.slider(
+                        "Jaren vooruit",
+                        1,
+                        40,
+                        20
+                    )
+
+                    col1, col2, col3 = st.columns(3)
+
+                    with col1:
+
+                        worst_rate = (
+                            st.number_input(
+                                "Worst Case (%)",
+                                value=3.0,
+                                step=0.5
+                            )
+                            / 100
+                        )
+
+                    with col2:
+
+                        base_rate = (
+                            st.number_input(
+                                "Base Case (%)",
+                                value=7.0,
+                                step=0.5
+                            )
+                            / 100
+                        )
+
+                    with col3:
+
+                        best_rate = (
+                            st.number_input(
+                                "Best Case (%)",
+                                value=10.0,
+                                step=0.5
+                            )
+                            / 100
+                        )
+
+                    scenarios = {
+                        "Worst Case":
+                            worst_rate,
+                        "Base Case":
+                            base_rate,
+                        "Best Case":
+                            best_rate
+                    }
+
+                    current_year = (
+                        datetime.now()
+                        .year
+                    )
+
+                    rows = []
+
+                    for (
+                        scenario,
+                        rate
+                    ) in scenarios.items():
+
+                        value = (
+                            current_value
+                        )
+
+                        for year in range(
+                            years + 1
+                        ):
+
+                            rows.append(
+                                {
+                                    "Jaar":
+                                        current_year
+                                        + year,
+
+                                    "Waarde":
+                                        value,
+
+                                    "Scenario":
+                                        scenario
+                                }
+                            )
+
+                            value = (
+                                value
+                                * (
+                                    1 + rate
+                                )
+                            ) + (
+                                annual_contribution
+                            )
+
+                    projection_df = (
+                        pd.DataFrame(
+                            rows
+                        )
+                    )
+
+                    fig = px.line(
+                        projection_df,
+                        x="Jaar",
+                        y="Waarde",
+                        color="Scenario",
+                        markers=True
+                    )
+
+                    fig.update_layout(
+                        title=(
+                            "Verwachte "
+                            "Portefeuillewaarde"
+                        ),
+                        xaxis_title="Jaar",
+                        yaxis_title="Waarde (€)",
+                        hovermode="x unified",
+                        height=600
+                    )
+
+                    st.plotly_chart(
+                        fig,
+                        use_container_width=True
+                    )
+
+                    final_values = (
+                        projection_df
+                        .groupby(
+                            "Scenario"
+                        )
+                        ["Waarde"]
+                        .last()
+                    )
+
+                    c1, c2, c3 = (
+                        st.columns(3)
+                    )
+
+                    with c1:
+
+                        st.metric(
+                            "Worst Case",
+                            f"€ {final_values['Worst Case']:,.0f}"
+                        )
+
+                    with c2:
+
+                        st.metric(
+                            "Base Case",
+                            f"€ {final_values['Base Case']:,.0f}"
+                        )
+
+                    with c3:
+
+                        st.metric(
+                            "Best Case",
+                            f"€ {final_values['Best Case']:,.0f}"
+                        )
+
+            except Exception as e:
+
+                st.error(e)
+
 
   ####################################           
             st.divider()
