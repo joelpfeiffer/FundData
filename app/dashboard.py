@@ -5358,13 +5358,6 @@ if tab11 is not None:
                             / 100
                         )
 
-                    
-
-                    st.write(
-                        "historical_return =",
-                        historical_return
-                    )
-
                     scenarios = {
                         "Worst Case": worst_rate,
                         "Base Case": base_rate,
