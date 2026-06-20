@@ -1450,7 +1450,12 @@ if tab9 is not None:
 
                     try:
 
-                        (
+                        st.write(
+                            "Ingelogde gebruiker:",
+                            st.session_state.user_id
+                        )
+
+                        result = (
                             supabase
                             .table("portfolios")
                             .insert({
@@ -1460,6 +1465,12 @@ if tab9 is not None:
                             })
                             .execute()
                         )
+
+                        st.write(
+                            "Insert resultaat:"
+                        )
+
+                        st.write(result)
 
                         st.success(
                             "Portfolio opgeslagen"
@@ -1472,6 +1483,13 @@ if tab9 is not None:
                     except Exception as e:
 
                         st.error(e)
+
+                        st.write(
+                            "user_id:",
+                            st.session_state.get(
+                                "user_id"
+                            )
+                        )
 
             # -------------------------
             # Portfolio geopend
