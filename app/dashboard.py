@@ -5305,10 +5305,7 @@ if tab11 is not None:
                         .dropna()
                         .iloc[-1]
                     )
-                    st.write(
-                        "historical_return",
-                        historical_return
-                    )
+                    
                     historical_return = (
                         (
                             last_total
@@ -5317,6 +5314,11 @@ if tab11 is not None:
                         - 1
                     ) * 100
 
+                    st.write(
+                        "historical_return",
+                        historical_return
+                    )
+                    
                     show_historical = st.checkbox(
                         f"Toon historisch rendement "
                         f"({historical_return:.2f}%)",
@@ -5331,7 +5333,7 @@ if tab11 is not None:
                             historical_return
                             / 100
                         )
-                        
+
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
