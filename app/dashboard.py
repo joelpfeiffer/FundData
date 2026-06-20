@@ -247,6 +247,9 @@ else:
         st.session_state.username = None
         st.session_state.role = None
 
+        st.session_state.portfolio_id = None
+        st.session_state.portfolio_name = None
+
         st.rerun()
 
         
