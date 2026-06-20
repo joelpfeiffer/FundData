@@ -333,11 +333,13 @@ tab_names = [
 
 if is_admin:
     tab_names.append("Admin")
-    tab_names.append("Test page")
 
 if is_logged_in:
     tab_names.append("Mijn Portefeuille")
     tab_names.append("Analyse")
+
+if is_admin:
+    tab_names.append("Test page")
 
 tabs = st.tabs(tab_names)
 
