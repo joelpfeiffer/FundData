@@ -3459,7 +3459,7 @@ if tab10 is not None:
                         "portfolio_valuations"
                     )
                     .select(
-                        "id,valuation_date,total_value,price_date"
+                        "id,valuation_date,total_value,price_date,total_value"
                     )
                     .eq(
                         "portfolio_id",
@@ -3646,10 +3646,10 @@ if tab10 is not None:
                 totals = (
                     valuation_df
                     .sort_values(
-                        "valuation_date"
+                        "price_date"
                     )
                     .set_index(
-                        "valuation_date"
+                        "price_date"
                     )[
                         "total_value"
                     ]
