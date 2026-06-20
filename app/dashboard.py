@@ -2991,6 +2991,245 @@ if tab9 is not None:
 
                     st.subheader("Alle Data")
 
+                    st.header("Portfolio Beheer")
+
+                    try:
+
+                        portfolios = (
+                            supabase
+                            .table("portfolios")
+                            .select("*")
+                            .eq(
+                                "user_id",
+                                st.session_state.user_id
+                            )
+                            .order("name")
+                            .execute()
+                        )
+
+                        if not portfolios.data:
+
+                            st.info(
+                                "Geen portfolio's gevonden"
+                            )
+
+                            st.stop()
+
+                        portfolio_options = {
+                            p["name"]: p["id"]
+                            for p in portfolios.data
+                        }
+
+                        selected_portfolio_name = st.selectbox(
+                            "Selecteer Portfolio",
+                            list(
+                                portfolio_options.keys()
+                            )
+                        )
+
+                        selected_portfolio_id = (
+                            portfolio_options[
+                                selected_portfolio_name
+                            ]
+                        )
+
+                        st.success(
+                            f"Geselecteerd: "
+                            f"{selected_portfolio_name}"
+                        )
+
+                        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+                            "Portfolio Funds",
+                            "Monthly Snapshots",
+                            "Snapshot Positions",
+                            "Portfolio Valuations",
+                            "Valuation Positions"
+                        ])
+
+                        # ==========================
+                        # Portfolio Funds
+                        # ==========================
+
+                        with tab1:
+
+                            rows = (
+                                supabase
+                                .table("portfolio_funds")
+                                .select("*")
+                                .eq(
+                                    "portfolio_id",
+                                    selected_portfolio_id
+                                )
+                                .execute()
+                            )
+
+                            st.dataframe(
+                                pd.DataFrame(
+                                    rows.data
+                                ),
+                                use_container_width=True
+                            )
+
+                        # ==========================
+                        # Monthly Snapshots
+                        # ==========================
+
+                        with tab2:
+
+                            rows = (
+                                supabase
+                                .table("monthly_snapshots")
+                                .select("*")
+                                .eq(
+                                    "portfolio_id",
+                                    selected_portfolio_id
+                                )
+                                .order(
+                                    "snapshot_date",
+                                    desc=True
+                                )
+                                .execute()
+                            )
+
+                            st.dataframe(
+                                pd.DataFrame(
+                                    rows.data
+                                ),
+                                use_container_width=True,
+                                height=400
+                            )
+
+                        # ==========================
+                        # Snapshot Positions
+                        # ==========================
+
+                        with tab3:
+
+                            snapshots = (
+                                supabase
+                                .table("monthly_snapshots")
+                                .select("id")
+                                .eq(
+                                    "portfolio_id",
+                                    selected_portfolio_id
+                                )
+                                .execute()
+                            )
+
+                            snapshot_ids = [
+                                row["id"]
+                                for row in snapshots.data
+                            ]
+
+                            if snapshot_ids:
+
+                                rows = (
+                                    supabase
+                                    .table("snapshot_positions")
+                                    .select("*")
+                                    .in_(
+                                        "snapshot_id",
+                                        snapshot_ids
+                                    )
+                                    .execute()
+                                )
+
+                                st.dataframe(
+                                    pd.DataFrame(
+                                        rows.data
+                                    ),
+                                    use_container_width=True,
+                                    height=500
+                                )
+
+                            else:
+
+                                st.info(
+                                    "Geen snapshot positions gevonden"
+                                )
+
+                        # ==========================
+                        # Portfolio Valuations
+                        # ==========================
+
+                        with tab4:
+
+                            rows = (
+                                supabase
+                                .table("portfolio_valuations")
+                                .select("*")
+                                .eq(
+                                    "portfolio_id",
+                                    selected_portfolio_id
+                                )
+                                .order(
+                                    "valuation_date",
+                                    desc=True
+                                )
+                                .execute()
+                            )
+
+                            st.dataframe(
+                                pd.DataFrame(
+                                    rows.data
+                                ),
+                                use_container_width=True,
+                                height=400
+                            )
+
+                        # ==========================
+                        # Valuation Positions
+                        # ==========================
+
+                        with tab5:
+
+                            valuations = (
+                                supabase
+                                .table("portfolio_valuations")
+                                .select("id")
+                                .eq(
+                                    "portfolio_id",
+                                    selected_portfolio_id
+                                )
+                                .execute()
+                            )
+
+                            valuation_ids = [
+                                row["id"]
+                                for row in valuations.data
+                            ]
+
+                            if valuation_ids:
+
+                                rows = (
+                                    supabase
+                                    .table("valuation_positions")
+                                    .select("*")
+                                    .in_(
+                                        "valuation_id",
+                                        valuation_ids
+                                    )
+                                    .execute()
+                                )
+
+                                st.dataframe(
+                                    pd.DataFrame(
+                                        rows.data
+                                    ),
+                                    use_container_width=True,
+                                    height=500
+                                )
+
+                            else:
+
+                                st.info(
+                                    "Geen valuation positions gevonden"
+                                )
+
+                    except Exception as e:
+
+                        st.error(e)
+
                     
 # =====================
 # Analyse
