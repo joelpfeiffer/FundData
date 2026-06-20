@@ -5295,7 +5295,8 @@ if tab11 is not None:
                     )
 
                     show_historical = st.checkbox(
-                        "Toon historisch gemiddeld rendement",
+                        f"Toon historisch rendement "
+                        f"({historical_return:.2f}%)",
                         value=True,
                         key="show_historical_return"
                     )
