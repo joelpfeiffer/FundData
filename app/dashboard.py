@@ -5411,7 +5411,8 @@ if tab11 is not None:
 
                     st.plotly_chart(
                         fig,
-                        use_container_width=True
+                        use_container_width=True,
+                        key="test_portfolio_prognose_chart"
                     )
 
                     final_values = (
