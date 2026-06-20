@@ -5294,6 +5294,12 @@ if tab11 is not None:
                         key="test_portfolio_prognose_years"
                     )
 
+                    show_historical = st.checkbox(
+                        "Toon historisch gemiddeld rendement",
+                        value=True,
+                        key="show_historical_return"
+                    )
+
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
@@ -5332,14 +5338,65 @@ if tab11 is not None:
                             / 100
                         )
 
+                    historical_return = None
+
+                    try:
+
+                        valuation_df["valuation_date"] = pd.to_datetime(
+                            valuation_df["valuation_date"]
+                        )
+
+                        start_value = float(
+                            valuation_df["total_value"].iloc[0]
+                        )
+
+                        end_value = float(
+                            valuation_df["total_value"].iloc[-1]
+                        )
+
+                        years_history = (
+                            (
+                                valuation_df["valuation_date"].iloc[-1]
+                                -
+                                valuation_df["valuation_date"].iloc[0]
+                            ).days
+                            / 365.25
+                        )
+
+                        if (
+                            years_history > 0
+                            and start_value > 0
+                        ):
+
+                            historical_return = (
+                                (
+                                    end_value
+                                    / start_value
+                                )
+                                ** (
+                                    1 / years_history
+                                )
+                                - 1
+                            )
+
+                    except Exception:
+
+                        historical_return = None
+
                     scenarios = {
-                        "Worst Case":
-                            worst_rate,
-                        "Base Case":
-                            base_rate,
-                        "Best Case":
-                            best_rate
+                        "Worst Case": worst_rate,
+                        "Base Case": base_rate,
+                        "Best Case": best_rate
                     }
+
+                    if (
+                        show_historical
+                        and historical_return is not None
+                    ):
+
+                        scenarios[
+                            f"Historisch ({historical_return:.1%})"
+                        ] = historical_return
 
                     current_year = (
                         datetime.now()
