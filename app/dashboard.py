@@ -3581,7 +3581,7 @@ if tab10 is not None:
                     values = (
                         fund_history
                         .set_index(
-                            "valuation_date"
+                            "price_date"
                         )[
                             "value"
                         ]
@@ -3644,10 +3644,10 @@ if tab10 is not None:
                 totals = (
                     valuation_df
                     .sort_values(
-                        "valuation_date"
+                        "price_date"
                     )
                     .set_index(
-                        "valuation_date"
+                        "price_date"
                     )[
                         "total_value"
                     ]
