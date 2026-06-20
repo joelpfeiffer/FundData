@@ -1454,7 +1454,7 @@ if tab9 is not None:
                             supabase
                             .table("portfolios")
                             .insert({
-                                "user_id": "b13578bd-ec93-49a2-b24f-ac8dc1608d50",
+                                "user_id": st.session_state.user_id,
                                 "name": new_name,
                                 "is_active": True
                             })
