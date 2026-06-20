@@ -5305,6 +5305,13 @@ if tab11 is not None:
                         .dropna()
                         .iloc[-1]
                     )
+                    historical_return = (
+                        (
+                            last_total
+                            / first_total
+                        )
+                        - 1
+                    ) * 100
 
                     show_historical = st.checkbox(
                         f"Toon historisch rendement "
@@ -5312,14 +5319,6 @@ if tab11 is not None:
                         value=True,
                         key="show_historical_return"
                     )
-                    if show_historical:
-
-                        scenarios[
-                            f"Historisch ({historical_return:.2f}%)"
-                        ] = (
-                            historical_return
-                            / 100
-                        )
 
                     col1, col2, col3 = st.columns(3)
 
@@ -5359,50 +5358,7 @@ if tab11 is not None:
                             / 100
                         )
 
-                    historical_return = None
-
-                    try:
-
-                        valuation_df["valuation_date"] = pd.to_datetime(
-                            valuation_df["valuation_date"]
-                        )
-
-                        start_value = float(
-                            valuation_df["total_value"].iloc[0]
-                        )
-
-                        end_value = float(
-                            valuation_df["total_value"].iloc[-1]
-                        )
-
-                        years_history = (
-                            (
-                                valuation_df["valuation_date"].iloc[-1]
-                                -
-                                valuation_df["valuation_date"].iloc[0]
-                            ).days
-                            / 365.25
-                        )
-
-                        if (
-                            years_history > 0
-                            and start_value > 0
-                        ):
-
-                            historical_return = (
-                                (
-                                    end_value
-                                    / start_value
-                                )
-                                ** (
-                                    1 / years_history
-                                )
-                                - 1
-                            )
-
-                    except Exception:
-
-                        historical_return = None
+                    
 
                     st.write(
                         "historical_return =",
