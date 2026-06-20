@@ -3063,77 +3063,85 @@ if tab9 is not None:
                                 .execute()
                             )
 
-                            funds_df = pd.DataFrame(
-                                rows.data
-                            )
+                            if not rows.data:
 
-                            st.dataframe(
-                                funds_df,
-                                use_container_width=True
-                            )
-
-                            if not funds_df.empty:
-
-                                st.divider()
-
-                                st.subheader(
-                                    "Fonds verwijderen"
+                                st.info(
+                                    "Geen portfolio funds gevonden"
                                 )
 
-                                selected_fund = (
-                                    st.selectbox(
-                                        "Selecteer fonds",
-                                        funds_df["id"]
-                                    )
+                            else:
+
+                                funds_df = pd.DataFrame(
+                                    rows.data
                                 )
 
-                                selected_row = (
-                                    funds_df[
-                                        funds_df["id"]
-                                        == selected_fund
+                                funds_df[
+                                    "Verwijderen"
+                                ] = False
+
+                                edited_df = st.data_editor(
+                                    funds_df,
+                                    use_container_width=True,
+                                    hide_index=True,
+                                    disabled=[
+                                        col
+                                        for col in funds_df.columns
+                                        if col != "Verwijderen"
                                     ]
                                 )
 
-                                st.dataframe(
-                                    selected_row,
-                                    use_container_width=True
+                                delete_ids = (
+                                    edited_df[
+                                        edited_df[
+                                            "Verwijderen"
+                                        ]
+                                    ]["id"]
+                                    .tolist()
                                 )
 
-                                confirm_delete = (
-                                    st.checkbox(
-                                        "Ik wil dit fonds verwijderen",
-                                        key="delete_pf_confirm"
-                                    )
-                                )
+                                if delete_ids:
 
-                                if (
-                                    confirm_delete
-                                    and
-                                    st.button(
-                                        "Verwijder fonds",
-                                        key="delete_pf_button"
+                                    st.warning(
+                                        f"{len(delete_ids)} record(s) geselecteerd voor verwijdering"
                                     )
-                                ):
 
-                                    (
-                                        supabase
-                                        .table(
-                                            "portfolio_funds"
+                                    if st.button(
+                                        "Verwijder geselecteerde portfolio funds",
+                                        type="primary"
+                                    ):
+
+                                        deleted = 0
+
+                                        for record_id in delete_ids:
+
+                                            try:
+
+                                                (
+                                                    supabase
+                                                    .table(
+                                                        "portfolio_funds"
+                                                    )
+                                                    .delete()
+                                                    .eq(
+                                                        "id",
+                                                        record_id
+                                                    )
+                                                    .execute()
+                                                )
+
+                                                deleted += 1
+
+                                            except Exception as e:
+
+                                                st.error(
+                                                    f"Fout bij verwijderen van ID {record_id}: {e}"
+                                                )
+
+                                        st.success(
+                                            f"{deleted} portfolio fund(s) verwijderd"
                                         )
-                                        .delete()
-                                        .eq(
-                                            "id",
-                                            selected_fund
-                                        )
-                                        .execute()
-                                    )
 
-                                    st.success(
-                                        "Fonds verwijderd"
-                                    )
-
-                                    st.rerun()
-
+                                        st.rerun()
                         # ==========================
                         # Monthly Snapshots
                         # ==========================
