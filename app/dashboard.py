@@ -5288,9 +5288,10 @@ if tab11 is not None:
 
                     years = st.slider(
                         "Jaren vooruit",
-                        1,
-                        40,
-                        20
+                        min_value=1,
+                        max_value=40,
+                        value=20,
+                        key="test_portfolio_prognose_years"
                     )
 
                     col1, col2, col3 = st.columns(3)
@@ -5301,7 +5302,8 @@ if tab11 is not None:
                             st.number_input(
                                 "Worst Case (%)",
                                 value=3.0,
-                                step=0.5
+                                step=0.5,
+                                key="test_worst_case"
                             )
                             / 100
                         )
@@ -5312,7 +5314,8 @@ if tab11 is not None:
                             st.number_input(
                                 "Base Case (%)",
                                 value=7.0,
-                                step=0.5
+                                step=0.5,
+                                key="test_worst_case"
                             )
                             / 100
                         )
@@ -5323,7 +5326,8 @@ if tab11 is not None:
                             st.number_input(
                                 "Best Case (%)",
                                 value=10.0,
-                                step=0.5
+                                step=0.5,
+                                key="test_worst_case"
                             )
                             / 100
                         )
