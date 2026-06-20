@@ -3063,12 +3063,76 @@ if tab9 is not None:
                                 .execute()
                             )
 
+                            funds_df = pd.DataFrame(
+                                rows.data
+                            )
+
                             st.dataframe(
-                                pd.DataFrame(
-                                    rows.data
-                                ),
+                                funds_df,
                                 use_container_width=True
                             )
+
+                            if not funds_df.empty:
+
+                                st.divider()
+
+                                st.subheader(
+                                    "Fonds verwijderen"
+                                )
+
+                                selected_fund = (
+                                    st.selectbox(
+                                        "Selecteer fonds",
+                                        funds_df["id"]
+                                    )
+                                )
+
+                                selected_row = (
+                                    funds_df[
+                                        funds_df["id"]
+                                        == selected_fund
+                                    ]
+                                )
+
+                                st.dataframe(
+                                    selected_row,
+                                    use_container_width=True
+                                )
+
+                                confirm_delete = (
+                                    st.checkbox(
+                                        "Ik wil dit fonds verwijderen",
+                                        key="delete_pf_confirm"
+                                    )
+                                )
+
+                                if (
+                                    confirm_delete
+                                    and
+                                    st.button(
+                                        "Verwijder fonds",
+                                        key="delete_pf_button"
+                                    )
+                                ):
+
+                                    (
+                                        supabase
+                                        .table(
+                                            "portfolio_funds"
+                                        )
+                                        .delete()
+                                        .eq(
+                                            "id",
+                                            selected_fund
+                                        )
+                                        .execute()
+                                    )
+
+                                    st.success(
+                                        "Fonds verwijderd"
+                                    )
+
+                                    st.rerun()
 
                         # ==========================
                         # Monthly Snapshots
