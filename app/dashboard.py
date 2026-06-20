@@ -5294,6 +5294,26 @@ if tab11 is not None:
                         key="test_portfolio_prognose_years"
                     )
 
+                    first_total = (
+                        matrix_df["Totaal"]
+                        .dropna()
+                        .iloc[0]
+                    )
+
+                    last_total = (
+                        matrix_df["Totaal"]
+                        .dropna()
+                        .iloc[-1]
+                    )
+
+                    historical_return = (
+                        (
+                            last_total
+                            / first_total
+                        )
+                        - 1
+                    ) * 100
+
                     show_historical = st.checkbox(
                         f"Toon historisch rendement "
                         f"({historical_return:.2f}%)",
@@ -5390,14 +5410,14 @@ if tab11 is not None:
                         "Best Case": best_rate
                     }
 
-                    if (
-                        show_historical
-                        and historical_return is not None
-                    ):
+                    if show_historical:
 
                         scenarios[
-                            f"Historisch ({historical_return:.1%})"
-                        ] = historical_return
+                            f"Historisch ({historical_return:.2f}%)"
+                        ] = (
+                            historical_return
+                            / 100
+                        )
 
                     current_year = (
                         datetime.now()
