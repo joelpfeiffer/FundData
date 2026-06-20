@@ -3650,7 +3650,10 @@ if tab10 is not None:
                     )
                     .set_index(
                         "valuation_date"
-                    )
+                    )[
+                        "total_value"
+                    ]
+                )
 
                 totals = totals.reindex(
                     matrix_df[
