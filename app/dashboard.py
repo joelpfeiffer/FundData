@@ -1111,16 +1111,17 @@ if tab8 is not None:
                 st.subheader(
                     "Userbeheer"
                 )
-        
-                profiles = (
-                    supabase
-                    .table("profiles")
-                    .select("*")
-                    .order("display_name")
-                    .execute()
-                )
-                import pandas as pd
-        
+
+                if st.session_state.role == "admin":
+
+                    profiles = (
+                        supabase_admin
+                        .table("profiles")
+                        .select("*")
+                        .order("display_name")
+                        .execute()
+                    )
+                    
                 user_df = pd.DataFrame(
                     profiles.data
                 )
@@ -2094,7 +2095,15 @@ if tab9 is not None:
                         )
 
                         if not show_all_versions:
+                            st.write(
+                                "Portfolio ID:",
+                                st.session_state.portfolio_id
+                            )
 
+                            st.write(
+                                "User ID:",
+                                st.session_state.user_id
+                            )
                             snapshots_query = (
                                 snapshots_query
                                 .eq(
