@@ -3646,14 +3646,11 @@ if tab10 is not None:
                 totals = (
                     valuation_df
                     .sort_values(
-                        "price_date_x"
+                        "valuation_date"
                     )
                     .set_index(
-                        "price_date_x"
-                    )[
-                        "total_value"
-                    ]
-                )
+                        "valuation_date"
+                    )
 
                 totals = totals.reindex(
                     matrix_df[
