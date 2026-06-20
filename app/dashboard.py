@@ -3539,6 +3539,10 @@ if tab10 is not None:
                     ]
                 )
 
+                merged["price_date"] = pd.to_datetime(
+                    merged["price_date"]
+                )
+
                 matrix_df = pd.DataFrame()
 
                 matrix_df[
