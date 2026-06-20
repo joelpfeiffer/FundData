@@ -4152,7 +4152,6 @@ if tab10 is not None:
                     c1, c2, c3 = (
                         st.columns(3)
                     )
-
                     with c1:
 
                         st.metric(
