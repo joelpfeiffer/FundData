@@ -5421,7 +5421,14 @@ if tab11 is not None:
                         "Base Case": base_rate,
                         "Best Case": best_rate
                     }
-
+                    historical_return = (
+                        (
+                            last_total
+                            / first_total
+                        )
+                        - 1
+                    ) * 100
+                    
                     if show_historical:
 
                         scenarios[
