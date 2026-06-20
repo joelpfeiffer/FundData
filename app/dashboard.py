@@ -3543,7 +3543,13 @@ if tab9 is not None:
                                 for row in valuations.data
                             ]
 
-                            if valuation_ids:
+                            if not valuation_ids:
+
+                                st.info(
+                                    "Geen valuations gevonden"
+                                )
+
+                            else:
 
                                 rows = (
                                     supabase
@@ -3556,24 +3562,95 @@ if tab9 is not None:
                                     .execute()
                                 )
 
-                                st.dataframe(
-                                    pd.DataFrame(
+                                if not rows.data:
+
+                                    st.info(
+                                        "Geen valuation positions gevonden"
+                                    )
+
+                                else:
+
+                                    positions_df = pd.DataFrame(
                                         rows.data
-                                    ),
-                                    use_container_width=True,
-                                    height=500
-                                )
+                                    )
 
-                            else:
+                                    positions_df[
+                                        "Verwijderen"
+                                    ] = False
 
-                                st.info(
-                                    "Geen valuation positions gevonden"
-                                )
+                                    edited_df = st.data_editor(
+                                        positions_df,
+                                        use_container_width=True,
+                                        hide_index=True,
+                                        disabled=[
+                                            col
+                                            for col in positions_df.columns
+                                            if col != "Verwijderen"
+                                        ]
+                                    )
 
+                                    delete_ids = (
+                                        edited_df[
+                                            edited_df["Verwijderen"]
+                                        ]["id"]
+                                        .tolist()
+                                    )
+
+                                    st.info(
+                                        f"{len(delete_ids)} positie(s) geselecteerd"
+                                    )
+
+                                    confirm_delete = st.checkbox(
+                                        "Ik weet zeker dat ik deze valuation positions wil verwijderen",
+                                        key="confirm_delete_valuation_positions"
+                                    )
+
+                                    if (
+                                        len(delete_ids) > 0
+                                        and confirm_delete
+                                    ):
+
+                                        if st.button(
+                                            "Verwijder geselecteerde valuation positions",
+                                            type="primary",
+                                            key="delete_valuation_positions_button"
+                                        ):
+
+                                            deleted = 0
+
+                                            for position_id in delete_ids:
+
+                                                try:
+
+                                                    (
+                                                        supabase
+                                                        .table(
+                                                            "valuation_positions"
+                                                        )
+                                                        .delete()
+                                                        .eq(
+                                                            "id",
+                                                            position_id
+                                                        )
+                                                        .execute()
+                                                    )
+
+                                                    deleted += 1
+
+                                                except Exception as e:
+
+                                                    st.error(
+                                                        f"Fout bij positie {position_id}: {e}"
+                                                    )
+
+                                            st.success(
+                                                f"{deleted} valuation position(s) verwijderd"
+                                            )
+
+                                            st.rerun()
                     except Exception as e:
 
                         st.error(e)
-
                     
 # =====================
 # Analyse
