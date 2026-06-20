@@ -5306,19 +5306,13 @@ if tab11 is not None:
                         .iloc[-1]
                     )
                     
-                    historical_return = (
-                        (
-                            last_total
-                            / first_total
-                        )
-                        - 1
-                    ) * 100
+                    
 
                     st.write(
                         "historical_return",
                         historical_return
                     )
-                    
+
                     show_historical = st.checkbox(
                         f"Toon historisch rendement "
                         f"({historical_return:.2f}%)",
