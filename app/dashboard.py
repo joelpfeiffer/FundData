@@ -361,8 +361,8 @@ elif is_admin:
 
 elif is_logged_in:
 
-    tab9 = tabs[8]
-    tab10 = tabs[9]
+    tab9 = tabs[7]
+    tab10 = tabs[8]
 
 # =========================
 # OVERVIEW
