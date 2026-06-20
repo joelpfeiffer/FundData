@@ -3541,8 +3541,8 @@ if tab10 is not None:
                 st.write(
                     merged.columns.tolist()
                 )
-                merged["price_date"] = pd.to_datetime(
-                    merged["price_date"]
+                merged["price_date_x"] = pd.to_datetime(
+                    merged["price_date_x"]
                 )
 
                 matrix_df = pd.DataFrame()
@@ -3551,7 +3551,7 @@ if tab10 is not None:
                     "Datum"
                 ] = sorted(
                     merged[
-                        "price_date"
+                        "price_date_x"
                     ].unique()
                 )
 
@@ -3576,14 +3576,14 @@ if tab10 is not None:
                             == fund_name
                         ]
                         .sort_values(
-                            "price_date"
+                            "price_date_x"
                         )
                     )
 
                     values = (
                         fund_history
                         .set_index(
-                            "price_date"
+                            "price_date_x"
                         )[
                             "value"
                         ]
@@ -3646,10 +3646,10 @@ if tab10 is not None:
                 totals = (
                     valuation_df
                     .sort_values(
-                        "price_date"
+                        "price_date_x"
                     )
                     .set_index(
-                        "price_date"
+                        "price_date_x"
                     )[
                         "total_value"
                     ]
