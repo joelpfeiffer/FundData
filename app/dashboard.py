@@ -3531,13 +3531,13 @@ if tab10 is not None:
                     )
                 )
 
-                #merged[
-                #    "valuation_date"
-                #] = pd.to_datetime(
-                #    merged[
-                #        "valuation_date"
-                #    ]
-                #)
+                merged[
+                    "valuation_date"
+                ] = pd.to_datetime(
+                    merged[
+                        "valuation_date"
+                    ]
+                )
                 st.write(
                     merged.columns.tolist()
                 )
