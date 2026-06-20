@@ -696,27 +696,27 @@ with tab5:
 # MONTE CARLO
 # =========================
 with tab6:
-    st.subheader("Monte Carlo")
-
-    capital = st.number_input("Kapitaal", 100, 1000000, 10000)
-
-    mean = returns.mean().mean()
-    std = returns.std().mean()
-
-    sims = 100
-    days = 100
-
-    paths = []
-    for _ in range(sims):
-        prices = [capital]
-        for _ in range(days):
-            prices.append(prices[-1]*(1+np.random.normal(mean,std)))
-        paths.append(prices)
-
-    fig = go.Figure()
-    for p in paths[:20]:
-        fig.add_trace(go.Scatter(y=p, showlegend=False))
-    st.plotly_chart(fig)
+    st.subheader("tijdelijk niet beschikbaar - Monte Carlo Simulatie")
+#
+#    capital = st.number_input("Kapitaal", 100, 1000000, 10000)
+#
+#    mean = returns.mean().mean()
+#    std = returns.std().mean()
+#
+#    sims = 100
+#    days = 100
+#
+#    paths = []
+#    for _ in range(sims):
+#        prices = [capital]
+#        for _ in range(days):
+#            prices.append(prices[-1]*(1+np.random.normal(mean,std)))
+#        paths.append(prices)
+#
+#    fig = go.Figure()
+#    for p in paths[:20]:
+#        fig.add_trace(go.Scatter(y=p, showlegend=False))
+#    st.plotly_chart(fig)
 
 # =========================
 # RAW DATA
