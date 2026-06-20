@@ -4157,21 +4157,30 @@ if tab10 is not None:
 
                         st.metric(
                             "Worst Case",
-                            f"€ {final_values['Worst Case']:.0f}"
+                            f"€ {final_values['Worst Case']:,.2f}"
+                            .replace(",", "X")
+                            .replace(".", ",")
+                            .replace("X", ".")
                         )
 
                     with c2:
 
                         st.metric(
                             "Base Case",
-                            f"€ {final_values['Base Case']:.0f}"
+                            f"€ {final_values['Base Case']:,.2f}"
+                            .replace(",", "X")
+                            .replace(".", ",")
+                            .replace("X", ".")
                         )
 
                     with c3:
 
                         st.metric(
                             "Best Case",
-                            f"€ {final_values['Best Case']:.0f}"
+                            f"€ {final_values['Best Case']:,.2f}"
+                            .replace(",", "X")
+                            .replace(".", ",")
+                            .replace("X", ".")
                         )
 
             except Exception as e:
