@@ -5305,7 +5305,10 @@ if tab11 is not None:
                         .dropna()
                         .iloc[-1]
                     )
-
+                    st.write(
+                        "historical_return",
+                        historical_return
+                    )
                     historical_return = (
                         (
                             last_total
@@ -5408,7 +5411,7 @@ if tab11 is not None:
                         "historical_return =",
                         historical_return
                     )
-                    
+
                     scenarios = {
                         "Worst Case": worst_rate,
                         "Base Case": base_rate,
