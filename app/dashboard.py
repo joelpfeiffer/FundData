@@ -1522,7 +1522,7 @@ if tab9 is not None:
 
                 
 
-                col1, col2, col3, col4 = st.columns(4)
+                col1, col2, col3, col4, col5, col6 = st.columns(6)
 
                 with col1:
 
@@ -1547,6 +1547,18 @@ if tab9 is not None:
                     if st.button("🗂️ Fondsen"):
 
                         st.session_state.portfolio_view = "funds"
+
+                with col5:
+
+                    if st.button("Historical data invoer"):
+
+                        st.session_state.portfolio_view = "historical"
+
+                with col6:
+
+                    if st.button("alle data"):
+
+                        st.session_state.portfolio_view = "all_data"
 
 
                 st.write(
@@ -2971,6 +2983,23 @@ if tab9 is not None:
                         except Exception as e:
 
                             st.error(e)
+
+                if st.session_state.portfolio_view == "historical":
+                
+                    # =====================
+                    # historische invoer
+                    # =====================
+
+                    st.subheader("Historische invoer")
+
+
+                if st.session_state.portfolio_view == "all_data":
+                
+                    # =====================
+                    # alle data
+                    # =====================
+
+                    st.subheader("Alle Data")
 
                     
 # =====================
