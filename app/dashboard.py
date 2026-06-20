@@ -5323,7 +5323,15 @@ if tab11 is not None:
                         value=True,
                         key="show_historical_return"
                     )
+                    if show_historical:
 
+                        scenarios[
+                            f"Historisch ({historical_return:.2f}%)"
+                        ] = (
+                            historical_return
+                            / 100
+                        )
+                        
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
