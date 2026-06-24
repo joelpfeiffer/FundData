@@ -355,6 +355,7 @@ tab8 = None
 tab9 = None
 tab10 = None
 tab11 = None
+tab12 = None
 
 if is_admin and is_logged_in:
 
@@ -371,6 +372,7 @@ elif is_logged_in:
 
     tab9 = tabs[7]
     tab10 = tabs[8]
+    tab12 = tabs[9]
 
 # =========================
 # OVERVIEW
@@ -6332,5 +6334,318 @@ if tab11 is not None:
 
                 st.error(e)
 
+# ==========================
+# RLS Debug
+# ==========================
+if tab12 is not None:
+    with tab12:
 
-            
+        if not st.session_state.get("logged_in"):
+
+            st.warning(
+                "Log in om deze pagina te gebruiken."
+            )
+
+        else:
+
+            st.success(
+                f"Ingelogd als "
+                f"{st.session_state.username}"
+            )
+
+        st.header("🔐 RLS Debug")
+
+        st.divider()
+
+        st.subheader("Session State")
+
+        st.write(
+            {
+                "logged_in":
+                    st.session_state.get(
+                        "logged_in"
+                    ),
+
+                "user_id":
+                    st.session_state.get(
+                        "user_id"
+                    ),
+
+                "username":
+                    st.session_state.get(
+                        "username"
+                    ),
+
+                "role":
+                    st.session_state.get(
+                        "role"
+                    ),
+
+                "portfolio_id":
+                    st.session_state.get(
+                        "portfolio_id"
+                    ),
+
+                "portfolio_name":
+                    st.session_state.get(
+                        "portfolio_name"
+                    )
+            }
+        )
+
+        st.divider()
+
+        st.subheader("Auth Session")
+
+        try:
+
+            session = (
+                supabase
+                .auth
+                .get_session()
+            )
+
+            st.write(session)
+
+        except Exception as e:
+
+            st.error(
+                f"Session Error: {e}"
+            )
+
+        st.divider()
+
+        st.subheader("Auth User")
+
+        try:
+
+            user = (
+                supabase
+                .auth
+                .get_user()
+            )
+
+            st.write(user)
+
+        except Exception as e:
+
+            st.error(
+                f"User Error: {e}"
+            )
+
+        st.divider()
+
+        st.subheader("Profiles Test")
+
+        try:
+
+            profiles = (
+                supabase
+                .table("profiles")
+                .select("*")
+                .execute()
+            )
+
+            st.success(
+                f"{len(profiles.data)} profiel(en)"
+            )
+
+            st.dataframe(
+                pd.DataFrame(
+                    profiles.data
+                ),
+                use_container_width=True,
+                height=250
+            )
+
+        except Exception as e:
+
+            st.error(
+                f"Profiles Error: {e}"
+            )
+
+        st.divider()
+
+        st.subheader("Portfolios Test")
+
+        try:
+
+            portfolios = (
+                supabase
+                .table("portfolios")
+                .select("*")
+                .execute()
+            )
+
+            st.success(
+                f"{len(portfolios.data)} portfolio(s)"
+            )
+
+            st.dataframe(
+                pd.DataFrame(
+                    portfolios.data
+                ),
+                use_container_width=True,
+                height=250
+            )
+
+        except Exception as e:
+
+            st.error(
+                f"Portfolios Error: {e}"
+            )
+
+        st.divider()
+
+        st.subheader("Profile Mapping Test")
+
+        try:
+
+            if (
+                st.session_state.get(
+                    "user_id"
+                )
+            ):
+
+                profile = (
+                    supabase
+                    .table("profiles")
+                    .select("*")
+                    .eq(
+                        "id",
+                        st.session_state.user_id
+                    )
+                    .single()
+                    .execute()
+                )
+
+                st.success(
+                    "Profile gevonden"
+                )
+
+                st.write(
+                    profile.data
+                )
+
+            else:
+
+                st.warning(
+                    "Geen user_id aanwezig in session"
+                )
+
+        except Exception as e:
+
+            st.error(
+                f"Mapping Error: {e}"
+            )
+
+        st.divider()
+
+        st.subheader("JWT Controle")
+
+        try:
+
+            session = (
+                supabase
+                .auth
+                .get_session()
+            )
+
+            if (
+                session
+                and
+                session.session
+            ):
+
+                st.success(
+                    "JWT aanwezig"
+                )
+
+                st.write(
+                    {
+                        "access_token_present":
+                            bool(
+                                session.session.access_token
+                            ),
+
+                        "refresh_token_present":
+                            bool(
+                                session.session.refresh_token
+                            ),
+
+                        "expires_at":
+                            session.session.expires_at
+                    }
+                )
+
+            else:
+
+                st.warning(
+                    "Geen actieve session gevonden"
+                )
+
+        except Exception as e:
+
+            st.error(
+                f"JWT Error: {e}"
+            )
+
+        st.divider()
+
+        st.subheader("RLS Smoke Test")
+
+        if st.button(
+            "🧪 Test Profiles"
+        ):
+
+            try:
+
+                result = (
+                    supabase
+                    .table("profiles")
+                    .select("*")
+                    .execute()
+                )
+
+                st.success(
+                    f"{len(result.data)} record(s)"
+                )
+
+                st.dataframe(
+                    pd.DataFrame(
+                        result.data
+                    ),
+                    use_container_width=True
+                )
+
+            except Exception as e:
+
+                st.error(e)
+
+        if st.button(
+            "🧪 Test Portfolios"
+        ):
+
+            try:
+
+                result = (
+                    supabase
+                    .table("portfolios")
+                    .select("*")
+                    .execute()
+                )
+
+                st.success(
+                    f"{len(result.data)} record(s)"
+                )
+
+                st.dataframe(
+                    pd.DataFrame(
+                        result.data
+                    ),
+                    use_container_width=True
+                )
+
+            except Exception as e:
+
+                st.error(e)          
