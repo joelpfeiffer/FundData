@@ -6895,3 +6895,50 @@ if tab12 is not None:
                 st.error(
                     f"Portfolio Valuations Error: {e}"
                 )
+
+            st.divider()
+
+            st.subheader("Valuation Positions Test")
+
+            try:
+
+                valuation_positions = (
+                    supabase
+                    .table("valuation_positions")
+                    .select("*")
+                    .execute()
+                )
+
+                st.success(
+                    f"{len(valuation_positions.data)} record(s)"
+                )
+
+                if valuation_positions.data:
+
+                    df = pd.DataFrame(
+                        valuation_positions.data
+                    )
+
+                    st.write("Kolommen:")
+
+                    st.write(
+                        df.columns.tolist()
+                    )
+
+                    st.dataframe(
+                        df,
+                        use_container_width=True,
+                        height=300
+                    )
+
+                else:
+
+                    st.warning(
+                        "Geen records gevonden."
+                    )
+
+            except Exception as e:
+
+                st.error(
+                    f"Valuation Positions Error: {e}"
+                )
