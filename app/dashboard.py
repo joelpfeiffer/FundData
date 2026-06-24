@@ -6680,3 +6680,17 @@ if tab12 is not None:
             except Exception as e:
 
                 st.error(e)
+
+            st.subheader("Login Result Test")
+
+            if st.button("Toon huidige auth status"):
+
+                try:
+
+                    result = supabase.auth.get_session()
+
+                    st.write(result)
+
+                except Exception as e:
+
+                    st.error(e)
