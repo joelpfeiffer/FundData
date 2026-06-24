@@ -6654,4 +6654,29 @@ if tab12 is not None:
 
                 except Exception as e:
 
-                    st.error(e)          
+                    st.error(e)     
+
+            st.subheader("Auth Login Test")
+
+                try:
+
+                    result = supabase.auth.get_user()
+
+                    st.write(result)
+
+                except Exception as e:
+
+                    st.error(e)     
+
+            st.subheader("Session Object")
+
+                try:
+
+                    session = supabase.auth.get_session()
+
+                    st.write(type(session))
+                    st.write(session)
+
+                except Exception as e:
+
+                    st.error(e)
