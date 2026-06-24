@@ -6701,4 +6701,4 @@ if tab12 is not None:
                 .table("portfolios")
                 .select("*")
                 .execute()
-        )
+            )
