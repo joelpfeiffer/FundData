@@ -3799,7 +3799,7 @@ if tab10 is not None:
                     "Selecteer eerst een portefeuille in 'Mijn Portefeuille'."
                 )
 
-                st.stop()
+            else:
                 
                 st.subheader(
                     "Dashboard"
@@ -5036,7 +5036,7 @@ if tab10 is not None:
             except Exception as e:
 
                 st.error(e)
-
+        
 # =====================
 # Test page
 # =====================
