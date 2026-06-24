@@ -6772,3 +6772,32 @@ if tab12 is not None:
             except Exception as e:
 
                 st.error(e)
+
+            st.divider()
+
+            st.subheader("Monthly Snapshots Test")
+
+            try:
+
+                snapshots = (
+                    supabase
+                    .table("monthly_snapshots")
+                    .select("*")
+                    .execute()
+                )
+
+                st.success(
+                    f"{len(snapshots.data)} record(s)"
+                )
+
+                st.dataframe(
+                    pd.DataFrame(
+                        snapshots.data
+                    ),
+                    use_container_width=True,
+                    height=250
+                )
+
+            except Exception as e:
+
+                st.error(e)
