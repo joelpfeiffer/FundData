@@ -6801,3 +6801,50 @@ if tab12 is not None:
             except Exception as e:
 
                 st.error(e)
+            
+            st.divider()
+
+            st.subheader("Snapshot Positions Test")
+
+            try:
+
+                snapshot_positions = (
+                    supabase
+                    .table("snapshot_positions")
+                    .select("*")
+                    .execute()
+                )
+
+                st.success(
+                    f"{len(snapshot_positions.data)} record(s)"
+                )
+
+                if snapshot_positions.data:
+
+                    df_snapshot_positions = pd.DataFrame(
+                        snapshot_positions.data
+                    )
+
+                    st.write("Kolommen:")
+
+                    st.write(
+                        df_snapshot_positions.columns.tolist()
+                    )
+
+                    st.dataframe(
+                        df_snapshot_positions,
+                        use_container_width=True,
+                        height=300
+                    )
+
+                else:
+
+                    st.warning(
+                        "Geen records gevonden."
+                    )
+
+            except Exception as e:
+
+                st.error(
+                    f"Snapshot Positions Error: {e}"
+                )
