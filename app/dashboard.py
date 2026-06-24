@@ -250,6 +250,20 @@ else:
         st.session_state.portfolio_id = None
         st.session_state.portfolio_name = None
 
+        result = supabase.auth.sign_in_with_password(
+            {
+                "email": email,
+                "password": password
+            }
+        )
+
+        st.write(result.session)
+        st.write(result.user)
+
+        st.write(
+            supabase.auth.get_session()
+        )
+        
         st.rerun()
 
         
