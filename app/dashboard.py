@@ -368,7 +368,7 @@ if is_admin and is_logged_in:
     tab9 = tabs[8]
     tab10 = tabs[9]
     tab11 = tabs[10]
-    Tab12 = tabs[11]
+    tab12 = tabs[11]
 
 elif is_admin:
 
