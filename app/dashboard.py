@@ -6696,6 +6696,7 @@ if tab12 is not None:
                     st.error(e)
             
             st.subheader("Portfolio's")
+
             try:
 
                 portfolios = (
@@ -6705,6 +6706,16 @@ if tab12 is not None:
                     .execute()
                 )
 
+                st.write(
+                    f"{len(portfolios.data)} portfolio(s)"
+                )
+
+                st.dataframe(
+                    pd.DataFrame(
+                        portfolios.data
+                    )
+                )
+
             except Exception as e:
 
-                    st.error(e)
+                st.error(e)
