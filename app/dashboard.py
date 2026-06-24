@@ -377,7 +377,7 @@ elif is_logged_in:
 
     tab9 = tabs[7]
     tab10 = tabs[8]
-    tab12 = tabs[9]
+    tab12 = tabs[11]
 
 # =========================
 # OVERVIEW
