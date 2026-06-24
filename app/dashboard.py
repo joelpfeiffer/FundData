@@ -6848,3 +6848,50 @@ if tab12 is not None:
                 st.error(
                     f"Snapshot Positions Error: {e}"
                 )
+
+            st.divider()
+
+            st.subheader("Portfolio Valuations Test")
+
+            try:
+
+                portfolio_valuations = (
+                    supabase
+                    .table("portfolio_valuations")
+                    .select("*")
+                    .execute()
+                )
+
+                st.success(
+                    f"{len(portfolio_valuations.data)} record(s)"
+                )
+
+                if portfolio_valuations.data:
+
+                    df = pd.DataFrame(
+                        portfolio_valuations.data
+                    )
+
+                    st.write("Kolommen:")
+
+                    st.write(
+                        df.columns.tolist()
+                    )
+
+                    st.dataframe(
+                        df,
+                        use_container_width=True,
+                        height=300
+                    )
+
+                else:
+
+                    st.warning(
+                        "Geen records gevonden."
+                    )
+
+            except Exception as e:
+
+                st.error(
+                    f"Portfolio Valuations Error: {e}"
+                )
