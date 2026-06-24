@@ -6743,3 +6743,32 @@ if tab12 is not None:
             except Exception as e:
 
                 st.error(e)
+
+            st.divider()
+
+            st.subheader("Portfolio Funds Test")
+
+            try:
+
+                portfolio_funds = (
+                    supabase
+                    .table("portfolio_funds")
+                    .select("*")
+                    .execute()
+                )
+
+                st.success(
+                    f"{len(portfolio_funds.data)} record(s)"
+                )
+
+                st.dataframe(
+                    pd.DataFrame(
+                        portfolio_funds.data
+                    ),
+                    use_container_width=True,
+                    height=250
+                )
+
+            except Exception as e:
+
+                st.error(e)
