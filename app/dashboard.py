@@ -6549,54 +6549,37 @@ if tab12 is not None:
 
             st.divider()
 
+            session = supabase.auth.get_session()
+
+            st.write(type(session))
+            st.write(session)
+            st.write(dir(session))
+
+            st.divider()
+
             st.subheader("JWT Controle")
 
             try:
 
-                session = (
-                    supabase
-                    .auth
-                    .get_session()
-                )
+                session = supabase.auth.get_session()
 
-                if (
-                    session
-                    and
-                    session.session
-                ):
+                if session:
 
-                    st.success(
-                        "JWT aanwezig"
-                    )
+                    st.success("JWT aanwezig")
 
-                    st.write(
-                        {
-                            "access_token_present":
-                                bool(
-                                    session.session.access_token
-                                ),
-
-                            "refresh_token_present":
-                                bool(
-                                    session.session.refresh_token
-                                ),
-
-                            "expires_at":
-                                session.session.expires_at
-                        }
-                    )
+                    st.write({
+                        "access_token_present": bool(session.access_token),
+                        "refresh_token_present": bool(session.refresh_token),
+                        "expires_at": session.expires_at
+                    })
 
                 else:
 
-                    st.warning(
-                        "Geen actieve session gevonden"
-                    )
+                    st.warning("Geen actieve session gevonden")
 
             except Exception as e:
 
-                st.error(
-                    f"JWT Error: {e}"
-                )
+                st.error(f"JWT Error: {e}")
 
             st.divider()
 
