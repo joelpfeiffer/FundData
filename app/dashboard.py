@@ -6704,3 +6704,42 @@ if tab12 is not None:
             except Exception as e:
 
                 st.error(e)
+
+            st.divider()
+
+            st.subheader("Session Debug")
+
+            try:
+
+                session = supabase.auth.get_session()
+
+                st.write("Type:")
+                st.write(type(session))
+
+                st.write("Object:")
+                st.write(session)
+
+                st.write("Vars:")
+                st.write(vars(session))
+
+            except Exception as e:
+
+                st.error(e)
+
+            st.divider()
+
+            st.subheader("User Debug")
+
+            try:
+
+                user = supabase.auth.get_user()
+
+                st.write(type(user))
+                st.write(user)
+
+                if hasattr(user, "user"):
+                    st.write(vars(user.user))
+
+            except Exception as e:
+
+                st.error(e)
