@@ -337,6 +337,7 @@ if is_admin:
 if is_logged_in:
     tab_names.append("Mijn Portefeuille")
     tab_names.append("Analyse")
+    tab_names.append("RLS debug")
 
 if is_admin:
     tab_names.append("Test page")
