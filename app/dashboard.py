@@ -6696,9 +6696,15 @@ if tab12 is not None:
                     st.error(e)
             
             st.subheader("Portfolio's")
-            portfolios = (
-                supabase
-                .table("portfolios")
-                .select("*")
-                .execute()
-            )
+            try:
+
+                portfolios = (
+                    supabase
+                    .table("portfolios")
+                    .select("*")
+                    .execute()
+                )
+
+            except Exception as e:
+
+                    st.error(e)
