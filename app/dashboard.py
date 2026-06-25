@@ -6942,3 +6942,37 @@ if tab12 is not None:
                 st.error(
                     f"Valuation Positions Error: {e}"
                 )
+
+            st.divider()
+
+            st.subheader("Year Baselines Test")
+
+            try:
+
+                result = (
+                    supabase
+                    .table("year_baselines")
+                    .select("*")
+                    .execute()
+                )
+
+                st.success(
+                    f"{len(result.data)} record(s)"
+                )
+
+                if result.data:
+
+                    st.write("Kolommen:")
+                    st.write(
+                        list(result.data[0].keys())
+                    )
+
+                st.dataframe(
+                    pd.DataFrame(result.data),
+                    use_container_width=True,
+                    height=350
+                )
+
+            except Exception as e:
+
+                st.error(e)
