@@ -6976,3 +6976,15 @@ if tab12 is not None:
             except Exception as e:
 
                 st.error(e)
+
+            st.divider()
+
+            st.subheader("Admin test")
+
+            result = (
+                supabase
+                .rpc("is_admin")
+                .execute()
+            )
+
+            st.write(result.data)
