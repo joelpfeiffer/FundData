@@ -26,6 +26,104 @@ if "admin_view" not in st.session_state:
 CSV_URL = "https://raw.githubusercontent.com/joelpfeiffer/FundData/main/data/prices.csv"
 TRADING_DAYS = 252
 
+# ==========================
+# DATABASE ERROR HANDLER
+# ==========================
+
+def show_database_error(e):
+
+    error = str(e).lower()
+
+    # ======================
+    # RLS
+    # ======================
+
+    if (
+        "42501" in error
+        or
+        "row-level security" in error
+    ):
+
+        st.error(
+            "🚫 Je hebt geen toestemming om deze actie uit te voeren.\n\n"
+            "Foutcode: DB002"
+        )
+
+    # ======================
+    # Duplicate
+    # ======================
+
+    elif "23505" in error:
+
+        st.error(
+            "⚠️ Dit record bestaat al.\n\n"
+            "Foutcode: DB003"
+        )
+
+    # ======================
+    # Foreign key
+    # ======================
+
+    elif "23503" in error:
+
+        st.error(
+            "⚠️ De geselecteerde gegevens bestaan niet.\n\n"
+            "Foutcode: DB004"
+        )
+
+    # ======================
+    # Not Null
+    # ======================
+
+    elif "23502" in error:
+
+        st.error(
+            "⚠️ Niet alle verplichte velden zijn ingevuld.\n\n"
+            "Foutcode: DB005"
+        )
+
+    # ======================
+    # Datatype
+    # ======================
+
+    elif "22p02" in error:
+
+        st.error(
+            "⚠️ Ongeldige invoer.\n\n"
+            "Foutcode: DB006"
+        )
+
+    # ======================
+    # Unknown
+    # ======================
+
+    else:
+
+        st.error(
+            "❌ Er is een onverwachte databasefout opgetreden.\n\n"
+            "Foutcode: DB999"
+        )
+
+    # ======================
+    # Admin debug
+    # ======================
+
+    if (
+        st.session_state.get(
+            "role"
+        )
+        ==
+        "admin"
+    ):
+
+        with st.expander(
+            "Technische details"
+        ):
+
+            st.code(
+                str(e)
+            )
+
 # =========================
 # LOAD DATA
 # =========================
@@ -828,7 +926,7 @@ with tab7:
 
     except Exception as e:
 
-        st.error(e)
+        show_database_error(e)
 # =============
 # admin
 # =============
@@ -936,8 +1034,8 @@ if tab8 is not None:
                         )
         
                     except Exception as e:
-        
-                        st.error(e)
+
+                        show_database_error(e)
         
                 # =====================
                 # Fondsen tonen
@@ -969,8 +1067,8 @@ if tab8 is not None:
                         )
         
                 except Exception as e:
-        
-                    st.error(e)
+
+                    show_database_error(e))
         
                 # =====================
                 # Aliasbeheer
@@ -1038,8 +1136,8 @@ if tab8 is not None:
                             )
         
                 except Exception as e:
-        
-                    st.error(e)
+
+                    show_database_error(e)
         
                 # =====================
                 # Alias overzicht
@@ -1070,8 +1168,8 @@ if tab8 is not None:
                         )
         
                 except Exception as e:
-        
-                    st.error(e)
+
+                    show_database_error(e)
         
         
             # =====================
@@ -1118,8 +1216,8 @@ if tab8 is not None:
                         )
         
                 except Exception as e:
-        
-                    st.error(e)
+
+                    show_database_error(e)
         
             elif (
                 st.session_state.admin_view
@@ -1285,7 +1383,7 @@ if tab8 is not None:
 
                         except Exception as e:
 
-                            st.error(e)
+                            show_database_error(e)
                 st.divider()
                
         
@@ -1340,8 +1438,8 @@ if tab8 is not None:
                         )
         
                     except Exception as e:
-        
-                        st.error(e)
+
+                        show_database_error(e)
 
 # ==================
 # Mijn Portefeuille
@@ -1674,7 +1772,7 @@ if tab9 is not None:
 
                     except Exception as e:
 
-                        st.error(e)
+                        show_database_error(e)
                 
                     
                 if st.session_state.portfolio_view == "year":
@@ -1727,7 +1825,7 @@ if tab9 is not None:
 
                         except Exception as e:
 
-                            st.error(e)
+                            show_database_error(e)
 
                 if st.session_state.portfolio_view == "month":
                     # =====================
@@ -1849,7 +1947,7 @@ if tab9 is not None:
 
                     except Exception as e:
 
-                        st.error(e)
+                        show_database_error(e)
 
                     month_map = {
                         "Januari": 1,
@@ -2106,7 +2204,7 @@ if tab9 is not None:
 
                         except Exception as e:
 
-                            st.error(e)
+                            show_database_error(e)
                     try:
 
                         show_all_versions = st.checkbox(
@@ -2174,7 +2272,7 @@ if tab9 is not None:
 
                     except Exception as e:
 
-                        st.error(e)
+                        show_database_error(e)
                         
         # ===================
         # weekly
@@ -2429,7 +2527,7 @@ if tab9 is not None:
 
                         except Exception as e:
 
-                            st.error(e)
+                            show_database_error(e)
 
                     st.success(
                         f"Snapshot gevonden: "
@@ -2811,7 +2909,7 @@ if tab9 is not None:
 
                                         except Exception as e:
 
-                                            st.error(e)
+                                            show_database_error(e)
 
 
                                 else:
@@ -2823,7 +2921,7 @@ if tab9 is not None:
 
                     except Exception as e:
 
-                        st.error(e)
+                        show_database_error(e)
 
                     st.divider()
 
@@ -2991,7 +3089,7 @@ if tab9 is not None:
 
                         except Exception as e:
 
-                            st.error(e)
+                            show_database_error(e)
 
                 if st.session_state.portfolio_view == "all_data":
                 
@@ -3772,7 +3870,7 @@ if tab9 is not None:
 
                     except Exception as e:
 
-                        st.error(e)
+                        show_database_error(e)
                     
 # =====================
 # Analyse
@@ -3937,7 +4035,7 @@ if tab10 is not None:
 
                 except Exception as e:
 
-                    st.error(e)
+                    show_database_error(e)
 
     #blok 2
                 st.divider()
@@ -3976,7 +4074,7 @@ if tab10 is not None:
 
                     except Exception as e:
 
-                        st.error(e)
+                        show_database_error(e)
 
                 with col2:
 
@@ -4074,7 +4172,7 @@ if tab10 is not None:
 
                     except Exception as e:
 
-                        st.error(e)
+                        show_database_error(e)
     #blok 3
                 st.divider()
 
@@ -4553,7 +4651,7 @@ if tab10 is not None:
                 
                 except Exception as e:
 
-                    st.error(e)
+                    show_database_error(e)
     #############################
                 st.divider()
 
@@ -4725,7 +4823,7 @@ if tab10 is not None:
 
                 except Exception as e:
 
-                    st.error(e)
+                    show_database_error(e)
 
                 st.divider()
 
@@ -4990,7 +5088,7 @@ if tab10 is not None:
 
                 except Exception as e:
 
-                    st.error(e)
+                    show_database_error(e)
 
 
     ####################################           
@@ -5037,7 +5135,7 @@ if tab10 is not None:
 
                 except Exception as e:
 
-                    st.error(e)
+                    show_database_error(e)
         
 # =====================
 # Test page
@@ -5202,7 +5300,7 @@ if tab11 is not None:
 
                 except Exception as e:
 
-                    st.error(e)
+                    show_database_error(e)
 
     #blok 2
                 st.divider()
@@ -5241,7 +5339,7 @@ if tab11 is not None:
 
                     except Exception as e:
 
-                        st.error(e)
+                        show_database_error(e)
 
                 with col2:
 
@@ -5339,7 +5437,7 @@ if tab11 is not None:
 
                     except Exception as e:
 
-                        st.error(e)
+                        show_database_error(e)
     #blok 3
                 st.divider()
 
@@ -5384,7 +5482,7 @@ if tab11 is not None:
 
                 except Exception as e:
 
-                    st.error(e)
+                    show_database_error(e)
                 
                 st.divider()
 
@@ -5513,7 +5611,7 @@ if tab11 is not None:
 
                 except Exception as e:
 
-                    st.error(e)
+                    show_database_error(e)
 
                 
                 st.divider()
@@ -5818,7 +5916,7 @@ if tab11 is not None:
                 
                 except Exception as e:
 
-                    st.error(e)
+                    show_database_error(e)
     #############################
                 st.divider()
 
@@ -5990,7 +6088,7 @@ if tab11 is not None:
 
                 except Exception as e:
 
-                    st.error(e)
+                    show_database_error(e)
 
                 st.divider()
 
@@ -6293,7 +6391,7 @@ if tab11 is not None:
 
                 except Exception as e:
 
-                    st.error(e)
+                    show_database_error(e)
 
 
     ####################################           
@@ -6340,7 +6438,7 @@ if tab11 is not None:
 
                 except Exception as e:
 
-                    st.error(e)
+                    show_database_error(e)
 
 # ==========================
 # RLS Debug
@@ -6611,7 +6709,7 @@ if tab12 is not None:
 
                 except Exception as e:
 
-                    st.error(e)
+                    show_database_error(e)
 
             if st.button(
                 "🧪 Test Portfolios"
@@ -6639,7 +6737,7 @@ if tab12 is not None:
 
                 except Exception as e:
 
-                    st.error(e)     
+                    show_database_error(e)     
 
             st.subheader("Auth Login Test")
 
@@ -6651,7 +6749,7 @@ if tab12 is not None:
 
             except Exception as e:
 
-                st.error(e)     
+                show_database_error(e)    
 
             st.subheader("Session Object")
 
@@ -6678,7 +6776,7 @@ if tab12 is not None:
 
                 except Exception as e:
 
-                    st.error(e)
+                    show_database_error(e)
             
             st.subheader("Portfolio's")
 
@@ -6703,7 +6801,7 @@ if tab12 is not None:
 
             except Exception as e:
 
-                st.error(e)
+                show_database_error(e)
 
             st.divider()
 
@@ -6724,7 +6822,7 @@ if tab12 is not None:
 
             except Exception as e:
 
-                st.error(e)
+                show_database_error(e)
 
             st.divider()
 
@@ -6742,7 +6840,7 @@ if tab12 is not None:
 
             except Exception as e:
 
-                st.error(e)
+                show_database_error(e)
 
             st.divider()
 
@@ -6771,7 +6869,7 @@ if tab12 is not None:
 
             except Exception as e:
 
-                st.error(e)
+                show_database_error(e)
 
             st.divider()
 
@@ -6800,7 +6898,7 @@ if tab12 is not None:
 
             except Exception as e:
 
-                st.error(e)
+                show_database_error(e)
             
             st.divider()
 
@@ -6975,7 +7073,7 @@ if tab12 is not None:
 
             except Exception as e:
 
-                st.error(e)
+                show_database_error(e)
 
             st.divider()
 
