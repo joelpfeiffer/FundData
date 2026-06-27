@@ -1068,7 +1068,7 @@ if tab8 is not None:
         
                 except Exception as e:
 
-                    show_database_error(e))
+                    show_database_error(e)
         
                 # =====================
                 # Aliasbeheer
