@@ -6440,6 +6440,167 @@ if tab11 is not None:
 
                     show_database_error(e)
 
+                st.divider()
+
+                st.subheader("Positie Analyse")
+
+                try:
+
+                    # -------------------------
+                    # Laatste snapshot ophalen
+                    # -------------------------
+
+                    latest_snapshot = (
+                        supabase
+                        .table(
+                            "monthly_snapshots"
+                        )
+                        .select(
+                            "id,snapshot_date"
+                        )
+                        .eq(
+                            "portfolio_id",
+                            st.session_state.portfolio_id
+                        )
+                        .eq(
+                            "is_active",
+                            True
+                        )
+                        .order(
+                            "snapshot_date",
+                            desc=True
+                        )
+                        .limit(1)
+                        .execute()
+                    )
+
+                    if latest_snapshot.data:
+
+                        snapshot_id = latest_snapshot.data[0]["id"]
+
+                        # -------------------------
+                        # Posities
+                        # -------------------------
+
+                        positions = (
+                            supabase
+                            .table(
+                                "snapshot_positions"
+                            )
+                            .select(
+                                "*"
+                            )
+                            .eq(
+                                "snapshot_id",
+                                snapshot_id
+                            )
+                            .execute()
+                        )
+
+                        position_df = pd.DataFrame(
+                            positions.data
+                        )
+
+                        if not position_df.empty:
+
+                            # -------------------------
+                            # Fondsnamen
+                            # -------------------------
+
+                            funds = (
+                                supabase
+                                .table(
+                                    "funds"
+                                )
+                                .select(
+                                    "id,current_name"
+                                )
+                                .execute()
+                            )
+
+                            funds_df = pd.DataFrame(
+                                funds.data
+                            )
+
+                            position_df = (
+                                position_df
+                                .merge(
+                                    funds_df,
+                                    left_on="fund_id",
+                                    right_on="id",
+                                    how="left"
+                                )
+                            )
+
+                            # -------------------------
+                            # Laatste koers
+                            # -------------------------
+
+                            latest_prices = (
+                                df
+                                .sort_values("date")
+                                .groupby("fund")
+                                .last()
+                                .reset_index()
+                            )
+
+                            latest_prices = latest_prices.rename(
+                                columns={
+                                    "fund": "current_name",
+                                    "price": "Laatste koers"
+                                }
+                            )
+
+                            position_df = (
+                                position_df
+                                .merge(
+                                    latest_prices,
+                                    on="current_name",
+                                    how="left"
+                                )
+                            )
+
+                            # -------------------------
+                            # Berekeningen
+                            # -------------------------
+
+                            position_df["Waarde"] = (
+                                position_df["units"]
+                                *
+                                position_df["Laatste koers"]
+                            )
+
+                            overzicht = (
+                                position_df[
+                                    [
+                                        "current_name",
+                                        "units",
+                                        "Laatste koers",
+                                        "Waarde"
+                                    ]
+                                ]
+                                .rename(
+                                    columns={
+                                        "current_name": "Fonds",
+                                        "units": "Eenheden"
+                                    }
+                                )
+                            )
+
+                            overzicht = overzicht.sort_values(
+                                "Waarde",
+                                ascending=False
+                            )
+
+                            st.dataframe(
+                                overzicht,
+                                use_container_width=True,
+                                hide_index=True
+                            )
+
+                except Exception as e:
+
+                    show_database_error(e)
 # ==========================
 # RLS Debug
 # ==========================
