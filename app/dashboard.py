@@ -6435,29 +6435,32 @@ if tab11 is not None:
                                     "valuation_date"
                                 ]
                             )
-
                 except Exception as e:
 
                     show_database_error(e)
 
-                st.divider()
+                # ==========================================================
+                # AANKOOPHISTORIE PER FONDS
+                # ==========================================================
 
-                st.subheader("Positie Analyse")
+                st.divider()
+                st.subheader("📈 Aankoophistorie")
 
                 try:
 
-                    # -------------------------
-                    # Laatste snapshot ophalen
-                    # -------------------------
+                    # ------------------------------------------------------
+                    # Fondsen van huidige portefeuille
+                    # ------------------------------------------------------
 
-                    latest_snapshot = (
+                    portfolio_funds = (
                         supabase
-                        .table(
-                            "monthly_snapshots"
-                        )
-                        .select(
-                            "id,snapshot_date"
-                        )
+                        .table("portfolio_funds")
+                        .select("""
+                            fund_id,
+                            funds (
+                                current_name
+                            )
+                        """)
                         .eq(
                             "portfolio_id",
                             st.session_state.portfolio_id
@@ -6466,136 +6469,249 @@ if tab11 is not None:
                             "is_active",
                             True
                         )
-                        .order(
-                            "snapshot_date",
-                            desc=True
-                        )
-                        .limit(1)
                         .execute()
                     )
 
-                    if latest_snapshot.data:
+                    if not portfolio_funds.data:
 
-                        snapshot_id = latest_snapshot.data[0]["id"]
+                        st.info("Geen fondsen gevonden.")
 
-                        # -------------------------
-                        # Posities
-                        # -------------------------
+                    else:
 
-                        positions = (
+                        funds_df = pd.json_normalize(
+                            portfolio_funds.data
+                        )
+
+                        funds_df = funds_df.rename(
+                            columns={
+                                "funds.current_name": "fund_name"
+                            }
+                        )
+
+                        selected_fund = st.selectbox(
+
+                            "Fonds",
+
+                            funds_df["fund_name"]
+
+                            .sort_values()
+
+                            .unique()
+
+                        )
+
+                        fund_id = funds_df.loc[
+                            funds_df["fund_name"] == selected_fund,
+                            "fund_id"
+                        ].iloc[0]
+
+                        # --------------------------------------------------
+                        # Alle snapshots
+                        # --------------------------------------------------
+
+                        snapshots = (
                             supabase
-                            .table(
-                                "snapshot_positions"
-                            )
+                            .table("monthly_snapshots")
                             .select(
-                                "*"
+                                "id,snapshot_date"
                             )
                             .eq(
-                                "snapshot_id",
-                                snapshot_id
+                                "portfolio_id",
+                                st.session_state.portfolio_id
+                            )
+                            .eq(
+                                "is_active",
+                                True
+                            )
+                            .order(
+                                "snapshot_date"
                             )
                             .execute()
                         )
 
-                        position_df = pd.DataFrame(
-                            positions.data
-                        )
+                        history = []
 
-                        if not position_df.empty:
+                        previous_units = 0
 
-                            # -------------------------
-                            # Fondsnamen
-                            # -------------------------
+                        for snapshot in snapshots.data:
 
-                            funds = (
+                            snapshot_id = snapshot["id"]
+
+                            row = (
                                 supabase
-                                .table(
-                                    "funds"
-                                )
+                                .table("snapshot_positions")
                                 .select(
-                                    "id,current_name"
+                                    "units"
+                                )
+                                .eq(
+                                    "snapshot_id",
+                                    snapshot_id
+                                )
+                                .eq(
+                                    "fund_id",
+                                    fund_id
                                 )
                                 .execute()
                             )
 
-                            funds_df = pd.DataFrame(
-                                funds.data
+                            if not row.data:
+                                continue
+
+                            units = float(
+                                row.data[0]["units"]
                             )
 
-                            position_df = (
-                                position_df
-                                .merge(
-                                    funds_df,
-                                    left_on="fund_id",
-                                    right_on="id",
-                                    how="left"
-                                )
+                            bought = units - previous_units
+
+                            previous_units = units
+
+                            # ------------------------------------------
+                            # Historische koers zoeken
+                            # ------------------------------------------
+
+                            snap_date = pd.to_datetime(
+                                snapshot["snapshot_date"]
                             )
 
-                            # -------------------------
-                            # Laatste koers
-                            # -------------------------
-
-                            latest_prices = (
-                                df
-                                .sort_values("date")
-                                .groupby("fund")
-                                .last()
-                                .reset_index()
-                            )
-
-                            latest_prices = latest_prices.rename(
-                                columns={
-                                    "fund": "current_name",
-                                    "price": "Laatste koers"
-                                }
-                            )
-
-                            position_df = (
-                                position_df
-                                .merge(
-                                    latest_prices,
-                                    on="current_name",
-                                    how="left"
-                                )
-                            )
-
-                            # -------------------------
-                            # Berekeningen
-                            # -------------------------
-
-                            position_df["Waarde"] = (
-                                position_df["units"]
-                                *
-                                position_df["Laatste koers"]
-                            )
-
-                            overzicht = (
-                                position_df[
-                                    [
-                                        "current_name",
-                                        "units",
-                                        "Laatste koers",
-                                        "Waarde"
-                                    ]
+                            price_row = (
+                                df[
+                                    (df["fund"] == selected_fund)
+                                    &
+                                    (
+                                        df["date"]
+                                        <=
+                                        snap_date
+                                    )
                                 ]
-                                .rename(
-                                    columns={
-                                        "current_name": "Fonds",
-                                        "units": "Eenheden"
-                                    }
+                                .sort_values(
+                                    "date"
                                 )
                             )
 
-                            overzicht = overzicht.sort_values(
-                                "Waarde",
-                                ascending=False
+                            if price_row.empty:
+
+                                price = np.nan
+
+                            else:
+
+                                price = (
+                                    price_row
+                                    .iloc[-1]["price"]
+                                )
+
+                            investment = bought * price
+
+                            history.append({
+
+                                "Datum":
+                                    snap_date.strftime("%d-%m-%Y"),
+
+                                "Totale eenheden":
+                                    units,
+
+                                "Nieuw gekocht":
+                                    bought,
+
+                                "Koers":
+                                    price,
+
+                                "Investering":
+                                    investment
+
+                            })
+
+                        history_df = pd.DataFrame(history)
+
+                        if history_df.empty:
+
+                            st.info(
+                                "Nog geen transacties gevonden."
                             )
+
+                        else:
 
                             st.dataframe(
-                                overzicht,
+
+                                history_df,
+
                                 use_container_width=True,
+
                                 hide_index=True
+
+                            )
+
+                            st.divider()
+
+                            total_units = history_df[
+                                "Totale eenheden"
+                            ].iloc[-1]
+
+                            total_investment = history_df[
+                                "Investering"
+                            ].sum()
+
+                            average_price = (
+                                total_investment
+                                /
+                                total_units
+                                if total_units > 0
+                                else 0
+                            )
+
+                            latest_price = (
+                                df[
+                                    df["fund"]
+                                    ==
+                                    selected_fund
+                                ]
+                                .sort_values("date")
+                                .iloc[-1]["price"]
+                            )
+
+                            current_value = (
+                                total_units
+                                *
+                                latest_price
+                            )
+
+                            profit = (
+                                current_value
+                                -
+                                total_investment
+                            )
+
+                            profit_pct = (
+                                (
+                                    profit
+                                    /
+                                    total_investment
+                                )
+                                *100
+                                if total_investment > 0
+                                else 0
+                            )
+
+                            c1,c2,c3,c4 = st.columns(4)
+
+                            c1.metric(
+                                "Eenheden",
+                                f"{total_units:,.6f}"
+                            )
+
+                            c2.metric(
+                                "Gem. aankoop",
+                                f"€ {average_price:,.2f}"
+                            )
+
+                            c3.metric(
+                                "Laatste koers",
+                                f"€ {latest_price:,.2f}"
+                            )
+
+                            c4.metric(
+                                "Resultaat",
+                                f"€ {profit:,.2f}",
+                                f"{profit_pct:.2f}%"
                             )
 
                 except Exception as e:
