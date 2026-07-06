@@ -6465,10 +6465,6 @@ if tab11 is not None:
                             "portfolio_id",
                             st.session_state.portfolio_id
                         )
-                        .eq(
-                            "is_active",
-                            True
-                        )
                         .execute()
                     )
 
