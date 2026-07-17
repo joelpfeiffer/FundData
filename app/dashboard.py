@@ -7359,3 +7359,34 @@ if tab12 is not None:
             )
 
             st.write(result.data)
+
+
+            st.subheader("Portfolio Insert Debug")
+
+            try:
+
+                # Controleer profiel
+                profile = (
+                    supabase
+                    .table("profiles")
+                    .select("*")
+                    .eq("id", user.user.id)
+                    .execute()
+                )
+
+                st.write("Profile records:")
+                st.write(profile.data)
+
+                # Controleer portfolios
+                portfolios = (
+                    supabase
+                    .table("portfolios")
+                    .select("*")
+                    .execute()
+                )
+
+                st.write("Bestaande portfolios:")
+                st.write(portfolios.data)
+
+            except Exception as e:
+                st.code(str(e))
