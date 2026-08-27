@@ -4372,6 +4372,7 @@ if tab10 is not None:
                                 values="value"
                             )
                             .sort_index()
+                            .ffill()
                         )
 
                         st.line_chart(
@@ -4435,30 +4436,29 @@ if tab10 is not None:
 
                 try:
 
-                    latest = (
+                    allocation_valuations = (
                         supabase
                         .table(
                             "portfolio_valuations"
                         )
                         .select(
-                            "id"
+                            "id,valuation_date"
                         )
                         .eq(
                             "portfolio_id",
                             st.session_state.portfolio_id
                         )
-                        .order(
-                            "valuation_date",
-                            desc=True
-                        )
-                        .limit(1)
+                        .order("valuation_date")
                         .execute()
                     )
 
-                    if latest.data:
+                    if allocation_valuations.data:
 
-                        valuation_id = (
-                            latest.data[0]["id"]
+                        allocation_valuation_df = pd.DataFrame(
+                            allocation_valuations.data
+                        )
+                        allocation_valuation_df["valuation_date"] = pd.to_datetime(
+                            allocation_valuation_df["valuation_date"]
                         )
 
                         positions = (
@@ -4469,10 +4469,11 @@ if tab10 is not None:
                             .select(
                                 "*"
                             )
-                            .eq(
+                            .in_(
                                 "valuation_id",
-                                valuation_id
+                                allocation_valuation_df["id"].tolist()
                             )
+                            .eq("is_active", True)
                             .execute()
                         )
 
@@ -4480,6 +4481,21 @@ if tab10 is not None:
 
                             alloc_df = pd.DataFrame(
                                 positions.data
+                            )
+
+                            alloc_df = (
+                                alloc_df
+                                .merge(
+                                    allocation_valuation_df,
+                                    left_on="valuation_id",
+                                    right_on="id",
+                                    how="inner"
+                                )
+                                .sort_values("valuation_date")
+                                .drop_duplicates(
+                                    subset=["fund_id"],
+                                    keep="last"
+                                )
                             )
 
                             funds = (
@@ -4709,7 +4725,7 @@ if tab10 is not None:
                             matrix_df[
                                 "Datum"
                             ]
-                        )
+                        ).ffill()
 
                         short_name = (
                             fund_name
