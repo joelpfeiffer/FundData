@@ -1,0 +1,14 @@
+{
+  "source_priority": ["cardano", "asn", "reaal", "zwitserleven"],
+  "aliases": {
+    "Zwitserleven Geldmarktfonds": "Zwitserleven Geldmarktfonds",
+    "Zwitserleven PPI Geldmarktfonds": "Zwitserleven PPI Geldmarktfonds",
+    "Zwitserleven Vanguard US 500 Unhedged": "Zwitserleven Vanguard US 500 Unhed",
+    "RZL Amerika Aandelenfonds": "RZL Aandelenfonds Amerika",
+    "RZL Europa Aandelenfonds": "RZL Aandelenfonds Europa",
+    "RZL Wereld Aandelenfonds": "RZL Aandelenfonds Wereld",
+    "RZL Vastgoedfonds": "RZL Aandelenfonds Vastgoed",
+    "RZL Azië Aandelenfonds": "RZL Aandelenfonds Pacific"
+  },
+  "csv_sources": []
+}
