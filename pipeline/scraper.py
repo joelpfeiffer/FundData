@@ -1,82 +1,74 @@
-import os
+"""GitHub Actions entry point: collect newest quote per fund into SQLite."""
+import csv
+import logging
 import sqlite3
-import pandas as pd
-import requests
-from io import StringIO
+import sys
+from pathlib import Path
 
-DB_PATH = "data/pension.db"
-URL = "https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/"
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-def fetch_data():
-    print("🌐 Fetching data...")
+from pipeline.multisource import Http, asn_quotes, cardano_quotes, choose, csv_quotes, load_config, parse_zwitserleven, reaal_quotes, ZWITSERLEVEN_URL
 
-    headers = {"User-Agent": "Mozilla/5.0"}
-    response = requests.get(URL, headers=headers, timeout=30)
-    response.raise_for_status()
+DB_PATH = ROOT / "data" / "pension.db"
+CONFIG_PATH = ROOT / "fund_sources.json"
+AUDIT_PATH = ROOT / "data" / "price_sources.csv"
+LOG = logging.getLogger("fund-prices")
 
-    tables = pd.read_html(StringIO(response.text))
 
-    df = tables[0][["Fonds", "Datum", "Koers"]]
+def collect_quotes():
+    config, http = load_config(CONFIG_PATH), Http(timeout=30)
+    primary = parse_zwitserleven(http.text(ZWITSERLEVEN_URL))
+    alternatives = []
+    try:
+        alternatives.extend(cardano_quotes(http, workers=6))
+    except Exception as exc:
+        LOG.warning("Cardano niet beschikbaar; Zwitserleven blijft actief: %s", exc)
+    try:
+        alternatives.extend(asn_quotes(http))
+    except Exception as exc:
+        LOG.warning("ASN niet beschikbaar: %s", exc)
+    try:
+        alternatives.extend(reaal_quotes(http, workers=6))
+    except Exception as exc:
+        LOG.warning("Reaal niet beschikbaar: %s", exc)
+    for spec in config.get("csv_sources", []):
+        try:
+            alternatives.extend(csv_quotes(http, spec, CONFIG_PATH.parent))
+        except Exception as exc:
+            LOG.warning("Extra bron %s niet beschikbaar: %s", spec.get("name", "onbekend"), exc)
+    return choose(primary, alternatives, config)
 
-    # Clean prijs
-    df["Koers"] = (
-        df["Koers"]
-        .astype(str)
-        .str.replace("€", "", regex=False)
-        .str.replace(",", ".", regex=False)
-        .str.replace("\xa0", "", regex=False)
-        .str.strip()
-        .astype(float)
-    )
 
-    # Datum fix
-    df["Datum"] = pd.to_datetime(df["Datum"], dayfirst=True)
+def save_to_db(quotes):
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""CREATE TABLE IF NOT EXISTS prices (
+            date TEXT NOT NULL, fund TEXT NOT NULL, price REAL NOT NULL,
+            PRIMARY KEY (date, fund))""")
+        conn.executemany(
+            "INSERT OR REPLACE INTO prices (date, fund, price) VALUES (?, ?, ?)",
+            [(q.day.isoformat(), q.fund, float(q.price)) for q in quotes],
+        )
 
-    print(f"✅ {len(df)} records opgehaald")
-    return df
 
-def save_to_db(df):
-    os.makedirs("data", exist_ok=True)
+def save_audit(rows):
+    fields = ["fund", "selected_source", "date", "price", "fallback", "zwitserleven_date", "candidate_count", "url"]
+    with AUDIT_PATH.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
 
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS prices (
-        date TEXT,
-        fund TEXT,
-        price REAL,
-        PRIMARY KEY (date, fund)
-    )
-    """)
-
-    new_date = df["Datum"].iloc[0].strftime("%Y-%m-%d")
-
-    cur.execute("SELECT MAX(date) FROM prices")
-    last_date = cur.fetchone()[0]
-
-    print("Laatste datum in DB:", last_date)
-    print("Nieuwe datum:", new_date)
-
-    if last_date == new_date:
-        print("⏭️ Data al aanwezig — skip")
-    else:
-        print("➕ Nieuwe data toevoegen")
-        for _, row in df.iterrows():
-            cur.execute(
-                "INSERT OR IGNORE INTO prices (date, fund, price) VALUES (?, ?, ?)",
-                (new_date, row["Fonds"], float(row["Koers"]))
-            )
-        conn.commit()
-        print(f"✅ {len(df)} records toegevoegd")
-
-    conn.close()
 
 def main():
-    print("🔥 SCRAPER START 🔥")
-    df = fetch_data()
-    save_to_db(df)
-    print("🎉 SCRAPER KLAAR")
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    quotes, audit = collect_quotes()
+    save_to_db(quotes)
+    save_audit(audit)
+    fallback_count = sum(row["fallback"] == "true" for row in audit)
+    LOG.info("Klaar: %d fondsen; %d keer alternatieve bron gekozen", len(quotes), fallback_count)
+
 
 if __name__ == "__main__":
     main()

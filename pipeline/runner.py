@@ -1,6 +1,11 @@
 import pandas as pd
 import sqlite3
 import os
+import sys
+
+# Keep the existing status messages usable in Windows terminals using cp1252.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="replace")
 
 # =========================
 # CONFIG
