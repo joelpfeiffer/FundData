@@ -2353,6 +2353,7 @@ if tab9 is not None:
                     )
                     
                     valuation_rows = []
+                    used_price_dates = []
                     
                     for position in positions.data:
 
@@ -2376,11 +2377,15 @@ if tab9 is not None:
                             position["units"]
                         )
 
-                        price_row = df[
-                            (df["fund"] == fund_name)
-                            &
-                            (df["date"] == latest_price_date)
-                        ]
+                        # Every fund can have its own most recent quote date.
+                        # Do not require all funds to have a row on the global
+                        # maximum date (Cardano/ASN/Reaal publish independently).
+                        price_row = (
+                            df[df["fund"] == fund_name]
+                            .dropna(subset=["date", "price"])
+                            .sort_values("date")
+                            .tail(1)
+                        )
 
                         if not price_row.empty:
 
@@ -2388,6 +2393,14 @@ if tab9 is not None:
                                 float(
                                     price_row.iloc[0]["price"]
                                 )
+                            )
+
+                            fund_price_date = pd.to_datetime(
+                                price_row.iloc[0]["date"]
+                            ).date()
+
+                            used_price_dates.append(
+                                fund_price_date
                             )
 
                             value = (
@@ -2398,6 +2411,7 @@ if tab9 is not None:
                                 "Fonds": fund_name,
                                 "Eenheden": round(units, 6),
                                 "Koers": round(price, 4),
+                                "Koersdatum": fund_price_date,
                                 "Waarde": round(value, 2)
                             })
 
@@ -2411,6 +2425,16 @@ if tab9 is not None:
 
                     valuation_df = pd.DataFrame(
                         valuation_rows
+                    )
+
+                    if valuation_df.empty:
+                        st.warning(
+                            "Voor geen van de fondsen is een koers gevonden."
+                        )
+                        st.stop()
+
+                    latest_used_price_date = max(
+                        used_price_dates
                     )
 
                     st.divider()
@@ -2436,6 +2460,87 @@ if tab9 is not None:
                         "Opslaan waardering"
                     ):
                         try:
+                            # Build the last stored state per fund across all
+                            # valuations. Valuations are incremental: a newer
+                            # valuation may contain only one changed fund.
+                            previous_valuations = (
+                                supabase
+                                .table("portfolio_valuations")
+                                .select("id,valuation_date")
+                                .eq(
+                                    "portfolio_id",
+                                    st.session_state.portfolio_id
+                                )
+                                .order(
+                                    "valuation_date",
+                                    desc=True
+                                )
+                                .execute()
+                            )
+
+                            previous_signature = {}
+
+                            if previous_valuations.data:
+                                valuation_ids = [
+                                    item["id"]
+                                    for item in previous_valuations.data
+                                ]
+
+                                previous_positions = (
+                                    supabase
+                                    .table("valuation_positions")
+                                    .select(
+                                        "valuation_id,fund_id,price,price_date"
+                                    )
+                                    .in_(
+                                        "valuation_id",
+                                        valuation_ids
+                                    )
+                                    .eq(
+                                        "is_active",
+                                        True
+                                    )
+                                    .execute()
+                                )
+
+                                positions_by_valuation = {}
+                                for item in previous_positions.data:
+                                    positions_by_valuation.setdefault(
+                                        str(item["valuation_id"]), []
+                                    ).append(item)
+
+                                # previous_valuations is newest first, so the
+                                # first occurrence of a fund is its latest row.
+                                for valuation in previous_valuations.data:
+                                    for item in positions_by_valuation.get(
+                                        str(valuation["id"]), []
+                                    ):
+                                        fund_key = str(item["fund_id"])
+                                        previous_signature.setdefault(
+                                            fund_key,
+                                            (
+                                                str(item.get("price_date")),
+                                                round(float(item["price"]), 4)
+                                            )
+                                        )
+
+                            rows_to_store = [
+                                item for item in valuation_rows
+                                if previous_signature.get(
+                                    str(item["fund_id"])
+                                ) != (
+                                    str(item["Koersdatum"]),
+                                    round(float(item["Koers"]), 4)
+                                )
+                            ]
+
+                            if not rows_to_store:
+                                st.info(
+                                    "Geen nieuwe fondskoersen beschikbaar. "
+                                    "De waardering is niet opnieuw opgeslagen."
+                                )
+                                st.stop()
+
                             existing_valuation = (
                                 supabase
                                 .table("portfolio_valuations")
@@ -2471,7 +2576,7 @@ if tab9 is not None:
                                         str(date.today()),
                                     
                                     "price_date":
-                                        str(latest_price_date),
+                                        str(latest_used_price_date),
 
                                     "total_value":
                                         float(total_value)
@@ -2483,7 +2588,7 @@ if tab9 is not None:
                                 valuation_result.data[0]["id"]
                             )
 
-                            for row in valuation_rows:
+                            for row in rows_to_store:
 
                                 (
                                     supabase
@@ -2504,7 +2609,7 @@ if tab9 is not None:
                                         "value":
                                             float(row["Waarde"]),
                                         "price_date":
-                                            str(latest_price_date),
+                                            str(row["Koersdatum"]),
 
                                         "version":
                                             1,
@@ -2522,7 +2627,9 @@ if tab9 is not None:
                                 )
 
                             st.success(
-                                "Waardering opgeslagen"
+                                f"Waardering opgeslagen: "
+                                f"{len(rows_to_store)} gewijzigd fonds / "
+                                f"gewijzigde fondsen."
                             )
 
                         except Exception as e:
