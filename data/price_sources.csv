@@ -1,86 +1,86 @@
 fund,selected_source,date,price,fallback,zwitserleven_date,candidate_count,url
-ASN Duurzaam Aandelenfonds,asn,2026-09-01,223.51,true,2026-08-31,2,https://www.asnbank.nl/beleggen/koersen.html
-ASN Duurzaam Obligatiefonds,asn,2026-09-01,24.93,true,2026-08-31,2,https://www.asnbank.nl/beleggen/koersen.html
-ASN Milieu & Waterfonds,asn,2026-09-01,54.89,true,2026-08-31,2,https://www.asnbank.nl/beleggen/koersen.html
-RZL Aandelenfonds Amerika,reaal,2026-08-31,102.77,true,2026-08-31,2,https://www.reaal.nl/beleggen/rzl-amerika-aandelenfonds/
-RZL Aandelenfonds Duurzaam Wereld,zwitserleven,2026-08-31,32.51,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Aandelenfonds Europa,reaal,2026-08-31,61.64,true,2026-08-31,2,https://www.reaal.nl/beleggen/rzl-europa-aandelenfonds/
-RZL Aandelenfonds Europa 2,zwitserleven,2026-08-31,69.25,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Aandelenfonds Opkomende Landen,zwitserleven,2026-08-31,34.76,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Aandelenfonds Pacific,reaal,2026-08-31,52.48,true,2026-08-31,2,https://www.reaal.nl/beleggen/rzl-azie-aandelenfonds/
-RZL Aandelenfonds Vastgoed,reaal,2026-08-31,47.13,true,2026-08-31,2,https://www.reaal.nl/beleggen/rzl-vastgoedfonds/
-RZL Aandelenfonds Wereld,reaal,2026-08-31,68.16,true,2026-08-31,2,https://www.reaal.nl/beleggen/rzl-wereld-aandelenfonds/
-RZL Aandelenfonds Wereld 2,zwitserleven,2026-08-31,85.16,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Diversificatiefonds,zwitserleven,2026-08-31,26.34,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Mixfonds,zwitserleven,2026-08-31,45.78,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Mixfonds 2,zwitserleven,2026-08-31,43.56,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Obligatiefonds,zwitserleven,2026-08-31,26.38,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Obligatiefonds 2,zwitserleven,2026-08-31,25.47,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Obligatiefonds Duratie 10+,zwitserleven,2026-08-31,21.06,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Obligatiefonds Duratie Heel Lang,zwitserleven,2026-08-31,23.73,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Obligatiefonds Duratie Lang,zwitserleven,2026-08-31,23.89,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Obligatiefonds Duratie Medium,zwitserleven,2026-08-31,24.92,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Obligatiefonds Groen en Sociaal,zwitserleven,2026-08-31,25.00,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Obligatiefonds Kortlopend,zwitserleven,2026-08-31,20.01,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Optimaalfonds,zwitserleven,2026-08-31,39.16,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven Amerika Aandelenfonds,cardano,2026-09-01,112.36,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-amerika-aandelenfonds/
-Zwitserleven Credits Fonds,cardano,2026-09-01,11.45,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-credits-fonds/
-Zwitserleven Credits Hypotheken Mixfonds,cardano,2026-09-01,11.40,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-credits-hypotheken-mixfonds/
-Zwitserleven Duurzaam Wereld Aandelenfonds,cardano,2026-09-01,43.57,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-duurzaam-wereld-aandelenfonds/
-Zwitserleven Europees Aandelenfonds,cardano,2026-09-01,40.60,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-europees-aandelenfonds/
-Zwitserleven Geldmarktfonds,zwitserleven,2026-08-31,25.49,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven Government Bonds 10+ Fonds,cardano,2026-09-01,7.98,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-government-bonds-10-fonds/
-Zwitserleven Index Aandelenfonds Europa,cardano,2026-09-01,47.24,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-index-aandelenfonds-europa/
-Zwitserleven Index Aandelenfonds Noord-Amerika,cardano,2026-09-01,56.52,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-index-aandelenfonds-noord-amerika/
-Zwitserleven Index Aandelenfonds Opkomende Landen,cardano,2026-09-01,40.24,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-index-aandelenfonds-opkomende-landen/
-Zwitserleven Index Aandelenfonds Pacific,cardano,2026-09-01,42.13,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-index-aandelenfonds-pacific/
-Zwitserleven Index Wereld Aandelenfonds,cardano,2026-09-01,100.11,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-index-wereld-aandelenfonds/
-Zwitserleven Kortlopend Obligatiefonds,cardano,2026-09-01,6.09,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-kortlopend-obligatiefonds/
-Zwitserleven Lifestyle Garantie,zwitserleven,2026-08-31,171.14,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven Long Duration Fonds,cardano,2026-09-01,25.11,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-long-duration-fonds/
-Zwitserleven MaatschappijGarantie (2%),zwitserleven,2026-08-31,42.03,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven MaatschappijGarantie (3%),zwitserleven,2026-08-31,47.06,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven MaatschappijGarantie plus,zwitserleven,2026-08-31,54.49,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven Medium Duration Fonds,cardano,2026-09-01,27.69,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-medium-duration-fonds/
-Zwitserleven Mixfonds,cardano,2026-09-01,60.67,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-mixfonds/
-Zwitserleven Obligatiefonds,cardano,2026-09-01,17.37,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-obligatiefonds/
-Zwitserleven PPI Geldmarktfonds,zwitserleven,2026-08-31,50.97,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PPI Vanguard Emerging,zwitserleven,2026-08-31,48.41,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PPI Vanguard Europe,zwitserleven,2026-08-31,52.96,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PPI Vanguard Inflation Linked Bond Index,zwitserleven,2026-08-31,50.94,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PPI Vanguard Japan,zwitserleven,2026-08-31,52.30,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PPI Vanguard Small Cap,zwitserleven,2026-08-31,60.49,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PPI Vanguard US 500 Hedged,zwitserleven,2026-08-31,56.53,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PPI Vanguard US 500 Unhed,zwitserleven,2026-08-31,50.80,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PPI iShares Government Bond index,zwitserleven,2026-08-31,49.32,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PW Collectief Garantiefonds,zwitserleven,2026-08-31,20.19,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PW Doorlopend Garantiefonds,zwitserleven,2026-08-31,13.25,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PW Europees Beheer Fonds 3%,zwitserleven,2026-08-31,191.65,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PW Europees Beheer Fonds 4%,zwitserleven,2026-08-31,193.69,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PW Garandement,zwitserleven,2026-08-31,15.71,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PW Garantie Plusfonds,zwitserleven,2026-08-31,18.29,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PW Garantiefonds,zwitserleven,2026-08-31,13.52,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PW Safetyfonds,zwitserleven,2026-08-31,113.15,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PW Vastrentendfonds,zwitserleven,2026-08-31,19.32,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PW Vastrentendfonds Nederland 3%,zwitserleven,2026-08-31,19.80,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PW Vastrentendfonds Nederland 4%,zwitserleven,2026-08-31,19.80,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PW Verzekerd Rendementfonds,zwitserleven,2026-08-31,15.26,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PW Wereldbeheerfonds 3%,zwitserleven,2026-08-31,143.51,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven PW Wereldbeheerfonds 4%,zwitserleven,2026-08-31,144.84,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven RendementsGarantie 1%,zwitserleven,2026-08-31,23.42,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven RendementsGarantie 2%,zwitserleven,2026-08-31,26.60,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven Selectie Fonds,cardano,2026-09-01,41.17,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-selectie-fonds/
-Zwitserleven Ultra Long Duration Fonds,cardano,2026-09-01,20.78,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-ultra-long-duration-fonds/
-Zwitserleven VP Credits Hypothekenmix,zwitserleven,2026-08-31,10.01,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven VP Obligatie,zwitserleven,2026-08-31,8.70,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven VP Selectie,zwitserleven,2026-08-31,10.51,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven VP Wereld Aandelen,zwitserleven,2026-08-31,15.43,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven Vanguard Emerging,zwitserleven,2026-08-31,24.21,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven Vanguard Europe,zwitserleven,2026-08-31,26.48,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven Vanguard Inflation Linked Bond Index,zwitserleven,2026-08-31,25.44,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven Vanguard Japan,zwitserleven,2026-08-31,26.15,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven Vanguard Small Cap,zwitserleven,2026-08-31,30.23,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven Vanguard US 500 Hedged,zwitserleven,2026-08-31,28.22,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven Vanguard US 500 Unhed,zwitserleven,2026-08-31,25.40,false,2026-08-31,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-Zwitserleven Vastgoedfonds,cardano,2026-09-01,25.78,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-vastgoedfonds/
-Zwitserleven Wereld Aandelenfonds,cardano,2026-09-01,98.96,true,2026-08-31,2,https://www.cardano.nl/onze-fondsen/zwitserleven-wereld-aandelenfonds/
+ASN Duurzaam Aandelenfonds,asn,2026-09-02,220.96,true,2026-09-01,2,https://www.asnbank.nl/beleggen/koersen.html
+ASN Duurzaam Obligatiefonds,asn,2026-09-02,24.90,true,2026-09-01,2,https://www.asnbank.nl/beleggen/koersen.html
+ASN Milieu & Waterfonds,asn,2026-09-02,54.20,true,2026-09-01,2,https://www.asnbank.nl/beleggen/koersen.html
+RZL Aandelenfonds Amerika,reaal,2026-09-01,102.37,true,2026-09-01,2,https://www.reaal.nl/beleggen/rzl-amerika-aandelenfonds/
+RZL Aandelenfonds Duurzaam Wereld,zwitserleven,2026-09-01,32.40,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Aandelenfonds Europa,reaal,2026-09-01,61.22,true,2026-09-01,2,https://www.reaal.nl/beleggen/rzl-europa-aandelenfonds/
+RZL Aandelenfonds Europa 2,zwitserleven,2026-09-01,68.78,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Aandelenfonds Opkomende Landen,zwitserleven,2026-09-01,34.75,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Aandelenfonds Pacific,reaal,2026-09-01,52.63,true,2026-09-01,2,https://www.reaal.nl/beleggen/rzl-azie-aandelenfonds/
+RZL Aandelenfonds Vastgoed,reaal,2026-09-01,46.8,true,2026-09-01,2,https://www.reaal.nl/beleggen/rzl-vastgoedfonds/
+RZL Aandelenfonds Wereld,reaal,2026-09-01,67.87,true,2026-09-01,2,https://www.reaal.nl/beleggen/rzl-wereld-aandelenfonds/
+RZL Aandelenfonds Wereld 2,zwitserleven,2026-09-01,84.80,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Diversificatiefonds,zwitserleven,2026-09-01,26.25,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Mixfonds,zwitserleven,2026-09-01,45.58,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Mixfonds 2,zwitserleven,2026-09-01,43.37,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Obligatiefonds,zwitserleven,2026-09-01,26.32,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Obligatiefonds 2,zwitserleven,2026-09-01,25.42,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Obligatiefonds Duratie 10+,zwitserleven,2026-09-01,20.97,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Obligatiefonds Duratie Heel Lang,zwitserleven,2026-09-01,23.43,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Obligatiefonds Duratie Lang,zwitserleven,2026-09-01,23.70,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Obligatiefonds Duratie Medium,zwitserleven,2026-09-01,24.85,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Obligatiefonds Groen en Sociaal,zwitserleven,2026-09-01,24.96,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Obligatiefonds Kortlopend,zwitserleven,2026-09-01,20.00,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+RZL Optimaalfonds,zwitserleven,2026-09-01,39.04,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven Amerika Aandelenfonds,cardano,2026-09-02,111.96,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-amerika-aandelenfonds/
+Zwitserleven Credits Fonds,cardano,2026-09-02,11.43,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-credits-fonds/
+Zwitserleven Credits Hypotheken Mixfonds,cardano,2026-09-02,11.36,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-credits-hypotheken-mixfonds/
+Zwitserleven Duurzaam Wereld Aandelenfonds,cardano,2026-09-02,43.24,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-duurzaam-wereld-aandelenfonds/
+Zwitserleven Europees Aandelenfonds,cardano,2026-09-02,40.39,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-europees-aandelenfonds/
+Zwitserleven Geldmarktfonds,zwitserleven,2026-09-01,25.50,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven Government Bonds 10+ Fonds,cardano,2026-09-02,7.96,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-government-bonds-10-fonds/
+Zwitserleven Index Aandelenfonds Europa,cardano,2026-09-02,46.95,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-index-aandelenfonds-europa/
+Zwitserleven Index Aandelenfonds Noord-Amerika,cardano,2026-09-02,56.10,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-index-aandelenfonds-noord-amerika/
+Zwitserleven Index Aandelenfonds Opkomende Landen,cardano,2026-09-02,40.71,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-index-aandelenfonds-opkomende-landen/
+Zwitserleven Index Aandelenfonds Pacific,cardano,2026-09-02,41.36,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-index-aandelenfonds-pacific/
+Zwitserleven Index Wereld Aandelenfonds,cardano,2026-09-02,99.75,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-index-wereld-aandelenfonds/
+Zwitserleven Kortlopend Obligatiefonds,cardano,2026-09-02,6.08,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-kortlopend-obligatiefonds/
+Zwitserleven Lifestyle Garantie,zwitserleven,2026-09-01,171.18,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven Long Duration Fonds,cardano,2026-09-02,25.02,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-long-duration-fonds/
+Zwitserleven MaatschappijGarantie (2%),zwitserleven,2026-09-01,42.04,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven MaatschappijGarantie (3%),zwitserleven,2026-09-01,47.07,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven MaatschappijGarantie plus,zwitserleven,2026-09-01,54.51,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven Medium Duration Fonds,cardano,2026-09-02,27.63,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-medium-duration-fonds/
+Zwitserleven Mixfonds,cardano,2026-09-02,60.48,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-mixfonds/
+Zwitserleven Obligatiefonds,cardano,2026-09-02,17.35,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-obligatiefonds/
+Zwitserleven PPI Geldmarktfonds,zwitserleven,2026-09-01,50.98,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PPI Vanguard Emerging,zwitserleven,2026-09-01,48.36,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PPI Vanguard Europe,zwitserleven,2026-09-01,52.60,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PPI Vanguard Inflation Linked Bond Index,zwitserleven,2026-09-01,50.82,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PPI Vanguard Japan,zwitserleven,2026-09-01,52.50,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PPI Vanguard Small Cap,zwitserleven,2026-09-01,60.35,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PPI Vanguard US 500 Hedged,zwitserleven,2026-09-01,56.34,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PPI Vanguard US 500 Unhed,zwitserleven,2026-09-01,50.65,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PPI iShares Government Bond index,zwitserleven,2026-09-01,49.26,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PW Collectief Garantiefonds,zwitserleven,2026-09-01,20.13,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PW Doorlopend Garantiefonds,zwitserleven,2026-09-01,13.22,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PW Europees Beheer Fonds 3%,zwitserleven,2026-09-01,190.79,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PW Europees Beheer Fonds 4%,zwitserleven,2026-09-01,192.82,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PW Garandement,zwitserleven,2026-09-01,15.68,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PW Garantie Plusfonds,zwitserleven,2026-09-01,18.23,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PW Garantiefonds,zwitserleven,2026-09-01,13.48,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PW Safetyfonds,zwitserleven,2026-09-01,112.73,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PW Vastrentendfonds,zwitserleven,2026-09-01,19.28,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PW Vastrentendfonds Nederland 3%,zwitserleven,2026-09-01,19.76,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PW Vastrentendfonds Nederland 4%,zwitserleven,2026-09-01,19.76,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PW Verzekerd Rendementfonds,zwitserleven,2026-09-01,15.21,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PW Wereldbeheerfonds 3%,zwitserleven,2026-09-01,143.04,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven PW Wereldbeheerfonds 4%,zwitserleven,2026-09-01,144.37,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven RendementsGarantie 1%,zwitserleven,2026-09-01,23.43,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven RendementsGarantie 2%,zwitserleven,2026-09-01,26.60,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven Selectie Fonds,cardano,2026-09-02,41.13,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-selectie-fonds/
+Zwitserleven Ultra Long Duration Fonds,cardano,2026-09-02,20.71,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-ultra-long-duration-fonds/
+Zwitserleven VP Credits Hypothekenmix,zwitserleven,2026-09-01,9.99,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven VP Obligatie,zwitserleven,2026-09-01,8.68,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven VP Selectie,zwitserleven,2026-09-01,10.48,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven VP Wereld Aandelen,zwitserleven,2026-09-01,15.39,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven Vanguard Emerging,zwitserleven,2026-09-01,24.18,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven Vanguard Europe,zwitserleven,2026-09-01,26.30,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven Vanguard Inflation Linked Bond Index,zwitserleven,2026-09-01,25.39,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven Vanguard Japan,zwitserleven,2026-09-01,26.25,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven Vanguard Small Cap,zwitserleven,2026-09-01,30.16,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven Vanguard US 500 Hedged,zwitserleven,2026-09-01,28.13,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven Vanguard US 500 Unhed,zwitserleven,2026-09-01,25.33,false,2026-09-01,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
+Zwitserleven Vastgoedfonds,cardano,2026-09-02,25.78,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-vastgoedfonds/
+Zwitserleven Wereld Aandelenfonds,cardano,2026-09-02,98.44,true,2026-09-01,2,https://www.cardano.nl/onze-fondsen/zwitserleven-wereld-aandelenfonds/
