@@ -2,14 +2,14 @@ fund,selected_source,date,price,fallback,zwitserleven_date,candidate_count,url
 ASN Duurzaam Aandelenfonds,asn,2026-09-11,214.82,true,2026-09-10,2,https://www.asnbank.nl/beleggen/koersen.html
 ASN Duurzaam Obligatiefonds,asn,2026-09-11,24.66,true,2026-09-10,2,https://www.asnbank.nl/beleggen/koersen.html
 ASN Milieu & Waterfonds,asn,2026-09-11,52.71,true,2026-09-10,2,https://www.asnbank.nl/beleggen/koersen.html
-RZL Aandelenfonds Amerika,reaal,2026-09-10,100.59,true,2026-09-10,2,https://www.reaal.nl/beleggen/rzl-amerika-aandelenfonds/
+RZL Aandelenfonds Amerika,reaal,2026-09-11,100.22,true,2026-09-10,2,https://www.reaal.nl/beleggen/rzl-amerika-aandelenfonds/
 RZL Aandelenfonds Duurzaam Wereld,zwitserleven,2026-09-10,32.15,false,2026-09-10,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Aandelenfonds Europa,reaal,2026-09-10,60.52,true,2026-09-10,2,https://www.reaal.nl/beleggen/rzl-europa-aandelenfonds/
+RZL Aandelenfonds Europa,reaal,2026-09-11,60.03,true,2026-09-10,2,https://www.reaal.nl/beleggen/rzl-europa-aandelenfonds/
 RZL Aandelenfonds Europa 2,zwitserleven,2026-09-10,68.00,false,2026-09-10,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
 RZL Aandelenfonds Opkomende Landen,zwitserleven,2026-09-10,35.36,false,2026-09-10,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
-RZL Aandelenfonds Pacific,reaal,2026-09-10,53.07,true,2026-09-10,2,https://www.reaal.nl/beleggen/rzl-azie-aandelenfonds/
-RZL Aandelenfonds Vastgoed,reaal,2026-09-10,46.14,true,2026-09-10,2,https://www.reaal.nl/beleggen/rzl-vastgoedfonds/
-RZL Aandelenfonds Wereld,reaal,2026-09-10,67.31,true,2026-09-10,2,https://www.reaal.nl/beleggen/rzl-wereld-aandelenfonds/
+RZL Aandelenfonds Pacific,reaal,2026-09-11,52.87,true,2026-09-10,2,https://www.reaal.nl/beleggen/rzl-azie-aandelenfonds/
+RZL Aandelenfonds Vastgoed,reaal,2026-09-11,45.86,true,2026-09-10,2,https://www.reaal.nl/beleggen/rzl-vastgoedfonds/
+RZL Aandelenfonds Wereld,reaal,2026-09-11,66.89,true,2026-09-10,2,https://www.reaal.nl/beleggen/rzl-wereld-aandelenfonds/
 RZL Aandelenfonds Wereld 2,zwitserleven,2026-09-10,84.10,false,2026-09-10,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
 RZL Diversificatiefonds,zwitserleven,2026-09-10,26.05,false,2026-09-10,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
 RZL Mixfonds,zwitserleven,2026-09-10,45.20,false,2026-09-10,1,https://www.zwitserleven.nl/over-zwitserleven/verantwoord-beleggen/fondsen/
