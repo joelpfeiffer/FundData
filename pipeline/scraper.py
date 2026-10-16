@@ -22,6 +22,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+import tempfile
 import re
 import time
 import unicodedata
@@ -272,7 +274,10 @@ def parse_price(value) -> float:
 
         value = value.replace(",", ".")
 
-    return float(value)
+    result = float(value)
+    if not (0 < result < float("inf")):
+        raise ValueError(f"Ongeldige koers: {value}")
+    return result
 
 
 def parse_date(value) -> date:
@@ -1090,10 +1095,24 @@ def save_winners(
         exist_ok=True
     )
 
-    combined.to_csv(
-        CSV_PATH,
-        index=False
-    )
+    # Bewaar de vorige CSV voordat we wijzigingen doorvoeren.
+    backup_path = CSV_PATH.with_name("prices_backup_auto.csv")
+    if CSV_PATH.exists():
+        shutil.copy2(CSV_PATH, backup_path)
+        print(f"Backup vorige versie: {backup_path}")
+
+    # Atomair vervangen: bij een schrijffout blijft de oude CSV intact.
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", newline="", suffix=".csv",
+        dir=CSV_PATH.parent, delete=False
+    ) as temp_file:
+        temp_path = Path(temp_file.name)
+        try:
+            combined.to_csv(temp_file, index=False)
+        except Exception:
+            temp_path.unlink(missing_ok=True)
+            raise
+    os.replace(temp_path, CSV_PATH)
 
     print()
     print(
@@ -1194,15 +1213,33 @@ def main():
     )
 
     # --------------------------------------------------------
-    # Cardano
+    # Cardano uitsluitend voor ontbrekende/achterlopende fondsen
     # --------------------------------------------------------
 
-    cardano_quotes = (
-        scrape_cardano(
-            target_funds,
-            historical_names
-        )
-    )
+    zw_latest = {}
+    for quote in zwitserleven_quotes:
+        key = fund_key(quote.fund)
+        if key not in zw_latest or quote.quote_date > zw_latest[key]:
+            zw_latest[key] = quote.quote_date
+
+    history_latest = {}
+    if not history.empty:
+        for _, row in history.iterrows():
+            key = fund_key(canonical_fund_name(row["fund"], historical_names))
+            day = pd.Timestamp(row["date"]).date()
+            if key not in history_latest or day > history_latest[key]:
+                history_latest[key] = day
+
+    fallback_targets = []
+    for name in target_funds:
+        key = fund_key(name)
+        zw_day = zw_latest.get(key)
+        history_day = history_latest.get(key)
+        if zw_day is None or (history_day is not None and zw_day < history_day):
+            fallback_targets.append(name)
+
+    print(f"Cardano fallback nodig voor {len(fallback_targets)} van {len(target_funds)} fondsen")
+    cardano_quotes = scrape_cardano(fallback_targets, historical_names)
 
     # --------------------------------------------------------
     # Historische fallback
